@@ -12,7 +12,11 @@ const NavButtonGroup = (props) => {
   }
 
   return (
+<<<<<<< HEAD
     <nav id='home-nav-button' className={'w-full z-10 md:h-72 md:mt-16 xl:mt-40 px-5 py-2 mt-12 flex flex-wrap md:max-w-6xl space-y-2 md:space-y-0 md:flex justify-center max-h-80 overflow-auto'}>
+=======
+    <nav id='home-nav-button' className={'w-full z-10 md:h-72 md:mt-6 xl:mt-32 px-5 py-2 mt-8 flex flex-wrap md:max-w-6xl space-y-2 md:space-y-0 md:flex justify-center max-h-80 overflow-auto'}>
+>>>>>>> upstream/main
       {categoryOptions?.map(category => {
         return (
           <SmartLink
@@ -20,7 +24,11 @@ const NavButtonGroup = (props) => {
             title={`${category.name}`}
             href={`/category/${category.name}`}
             passHref
+<<<<<<< HEAD
             className='text-center font-sans text-lg md:text-xl shadow-text w-full sm:w-4/5 md:mx-6 md:w-44 md:h-14 lg:h-18 h-14 justify-center items-center flex border-2 cursor-pointer rounded-xl glassmorphism hover:bg-white hover:text-black duration-200 hover:scale-105 transform'>
+=======
+            className='text-center shadow-text w-full sm:w-4/5 md:mx-6 md:w-40 md:h-14 lg:h-20 h-14 justify-center items-center flex border-2 cursor-pointer rounded-lg glassmorphism hover:bg-white hover:text-black duration-200 hover:scale-105 transform'>
+>>>>>>> upstream/main
                {category.name}
             </SmartLink>
         )

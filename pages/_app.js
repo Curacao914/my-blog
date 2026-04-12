@@ -19,10 +19,13 @@ import ExternalPlugins from '@/components/ExternalPlugins'
 import SEO from '@/components/SEO'
 import { zhCN } from '@clerk/localizations'
 import dynamic from 'next/dynamic'
+<<<<<<< HEAD
 
 // 【核心新增 1】：引入我们刚刚自己写的 React 原生聊天挂件
 import NativeDifyChat from '@/components/NativeDifyChat'
 
+=======
+>>>>>>> upstream/main
 // import { ClerkProvider } from '@clerk/nextjs'
 const ClerkProvider = dynamic(() =>
   import('@clerk/nextjs').then(m => m.ClerkProvider)
@@ -56,8 +59,11 @@ const MyApp = ({ Component, pageProps }) => {
   )
 
   const enableClerk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+<<<<<<< HEAD
   
   // 组装全局 DOM
+=======
+>>>>>>> upstream/main
   const content = (
     <GlobalContextProvider {...pageProps}>
       <GLayout {...pageProps}>
@@ -65,6 +71,7 @@ const MyApp = ({ Component, pageProps }) => {
         <Component {...pageProps} />
       </GLayout>
       <ExternalPlugins {...pageProps} />
+<<<<<<< HEAD
       
       {/* 【核心新增 2】：将聊天挂件放置在最外层，确保它悬浮在所有主题之上 */}
       <NativeDifyChat />
@@ -72,6 +79,10 @@ const MyApp = ({ Component, pageProps }) => {
     </GlobalContextProvider>
   )
   
+=======
+    </GlobalContextProvider>
+  )
+>>>>>>> upstream/main
   return (
     <>
       {enableClerk ? (

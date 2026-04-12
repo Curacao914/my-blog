@@ -1,16 +1,25 @@
 /* eslint-disable no-undef */
 import { siteConfig } from '@/lib/config'
 import { useGlobal } from '@/lib/global'
+<<<<<<< HEAD
 import { isMobile } from '@/lib/utils'
 import { useEffect } from 'react'
 
 /**
  * 动态签名挂件（替代宠物）
+=======
+import { isMobile, loadExternalResource } from '@/lib/utils'
+import { useEffect } from 'react'
+
+/**
+ * 网页动画
+>>>>>>> upstream/main
  * @returns
  */
 export default function Live2D() {
   const { theme, switchTheme } = useGlobal()
   const showPet = JSON.parse(siteConfig('WIDGET_PET'))
+<<<<<<< HEAD
   const petSwitchTheme = siteConfig('WIDGET_PET_SWITCH_THEME')
 
   useEffect(() => {
@@ -19,6 +28,30 @@ export default function Live2D() {
       initDynamicSignature()
     }
   }, [theme, showPet])
+=======
+  const petLink = siteConfig('WIDGET_PET_LINK')
+  const petSwitchTheme = siteConfig('WIDGET_PET_SWITCH_THEME')
+
+  useEffect(() => {
+    if (showPet && !isMobile()) {
+      Promise.all([
+        loadExternalResource(
+          'https://cdn.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/live2d.min.js',
+          'js'
+        )
+      ]).then(e => {
+        if (typeof window?.loadlive2d !== 'undefined') {
+          // https://github.com/xiazeyu/live2d-widget-models
+          try {
+            loadlive2d('live2d', petLink)
+          } catch (error) {
+            console.error('读取PET模型', error)
+          }
+        }
+      })
+    }
+  }, [theme])
+>>>>>>> upstream/main
 
   function handleClick() {
     if (petSwitchTheme) {
@@ -26,6 +59,7 @@ export default function Live2D() {
     }
   }
 
+<<<<<<< HEAD
   function initDynamicSignature() {
     const el = document.getElementById('sig-logic-path')
     if (!el) return
@@ -46,11 +80,14 @@ export default function Live2D() {
     })
   }
 
+=======
+>>>>>>> upstream/main
   if (!showPet) {
     return <></>
   }
 
   return (
+<<<<<<< HEAD
     <>
       <style jsx global>{`
         /* 动态签名容器 */
@@ -137,5 +174,16 @@ export default function Live2D() {
         </svg>
       </div>
     </>
+=======
+    <canvas
+      id='live2d'
+      width='280'
+      height='250'
+      onClick={handleClick}
+      className='cursor-grab'
+      onMouseDown={e => e.target.classList.add('cursor-grabbing')}
+      onMouseUp={e => e.target.classList.remove('cursor-grabbing')}
+    />
+>>>>>>> upstream/main
   )
 }

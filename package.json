@@ -1,6 +1,10 @@
 {
   "name": "notion-next",
+<<<<<<< HEAD
   "version": "4.9.4",
+=======
+  "version": "4.9.4.2",
+>>>>>>> upstream/main
   "homepage": "https://github.com/tangly1024/NotionNext.git",
   "license": "MIT",
   "engines": {
@@ -54,6 +58,10 @@
     "@headlessui/react": "^1.7.19",
     "@next/bundle-analyzer": "^12.3.7",
     "@vercel/analytics": "^1.5.0",
+<<<<<<< HEAD
+=======
+    "@vercel/functions": "^3.4.3",
+>>>>>>> upstream/main
     "algoliasearch": "^4.25.2",
     "axios": "^1.7.2",
     "critters": "^0.0.23",
@@ -65,14 +73,22 @@
     "next": "^14.2.30",
     "notion-client": "7.10.0",
     "notion-utils": "7.10.0",
+<<<<<<< HEAD
+=======
+    "p-limit": "^7.3.0",
+>>>>>>> upstream/main
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-facebook": "^8.1.4",
     "react-hotkeys-hook": "^4.6.2",
     "react-notion-x": "7.10.0",
     "react-share": "^5.2.2",
+<<<<<<< HEAD
     "react-tweet-embed": "~2.0.0",
     "react-markdown": "^9.0.1"
+=======
+    "react-tweet-embed": "~2.0.0"
+>>>>>>> upstream/main
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.1.4",
