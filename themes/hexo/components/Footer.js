@@ -35,13 +35,10 @@ const Footer = ({ title }) => {
         <h1 className='text-xs pt-4 text-light-400 dark:text-gray-400'>
           {title} {siteConfig('BIO') && <>|</>} {siteConfig('BIO')}
         </h1>
-<<<<<<< HEAD
         <span className='text-[10px] pt-1 block text-gray-400 dark:text-gray-500'>
           为了获得最佳的AI🤖交互体验，建议使用 Chrome 或 Edge 浏览器访问❤️
         </span>
 
-=======
->>>>>>> upstream/main
         <PoweredBy className='justify-center' />
       </span>
       <br />

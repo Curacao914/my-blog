@@ -6,14 +6,6 @@ import { fetchGlobalAllData, resolvePostProps } from '@/lib/db/SiteDataApi'
 import { useGlobal } from '@/lib/global'
 import { getPageTableOfContents } from '@/lib/db/notion/getPageTableOfContents'
 import { getPasswordQuery } from '@/lib/utils/password'
-<<<<<<< HEAD
-import { checkSlugHasMorThanTwoSlash, checkSlugHasNoSlash, processPostData } from '@/lib/utils/post'
-import { DynamicLayout } from '@/themes/theme'
-import md5 from 'js-md5'
-import { useRouter } from 'next/router'
-import { idToUuid } from 'notion-utils'
-import { useEffect, useState } from 'react'
-=======
 import { checkSlugHasNoSlash } from '@/lib/utils/post'
 import { DynamicLayout } from '@/themes/theme'
 import md5 from 'js-md5'
@@ -22,7 +14,6 @@ import PropTypes from 'prop-types'
 import { useEffect, useState } from 'react'
 import { isExport } from '@/lib/utils/buildMode'
 import { getPriorityPages, prefetchAllBlockMaps } from '@/lib/build/prefetch'
->>>>>>> upstream/main
 
 /**
  * 根据notion的slug访问页面
@@ -106,24 +97,6 @@ const Slug = props => {
   )
 }
 
-<<<<<<< HEAD
-export async function getStaticPaths() {
-  if (!BLOG.isProd) {
-    return {
-      paths: [],
-      fallback: true
-    }
-  }
-
-  const from = 'slug-paths'
-  const { allPages } = await fetchGlobalAllData({ from })
-  const paths = allPages
-    ?.filter(row => checkSlugHasNoSlash(row))
-    .map(row => ({ params: { prefix: row.slug } }))
-  return {
-    paths: paths,
-    fallback: true
-=======
 Slug.propTypes = {
   post: PropTypes.shape({
     id: PropTypes.string,
@@ -162,7 +135,6 @@ export async function getStaticPaths() {
       .filter(row => checkSlugHasNoSlash(row))
       .map(row => ({ params: { prefix: row.slug } })),
     fallback: 'blocking'
->>>>>>> upstream/main
   }
 }
 
@@ -171,27 +143,17 @@ export async function getStaticProps({ params: { prefix }, locale }) {
     prefix,
     locale,
   })
-<<<<<<< HEAD
-  return {
-    props,
-    revalidate: process.env.EXPORT
-=======
 
   return {
     props,
     revalidate: isExport()
->>>>>>> upstream/main
       ? undefined
       : siteConfig(
         'NEXT_REVALIDATE_SECOND',
         BLOG.NEXT_REVALIDATE_SECOND,
         props.NOTION_CONFIG
-<<<<<<< HEAD
-      )
-=======
       ),
     notFound: !props.post
->>>>>>> upstream/main
   }
 }
 

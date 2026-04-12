@@ -33,10 +33,7 @@ import TocDrawer from './components/TocDrawer'
 import TocDrawerButton from './components/TocDrawerButton'
 import CONFIG from './config'
 import { Style } from './style'
-<<<<<<< HEAD
 import Script from 'next/script'
-=======
->>>>>>> upstream/main
 
 const AlgoliaSearchModal = dynamic(
   () => import('@/components/AlgoliaSearchModal'),
