@@ -1,4 +1,3 @@
-import { getAuth } from '@clerk/nextjs/server'
 import { fromDbScheduleItem } from '@/lib/domain/schedule'
 import {
   ensureProfile,
@@ -6,11 +5,7 @@ import {
   listNotes,
   upsertNote
 } from '@/lib/server/supabase'
-
-function getUserId(req) {
-  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) return 'local-dev'
-  return getAuth(req).userId
-}
+import { getScheduleOwnerUserId } from '@/lib/auth/scheduleOwner'
 
 function makeReadingMarkdown(item, note = '') {
   const links = (item.links || [])
@@ -46,7 +41,7 @@ function notePayload({ item, note }) {
 }
 
 export default async function handler(req, res) {
-  const userId = getUserId(req)
+  const userId = getScheduleOwnerUserId(req)
   if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
   try {

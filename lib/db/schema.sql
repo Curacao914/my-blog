@@ -260,3 +260,204 @@ create index if not exists course_assets_job_role_idx
 
 create index if not exists course_lessons_job_order_idx
   on course_lessons (job_id, lesson_order);
+
+-- law-tech workspace schema additions
+create extension if not exists pgcrypto;
+
+create table if not exists profiles (
+  id uuid primary key default gen_random_uuid(),
+  clerk_user_id text unique not null,
+  display_name text,
+  role text not null default 'owner',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists captures (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid references profiles(id) on delete cascade,
+  source text not null,
+  sender_id text,
+  message_id text,
+  idempotency_key text,
+  raw_text text,
+  raw_payload jsonb not null default '{}'::jsonb,
+  interpreted_as text,
+  result jsonb not null default '{}'::jsonb,
+  state text not null default 'inbox',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists materials (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid references profiles(id) on delete cascade,
+  capture_id uuid references captures(id) on delete set null,
+  kind text not null,
+  title text not null,
+  storage_path text,
+  external_url text,
+  mime_type text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists schedule_items (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid references profiles(id) on delete cascade,
+  capture_id uuid references captures(id) on delete set null,
+  title text not null,
+  section text not null default '其他',
+  section_key text not null default '',
+  tone text not null default '',
+  schedule_date text not null default 'inbox',
+  starts_at timestamptz,
+  time_label text,
+  place text,
+  priority text not null default 'normal',
+  status text not null default 'active',
+  links jsonb not null default '[]'::jsonb,
+  children jsonb not null default '[]'::jsonb,
+  summary text,
+  note text,
+  source text not null default 'web',
+  ai_trace jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists courses (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid references profiles(id) on delete cascade,
+  title text not null,
+  teacher text,
+  term text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists course_sessions (
+  id uuid primary key default gen_random_uuid(),
+  course_id uuid references courses(id) on delete cascade,
+  title text not null,
+  session_order integer,
+  taught_at date,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists notes (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid references profiles(id) on delete cascade,
+  course_session_id uuid references course_sessions(id) on delete set null,
+  title text not null,
+  body_markdown text not null default '',
+  note_type text not null default 'note',
+  status text not null default 'draft',
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists workflows (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid references profiles(id) on delete cascade,
+  kind text not null,
+  title text not null,
+  status text not null default 'active',
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists workflow_steps (
+  id uuid primary key default gen_random_uuid(),
+  workflow_id uuid references workflows(id) on delete cascade,
+  step_order integer not null,
+  title text not null,
+  status text not null default 'waiting',
+  input jsonb not null default '{}'::jsonb,
+  output jsonb not null default '{}'::jsonb,
+  error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists publishables (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid references profiles(id) on delete cascade,
+  source_type text not null,
+  source_id uuid not null,
+  slug text unique not null,
+  title text not null,
+  summary text,
+  category text,
+  tags text[] not null default '{}',
+  visibility text not null default 'private',
+  status text not null default 'draft',
+  body_markdown text not null default '',
+  snapshot_checksum text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists shares (
+  id uuid primary key default gen_random_uuid(),
+  publishable_id uuid references publishables(id) on delete cascade,
+  token text unique not null,
+  password_hash text,
+  expires_at timestamptz,
+  max_visits integer,
+  visit_count integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists reminders (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid references profiles(id) on delete cascade,
+  schedule_item_id uuid references schedule_items(id) on delete cascade,
+  channel text not null default 'email',
+  remind_at timestamptz not null,
+  status text not null default 'pending',
+  payload jsonb not null default '{}'::jsonb,
+  attempts integer not null default 0,
+  last_error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists reminder_events (
+  id uuid primary key default gen_random_uuid(),
+  reminder_id uuid references reminders(id) on delete cascade,
+  event_type text not null,
+  message text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid references profiles(id) on delete set null,
+  actor text not null default 'system',
+  action text not null,
+  target_type text,
+  target_id uuid,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_captures_owner_state on captures(owner_id, state, created_at desc);
+create unique index if not exists idx_captures_owner_idempotency on captures(owner_id, idempotency_key) where idempotency_key is not null;
+create index if not exists idx_tasks_owner_status on tasks(owner_id, status, due_at);
+create index if not exists idx_schedule_items_owner_date on schedule_items(owner_id, schedule_date, status, starts_at);
+create index if not exists idx_materials_owner_kind on materials(owner_id, kind, created_at desc);
+create index if not exists idx_notes_owner_status on notes(owner_id, status, updated_at desc);
+create index if not exists idx_notes_metadata on notes using gin(metadata);
+create index if not exists idx_workflows_owner_status on workflows(owner_id, status, created_at desc);
+create index if not exists idx_publishables_visibility on publishables(visibility, status, updated_at desc);
+create index if not exists idx_reminders_owner_status_time on reminders(owner_id, status, remind_at);
+create index if not exists idx_reminders_schedule_item on reminders(schedule_item_id, status);
+create index if not exists idx_reminder_events_reminder_time on reminder_events(reminder_id, created_at desc);

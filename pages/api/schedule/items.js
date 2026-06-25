@@ -1,4 +1,3 @@
-import { getAuth } from '@clerk/nextjs/server'
 import { fromDbScheduleItem, toDbScheduleItem } from '@/lib/domain/schedule'
 import {
   deleteScheduleRows,
@@ -6,14 +5,11 @@ import {
   listScheduleRows,
   upsertScheduleRows
 } from '@/lib/server/supabase'
-
-function getUserId(req) {
-  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) return 'local-dev'
-  return getAuth(req).userId
-}
+import { syncRemindersForScheduleItems } from '@/lib/server/reminders'
+import { getScheduleOwnerUserId } from '@/lib/auth/scheduleOwner'
 
 export default async function handler(req, res) {
-  const userId = getUserId(req)
+  const userId = getScheduleOwnerUserId(req)
   if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
   try {
@@ -32,7 +28,11 @@ export default async function handler(req, res) {
 
       await deleteScheduleRows(profile.id, deletedIds)
       if (items.length) {
-        await upsertScheduleRows(items.map(item => toDbScheduleItem(item, profile.id)))
+        const savedRows = await upsertScheduleRows(items.map(item => toDbScheduleItem(item, profile.id)))
+        await syncRemindersForScheduleItems({
+          ownerId: profile.id,
+          items: (savedRows || []).map(fromDbScheduleItem)
+        })
       }
 
       const rows = await listScheduleRows(profile.id)

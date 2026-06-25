@@ -1,5 +1,11 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
-  "headers": []
+  "headers": [],
+  "crons": [
+    {
+      "path": "/api/reminders/run",
+      "schedule": "0 0 * * *"
+    }
+  ]
 }

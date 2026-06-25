@@ -1,0 +1,17 @@
+{
+  "name": "law-tech-wechat-relay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.6.10"
+  },
+  "openclaw": {
+    "extensions": [
+      "./src/plugin.js"
+    ]
+  }
+}

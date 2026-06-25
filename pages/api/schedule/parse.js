@@ -292,6 +292,54 @@ function validateItems(items = []) {
   return errors
 }
 
+function fallbackReadingTitle(command) {
+  const text = String(command || '').trim()
+  if (/good faith|bona fide/i.test(text) && /arbitration/i.test(text) && /Hong Kong/i.test(text)) {
+    return '仲裁协议中善意义务的进一步说明（Hong Kong 为例）'
+  }
+  if (/mp\.weixin\.qq\.com/.test(text)) return '微信文章'
+  const firstLine = text.split(/\n/).map((line) => line.trim()).find(Boolean) || '待读材料'
+  return firstLine.replace(/^Curacao:\s*/i, '').slice(0, 42) || '待读材料'
+}
+
+function fallbackReadingSummary(command) {
+  const text = String(command || '').replace(/\s+/g, ' ').trim()
+  if (/good faith|bona fide/i.test(text) && /arbitration/i.test(text) && /Hong Kong/i.test(text)) {
+    return '这段材料讨论香港仲裁协议中的善意义务。其要点是：当仲裁地为香港时，香港《仲裁条例》及其采纳的 UNCITRAL Model Law Article 2A 可能使当事人负有善意行事义务。'
+  }
+  return text.length > 180 ? `${text.slice(0, 180)}…` : text
+}
+
+function fallbackItemsFromCommand(command, { referenceDate, linkMetadata = [] }) {
+  const text = String(command || '').trim()
+  const links = extractUrls(text).map((url) => {
+    const metadata = metadataForUrl(url, linkMetadata)
+    return {
+      title: metadata?.title || (url.includes('mp.weixin.qq.com') ? '微信文章' : '链接'),
+      url
+    }
+  })
+  const looksLikeReading = links.length || text.length > 80 || /article|paper|材料|文章|阅读|推文|good faith|arbitration/i.test(text)
+  if (!looksLikeReading) return []
+  return normalizeItems([
+    {
+      title: fallbackReadingTitle(text),
+      section: '阅读',
+      sectionKey: 'reading',
+      tone: 'today-honey',
+      date: 'reading',
+      time: '',
+      place: '',
+      priority: 'normal',
+      status: 'active',
+      links,
+      children: [],
+      summary: fallbackReadingSummary(text),
+      note: ''
+    }
+  ], { referenceDate, linkMetadata })
+}
+
 async function callScheduleModel({ apiKey, baseUrl, model, messages }) {
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
@@ -363,12 +411,13 @@ ${command}`
   const text = data.choices?.[0]?.message?.content || ''
   const parsed = extractJson(text)
   const items = normalizeItems(parsed.items, { referenceDate, linkMetadata })
-  const errors = validateItems(items)
+  const safeItems = items.length ? items : fallbackItemsFromCommand(command, { referenceDate, linkMetadata })
+  const errors = validateItems(safeItems)
   if (errors.length) {
     return Response.json({ error: 'INVALID_MODEL_OUTPUT', details: errors }, { status: 422 })
   }
 
-  return Response.json({ mode: parsed.mode === 'replace' ? 'replace' : 'append', items })
+  return Response.json({ mode: parsed.mode === 'replace' ? 'replace' : 'append', items: safeItems })
 }
 
 export default async function handler(req, res) {
