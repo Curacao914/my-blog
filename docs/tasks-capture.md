@@ -211,7 +211,7 @@ dry-run 请求：
 }
 ```
 
-`mark: true` 表示发送成功后写入 `reminder_sent_at`，避免重复提醒。  
+`mark: true` 表示发送成功后写入 `reminder_sent_at`，避免重复提醒。
 如果只是测试发送，可传 `mark: false`。
 
 此 API 默认不会发送；必须显式传 `send: true`。
