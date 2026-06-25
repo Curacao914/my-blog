@@ -1,12 +1,26 @@
-import { SignIn } from '@clerk/nextjs'
+import dynamic from 'next/dynamic'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+
+const SignIn = dynamic(() => import('@clerk/nextjs').then(mod => mod.SignIn), {
+  ssr: false
+})
+
+function AuthUnavailable() {
+  return (
+    <div className='auth-unavailable'>
+      <strong>登录服务未配置</strong>
+      <span>请在 Vercel Preview 中补充 Clerk 环境变量后再进入工作台。</span>
+    </div>
+  )
+}
 
 const AuthShell = () => {
   const router = useRouter()
   const redirectTo =
     typeof router.query.redirectTo === 'string' ? router.query.redirectTo : '/desk'
+  const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
 
   return (
     <>
@@ -24,13 +38,17 @@ const AuthShell = () => {
             <p>law-tech.dev</p>
             <h1>工作台</h1>
           </div>
-          <SignIn
-            fallbackRedirectUrl={redirectTo}
-            forceRedirectUrl={redirectTo}
-            path='/sign-in'
-            routing='path'
-            signUpUrl='/sign-up'
-          />
+          {clerkEnabled ? (
+            <SignIn
+              fallbackRedirectUrl={redirectTo}
+              forceRedirectUrl={redirectTo}
+              path='/sign-in'
+              routing='path'
+              signUpUrl='/sign-up'
+            />
+          ) : (
+            <AuthUnavailable />
+          )}
         </section>
       </main>
 
@@ -86,6 +104,21 @@ const AuthShell = () => {
           font-size: 24px;
           line-height: 1.2;
           letter-spacing: -0.04em;
+        }
+
+        .auth-unavailable {
+          display: grid;
+          gap: 8px;
+          padding: 18px;
+          border: 1px solid #dfe7e1;
+          border-radius: 20px;
+          background: rgba(247, 249, 248, 0.78);
+          color: #66716b;
+          line-height: 1.6;
+        }
+
+        .auth-unavailable strong {
+          color: #1e2322;
         }
       `}</style>
     </>

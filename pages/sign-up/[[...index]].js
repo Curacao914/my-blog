@@ -1,8 +1,23 @@
-import { SignUp } from '@clerk/nextjs'
+import dynamic from 'next/dynamic'
 import Head from 'next/head'
 import Link from 'next/link'
 
+const SignUp = dynamic(() => import('@clerk/nextjs').then(mod => mod.SignUp), {
+  ssr: false
+})
+
+function AuthUnavailable() {
+  return (
+    <div className='auth-unavailable'>
+      <strong>注册服务未配置</strong>
+      <span>请在 Vercel Preview 中补充 Clerk 环境变量后再使用注册入口。</span>
+    </div>
+  )
+}
+
 const SignUpPage = () => {
+  const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
+
   return (
     <>
       <Head>
@@ -19,13 +34,17 @@ const SignUpPage = () => {
             <p>工作台</p>
             <h1>工作台</h1>
           </div>
-          <SignUp
-            fallbackRedirectUrl='/desk'
-            forceRedirectUrl='/desk'
-            path='/sign-up'
-            routing='path'
-            signInUrl='/sign-in'
-          />
+          {clerkEnabled ? (
+            <SignUp
+              fallbackRedirectUrl='/desk'
+              forceRedirectUrl='/desk'
+              path='/sign-up'
+              routing='path'
+              signInUrl='/sign-in'
+            />
+          ) : (
+            <AuthUnavailable />
+          )}
         </section>
       </main>
 
@@ -81,6 +100,21 @@ const SignUpPage = () => {
           font-size: 24px;
           line-height: 1.2;
           letter-spacing: -0.04em;
+        }
+
+        .auth-unavailable {
+          display: grid;
+          gap: 8px;
+          padding: 18px;
+          border: 1px solid #dfe7e1;
+          border-radius: 20px;
+          background: rgba(247, 249, 248, 0.78);
+          color: #66716b;
+          line-height: 1.6;
+        }
+
+        .auth-unavailable strong {
+          color: #1e2322;
         }
       `}</style>
     </>
