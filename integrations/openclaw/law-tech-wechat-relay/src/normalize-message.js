@@ -61,6 +61,9 @@ export function normalizeOpenClawHookMessage(event = {}, ctx = {}) {
 
 export function shouldHandleWechatMessage(message) {
   if (!message.command) return false
-  if (message.channel && message.channel !== 'openclaw-weixin') return false
-  return true
+  const channel = String(message.channel || '').toLowerCase()
+  if (!channel) return true
+  if (channel === 'openclaw-weixin') return true
+  if (channel.includes('weixin') || channel.includes('wechat')) return true
+  return false
 }

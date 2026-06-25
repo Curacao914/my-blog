@@ -27,6 +27,24 @@ test('ignores empty messages', () => {
   assert.equal(shouldHandleWechatMessage(message), false)
 })
 
+test('accepts Tencent Weixin channel aliases', () => {
+  const message = normalizeWechatMessage({
+    channel: 'tencent-weixin',
+    BodyForAgent: '明天上午10点检查微信入口'
+  })
+
+  assert.equal(shouldHandleWechatMessage(message), true)
+})
+
+test('ignores unrelated channels', () => {
+  const message = normalizeWechatMessage({
+    channel: 'web',
+    BodyForAgent: '明天上午10点检查微信入口'
+  })
+
+  assert.equal(shouldHandleWechatMessage(message), false)
+})
+
 test('claims message and returns Law-Tech reply text', async () => {
   const originalFetch = globalThis.fetch
   globalThis.fetch = async () => new Response(JSON.stringify({
