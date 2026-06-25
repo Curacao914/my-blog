@@ -536,6 +536,17 @@ textarea {
   box-shadow: 0 16px 30px rgba(24, 63, 50, 0.2);
 }
 
+.today-notice {
+  justify-self: start;
+  margin-top: -8px;
+  border: 1px solid rgba(215, 164, 61, 0.22);
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: rgba(23, 35, 29, 0.72);
+  background: rgba(255, 248, 230, 0.72);
+  font-size: 13px;
+}
+
 .carry-strip {
   display: flex;
   gap: 8px;

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { selectRelevantItems } from '@/lib/domain/schedule-context'
 
 const storageKey = 'law-tech.schedule.v2'
-const exampleCommand = '今天要整理完商法的笔记、学工有一个PPT要做、有几篇微信的文章要读、晚上7点记得和师兄吃饭'
+const commandPlaceholder = '写一句话：明天上午10点检查微信入口，或把公众号链接发进阅读箱。'
 
 const viewTabs = [
   { key: 'today', label: '今天' },
@@ -70,86 +70,6 @@ function sectionKeyFrom(section = '其他') {
     .toLowerCase()
     .replace(/\s+/g, '-')
     .replace(/[^\u4e00-\u9fa5a-z0-9-]/g, '')
-}
-
-function splitInput(text) {
-  return text
-    .split(/[、，,；;\n]/)
-    .map((item) => item.trim())
-    .filter(Boolean)
-}
-
-function urlsFrom(text) {
-  return [...text.matchAll(/https?:\/\/[^\s，。；、]+/g)].map((match) => ({ title: '链接', url: match[0] }))
-}
-
-function fallbackSection(text) {
-  if (/笔记|课程|商法|刑诉|民法|复习|课/.test(text)) return '学习'
-  if (/学工|PPT|汇报|会议|班委|学生|社团/.test(text)) return '学工'
-  if (/微信|文章|阅读|读|书|https?:\/\//.test(text)) return '阅读'
-  if (/论文|写作|草稿|选题|投稿/.test(text)) return '写作'
-  if (/吃饭|师兄|晚上|早上|中午|见|约/.test(text)) return '日常'
-  return '其他'
-}
-
-function fallbackDate(text) {
-  if (/昨天|前天|上周/.test(text)) return 'overdue'
-  if (/明天/.test(text)) return 'tomorrow'
-  if (/后天|下周|周[一二三四五六日天]|星期[一二三四五六日天]/.test(text)) return 'upcoming'
-  if (/今天|今晚|上午|中午|下午|晚上|早上/.test(text)) return 'today'
-  return /微信|文章|阅读|读|书|https?:\/\//.test(text) && !/提醒|记得|要|需要|截止|举办|会议|论坛|活动|PPT|学工/.test(text) ? 'reading' : 'today'
-}
-
-function fallbackTime(text) {
-  const exact = text.match(/(上午|中午|下午|晚上|早上)?\s*([0-9]{1,2})[点:：]([0-9]{1,2})?/)
-  if (!exact) return ''
-  const prefix = exact[1] || ''
-  const hour = exact[2]
-  const minute = exact[3] ? `:${exact[3].padStart(2, '0')}` : ':00'
-  return `${prefix}${hour}${minute}`
-}
-
-function cleanTitle(text) {
-  return text
-    .replace(/^今天要?/, '')
-    .replace(/^明天要?/, '')
-    .replace(/^后天要?/, '')
-    .replace(/^今晚/, '')
-    .replace(/^记得/, '')
-    .replace(/有几篇/, '')
-    .replace(/要做$/, '')
-    .trim()
-}
-
-function fallbackParse(text) {
-  return splitInput(text).map((chunk) => {
-    const section = fallbackSection(chunk)
-    const sectionKey = sectionKeyFrom(section)
-    const links = urlsFrom(chunk)
-    return {
-      id: makeId(sectionKey),
-      title: cleanTitle(chunk) || '未命名事项',
-      section,
-      sectionKey,
-      contentType: section === '阅读' ? 'reading' : 'action',
-      tone: toneFor(sectionKey),
-      date: fallbackDate(chunk),
-      time: fallbackTime(chunk),
-      place: '',
-      priority: /重要|必须|截止|ddl|尽快|今天.*完|记得/.test(chunk) ? 'high' : 'normal',
-      importance: /重要|必须|优先/.test(chunk) ? 'important' : 'normal',
-      urgency: /今天|今晚|明天|截止|ddl|记得/.test(chunk) ? 'urgent' : 'not_urgent',
-      isPinned: false,
-      prioritySource: 'rule',
-      importanceSource: 'rule',
-      urgencySource: 'rule',
-      status: 'active',
-      links,
-      children: [],
-      summary: links.length || chunk.length > 80 ? chunk.slice(0, 68) : '',
-      note: ''
-    }
-  })
 }
 
 function inferContentType(item, section, sectionKey) {
@@ -234,6 +154,8 @@ async function requestScheduleCommand({ command, items }) {
   const data = await response.json()
   return {
     mode: data.mode === 'replace' ? 'replace' : 'append',
+    status: data.status || 'ok',
+    reason: data.reason || '',
     items: normalizeItems(data.items || []),
     contextIds: contextItems.map((item) => item.id)
   }
@@ -258,7 +180,7 @@ function dateLabel(date) {
 }
 
 export function TodayBoard() {
-  const [command, setCommand] = useState(exampleCommand)
+  const [command, setCommand] = useState('')
   const [view, setView] = useState('today')
   const [items, setItems] = useState([])
   const [editingId, setEditingId] = useState('')
@@ -266,6 +188,7 @@ export function TodayBoard() {
   const [isLoading, setIsLoading] = useState(false)
   const [isReady, setIsReady] = useState(false)
   const [cloudEnabled, setCloudEnabled] = useState(false)
+  const [notice, setNotice] = useState('')
   const deletedIdsRef = useRef([])
 
   useEffect(() => {
@@ -277,7 +200,7 @@ export function TodayBoard() {
           const data = await response.json()
           if (!cancelled) {
             const loaded = normalizeItems(data.items || [])
-            setItems(loaded.length ? sortItems(loaded) : sortItems(fallbackParse(exampleCommand)))
+            setItems(sortItems(loaded))
             setCloudEnabled(true)
             setIsReady(true)
           }
@@ -287,7 +210,8 @@ export function TodayBoard() {
 
       const saved = window.localStorage.getItem(storageKey)
       if (!cancelled) {
-        setItems(saved ? sortItems(normalizeItems(JSON.parse(saved))) : sortItems(fallbackParse(exampleCommand)))
+        setItems(saved ? sortItems(normalizeItems(JSON.parse(saved))) : [])
+        setNotice('云端暂时不可用')
         setIsReady(true)
       }
     }
@@ -365,20 +289,23 @@ export function TodayBoard() {
   async function runCommand() {
     if (!command.trim()) return
     setIsLoading(true)
+    setNotice('')
     try {
       const result = await requestScheduleCommand({ command, items })
+      if (result.status === 'ignored' || !result.items.length) {
+        setNotice('没有保存')
+        return
+      }
       if (result.mode === 'replace') {
         const returnedIds = result.items.map((item) => item.id).filter((id) => /^[0-9a-f-]{36}$/i.test(id || ''))
         const context = new Set(returnedIds.length ? returnedIds : result.contextIds)
         setItems(sortItems([...items.filter((item) => !context.has(item.id)), ...result.items]))
       } else {
-        if (!result.items.length) return
         setItems(sortItems([...items, ...result.items]))
       }
       setCommand('')
     } catch {
-      setItems(sortItems([...items, ...fallbackParse(command)]))
-      setCommand('')
+      setNotice('保存失败')
     } finally {
       setIsLoading(false)
     }
@@ -409,11 +336,12 @@ export function TodayBoard() {
   return (
     <div className="today-board">
       <section className="command-bar">
-        <textarea value={command} onChange={(event) => setCommand(event.target.value)} />
+        <textarea value={command} onChange={(event) => setCommand(event.target.value)} placeholder={commandPlaceholder} />
         <button type="button" onClick={runCommand} disabled={isLoading}>
           {isLoading ? '处理中' : '执行'}
         </button>
       </section>
+      {notice ? <div className="today-notice">{notice}</div> : null}
 
       <nav className="view-tabs" aria-label="日程视图">
         {viewTabs.map((tab) => (
