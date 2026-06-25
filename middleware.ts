@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { clerkMiddleware } from '@clerk/nextjs/server'
 import { checkStrIsNotionId, getLastPartOfUrl } from '@/lib/utils'
 import { idToUuid } from 'notion-utils'
 import BLOG from './blog.config'
@@ -50,4 +51,4 @@ const notionCompatibilityMiddleware = async (req: NextRequest) => {
   return NextResponse.next()
 }
 
-export default notionCompatibilityMiddleware
+export default clerkMiddleware(async (_auth, req) => notionCompatibilityMiddleware(req as NextRequest))

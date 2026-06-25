@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import { DeskShell } from '@/components/DeskShell'
 import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
+import { requireDeskPage } from '@/lib/auth/deskPage'
 
 export default function SystemPage() {
   return (
@@ -19,3 +20,4 @@ export default function SystemPage() {
 }
 
 SystemPage.layout = 'bare'
+export const getServerSideProps = requireDeskPage()

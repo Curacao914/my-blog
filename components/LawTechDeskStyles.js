@@ -14,6 +14,9 @@ export function LawTechDeskStyles() {
   --blue-soft: #e2edf1;
   --line: rgba(23, 35, 29, 0.12);
   --glass: rgba(255, 255, 255, 0.62);
+  --glass-strong: rgba(255, 255, 255, 0.78);
+  --urgent: #a76535;
+  --important: #6e7f45;
   --shadow: 0 24px 80px rgba(24, 63, 50, 0.14);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -426,7 +429,7 @@ textarea {
 
 .today-board {
   display: grid;
-  gap: 22px;
+  gap: 18px;
 }
 
 .command-bar {
@@ -472,7 +475,7 @@ textarea {
 }
 
 .command-bar textarea {
-  min-height: 92px;
+  min-height: 76px;
   resize: vertical;
   border: 1px solid rgba(23, 35, 29, 0.12);
   border-radius: 26px;
@@ -481,6 +484,35 @@ textarea {
   background: rgba(255, 255, 255, 0.74);
   outline: none;
   line-height: 1.75;
+}
+
+.focus-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.focus-strip.focus-count-1 {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.focus-card {
+  min-height: 138px;
+  padding: 18px;
+  border-color: rgba(255, 255, 255, 0.78);
+  background:
+    radial-gradient(circle at 92% 0%, rgba(255, 255, 255, 0.86), transparent 32%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(226, 237, 241, 0.54));
+  backdrop-filter: blur(24px) saturate(1.12);
+}
+
+.focus-card::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  pointer-events: none;
+  border-radius: 25px;
+  border: 1px solid rgba(255, 255, 255, 0.48);
 }
 
 .command-bar textarea:focus {
@@ -559,14 +591,35 @@ textarea {
 
 .today-lanes {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.92fr);
+  gap: 18px;
+  align-items: start;
 }
 
 .today-lane {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   align-content: start;
   gap: 10px;
+}
+
+.matrix-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.matrix-lane {
+  display: flex;
+  min-height: 220px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(24, 63, 50, 0.1);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.38);
+  box-shadow: 0 12px 30px rgba(24, 63, 50, 0.06);
 }
 
 .today-lane-title {
@@ -595,9 +648,18 @@ textarea {
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 26px;
-  background: rgba(255, 255, 255, 0.68);
+  background: var(--glass-strong);
   box-shadow: 0 12px 34px rgba(24, 63, 50, 0.08);
   transition: transform 0.35s var(--ease), opacity 0.35s var(--ease), box-shadow 0.35s var(--ease);
+}
+
+.compact-card {
+  padding: 13px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.compact-card .card-title-button {
+  font-size: 17px;
 }
 
 .today-card:hover {
@@ -704,6 +766,16 @@ textarea {
   background: rgba(215, 164, 61, 0.24);
   font-size: 12px;
   font-weight: 500;
+}
+
+.today-card-head b:nth-of-type(2) {
+  color: #425526;
+  background: rgba(110, 127, 69, 0.18);
+}
+
+.today-card-head b:nth-of-type(3) {
+  color: #74401e;
+  background: rgba(167, 101, 53, 0.18);
 }
 
 .card-actions button {
@@ -1047,6 +1119,8 @@ textarea {
   .desk-grid,
   .tool-grid,
   .today-lanes,
+  .focus-strip,
+  .matrix-board,
   .reading-box,
   .command-bar,
   .editor-grid {

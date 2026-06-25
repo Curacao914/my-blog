@@ -8,6 +8,7 @@ Return JSON only:
     {
       "id": "existing item uuid when modifying an existing item; omit for new items",
       "title": "string",
+      "contentType": "action | reading",
       "section": "string",
       "sectionKey": "string",
       "tone": "today-leaf | today-blue | today-honey | today-rose | today-lilac",
@@ -15,6 +16,12 @@ Return JSON only:
       "time": "HH:mm | string",
       "place": "string",
       "priority": "low | normal | high",
+      "importance": "important | normal",
+      "urgency": "urgent | not_urgent",
+      "isPinned": false,
+      "prioritySource": "ai | user | rule",
+      "importanceSource": "ai | user | rule",
+      "urgencySource": "ai | user | rule",
       "status": "active | done | cancelled",
       "links": [{ "title": "string", "url": "string" }],
       "children": [{ "title": "string", "done": false }],
@@ -34,6 +41,10 @@ Return JSON only:
 const TIME_ZONE = 'Asia/Shanghai'
 const TONES = new Set(['today-leaf', 'today-blue', 'today-honey', 'today-rose', 'today-lilac'])
 const PRIORITIES = new Set(['low', 'normal', 'high'])
+const CONTENT_TYPES = new Set(['action', 'reading'])
+const IMPORTANCE = new Set(['important', 'normal'])
+const URGENCY = new Set(['urgent', 'not_urgent'])
+const SOURCES = new Set(['ai', 'user', 'rule'])
 const STATUSES = new Set(['active', 'done', 'cancelled'])
 const GENERIC_LINK_TITLES = new Set(['链接', '微信文章', '文章', '网页'])
 const CHANNELS = new Set(['email'])
@@ -202,19 +213,23 @@ function buildSystemPrompt({ referenceDate }) {
     '2. 用户说“今天/明天/后天/周几/下周/某月某日”时，换算为具体 YYYY-MM-DD。',
     '3. 有明确时间时，time 优先输出 24 小时制 HH:mm；只有无法归一时才保留原文。',
     '4. 没有时间但有日期，也要创建日程项；没有日期也没有时间的普通事项 date 用 none。',
-    '5. 用户发送 URL、公众号链接、文章标题或大段文字，且没有指定处理时间：创建阅读项，section=阅读，sectionKey=reading，date=reading。',
-    '6. 用户发送 URL/文章并指定“今晚读/明天看/周五前看”等时间：创建阅读日程，section=阅读，sectionKey=reading，date 用具体日期，并保留 links。',
-    '7. 如果 URL context 提供了标题或描述，阅读项 title 必须优先使用真实标题，summary 用一小段中文概括，通常 2-4 句，说明文章主题、关键信息和为什么值得读；不要只写“微信文章”。',
-    '8. 对无法获取标题的 mp.weixin.qq.com 链接，title 才用“微信文章”；summary 用一句很短的待读理由或内容线索，不要编造正文细节。',
-    '9. 一条输入包含多件事时，拆成多个 items；每个 item 都要能独立显示。',
-    '10. 分类不固定，可用学习、学工、阅读、日常、写作、行政、健康等自然短标签；不要生硬使用“智能/AI”。',
-    '11. 如果用户要求完成、取消、延期、修改已有事项，mode=replace，并返回相关事项修改后的完整版本；如果只是新增，mode=append，只返回新增项。',
-    '12. 修改已有事项时，必须保留该事项原来的 id；新建事项不要编造 id。',
-    '13. 用户说“读完了/完成了/取消/删掉/改到/延期/提前/换到/提醒我”并且 Current relevant items 里有对应事项时，一律修改该事项，不要新建同名事项。',
-    '14. 用户说“读完了/完成了”时 status=done；说“取消/不用了/删掉”时 status=cancelled；只改时间时保留原 title、section、links、summary、note。',
-    '15. 用户明确说“提醒我/提前提醒/到时提醒/某时提醒”时，填写 reminder；提前半小时输出 leadMinutes=30，提前一天输出 1440；指定提醒时刻则输出具体 remindAt。',
-    '16. 如果用户没有提提醒，不要为了普通新增事项编造 reminder；服务端会按默认策略处理。',
-    '17. 保留用户原意，不要在回复里扩写、开玩笑或自作主张添加不存在的安排。',
+    '5. contentType 必须表达内容身份：action=事项/活动/待办/提醒，reading=待读文章/推文/材料。时间、链接、标签都不能替代 contentType。',
+    '6. 用户发送 URL、公众号链接、文章标题或大段文字，且没有指定处理时间：通常创建阅读项，contentType=reading，section=阅读，sectionKey=reading，date=reading。',
+    '7. 用户发送 URL/文章并指定“今晚读/明天看/周五前看”等时间：创建阅读日程，contentType=reading，section=阅读，sectionKey=reading，date 用具体日期，并保留 links。',
+    '8. 但活动通知、会议通知、论坛安排、请示批复、课程作业、学工任务，即使很长或带链接，也应 contentType=action。标签可以是学工/课程/行政等。',
+    '9. 如果 URL context 提供了标题或描述，阅读项 title 必须优先使用真实标题，summary 用一小段中文概括，通常 2-4 句，说明文章主题、关键信息和为什么值得读；不要只写“微信文章”。',
+    '10. 对无法获取标题的 mp.weixin.qq.com 链接，title 才用“微信文章”；summary 用一句很短的待读理由或内容线索，不要编造正文细节。',
+    '11. 一条输入包含多件事时，拆成多个 items；每个 item 都要能独立显示。',
+    '12. 分类不固定，可用学习、学工、阅读、日常、写作、行政、健康等自然短标签；不要生硬使用“智能/AI”。',
+    '13. importance 表示重要性，urgency 表示紧急性。时间临近可以使 urgency=urgent，但不能自动等于 important；用户明确说重要/必须优先时 importance=important。',
+    '14. 如果用户要求完成、取消、延期、修改已有事项，mode=replace，并返回相关事项修改后的完整版本；如果只是新增，mode=append，只返回新增项。',
+    '15. 修改已有事项时，必须保留该事项原来的 id；新建事项不要编造 id。',
+    '16. 用户说“读完了/完成了/取消/删掉/改到/延期/提前/换到/提醒我”并且 Current relevant items 里有对应事项时，一律修改该事项，不要新建同名事项。',
+    '17. 用户说“读完了/完成了”时 status=done；说“取消/不用了/删掉”时 status=cancelled；只改时间时保留原 title、section、links、summary、note、contentType。',
+    '18. 用户明确说“提醒我/提前提醒/到时提醒/某时提醒”时，填写 reminder；提前半小时输出 leadMinutes=30，提前一天输出 1440；指定提醒时刻则输出具体 remindAt。',
+    '19. 如果用户没有提提醒，不要为了普通新增事项编造 reminder；服务端会按默认策略处理。',
+    '20. 对纯寒暄、系统失败文案、没有保存意图也没有可行动内容的输入，返回 items: []。',
+    '21. 保留用户原意，不要在回复里扩写、开玩笑或自作主张添加不存在的安排。',
     '',
     schemaInstruction
   ].join('\n')
@@ -239,6 +254,7 @@ function normalizeItems(items = [], { referenceDate, linkMetadata = [] }) {
   return items.map((item) => enrichItemWithMetadata({
     id: item.id,
     title: item.title || '未命名事项',
+    contentType: normalizeContentType(item),
     section: item.section || item.kind || '其他',
     sectionKey: item.sectionKey || (item.section === '阅读' ? 'reading' : ''),
     tone: TONES.has(item.tone) ? item.tone : '',
@@ -246,6 +262,12 @@ function normalizeItems(items = [], { referenceDate, linkMetadata = [] }) {
     time: normalizeTimeValue(item.time),
     place: item.place || '',
     priority: PRIORITIES.has(item.priority) ? item.priority : 'normal',
+    importance: IMPORTANCE.has(item.importance) ? item.importance : (item.priority === 'high' ? 'important' : 'normal'),
+    urgency: URGENCY.has(item.urgency) ? item.urgency : 'not_urgent',
+    isPinned: Boolean(item.isPinned),
+    prioritySource: SOURCES.has(item.prioritySource) ? item.prioritySource : 'ai',
+    importanceSource: SOURCES.has(item.importanceSource) ? item.importanceSource : 'ai',
+    urgencySource: SOURCES.has(item.urgencySource) ? item.urgencySource : 'ai',
     status: STATUSES.has(item.status) ? item.status : (item.done ? 'done' : 'active'),
     links: Array.isArray(item.links)
       ? item.links
@@ -257,6 +279,13 @@ function normalizeItems(items = [], { referenceDate, linkMetadata = [] }) {
     note: item.note || '',
     reminder: normalizeReminder(item.reminder, referenceDate)
   }, linkMetadata))
+}
+
+function normalizeContentType(item = {}) {
+  const value = item.contentType || item.content_type || item.kind
+  if (CONTENT_TYPES.has(value)) return value
+  if (item.sectionKey === 'reading' || item.section === '阅读' || item.date === 'reading') return 'reading'
+  return 'action'
 }
 
 function normalizeReminder(reminder, referenceDate) {
@@ -285,8 +314,11 @@ function validateItems(items = []) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(item.date) && item.date !== 'reading' && item.date !== 'none') {
       errors.push(`items[${index}].date is invalid`)
     }
-    if ((item.date === 'reading' || item.sectionKey === 'reading') && item.section !== '阅读') {
+    if (item.contentType === 'reading' && item.section !== '阅读') {
       errors.push(`items[${index}].reading section should be 阅读`)
+    }
+    if (!CONTENT_TYPES.has(item.contentType)) {
+      errors.push(`items[${index}].contentType is invalid`)
     }
   })
   return errors
@@ -310,8 +342,26 @@ function fallbackReadingSummary(command) {
   return text.length > 180 ? `${text.slice(0, 180)}…` : text
 }
 
+function shouldIgnoreCommand(command) {
+  const text = String(command || '').replace(/\s+/g, ' ').trim()
+  if (!text) return true
+  if (/^(hi|hello|你好|在吗|测试|test|ok|嗯+|啊+|收到|谢谢)$/i.test(text)) return true
+  if (/这条内容尚未添加成功，请稍后重试/.test(text)) return true
+  return false
+}
+
+function looksLikeActionCommand(text) {
+  return /提醒|记得|要|需要|截止|ddl|完成|整理|提交|处理|参加|举办|会议|论坛|讲座|活动|请示|复函|审示|报名|作业|PPT|学工|课|晚上|下午|上午|中午|明天|后天|周[一二三四五六日天]|星期[一二三四五六日天]|\d{1,2}[点:：]/.test(text)
+}
+
+function looksLikeReadingCommand(text, links) {
+  const explicitReading = /阅读|读|看这篇|这篇|推文|文章|论文|paper|article|good faith|arbitration/i.test(text)
+  return explicitReading || (!looksLikeActionCommand(text) && (links.length > 0 || text.length > 120))
+}
+
 function fallbackItemsFromCommand(command, { referenceDate, linkMetadata = [] }) {
   const text = String(command || '').trim()
+  if (shouldIgnoreCommand(text)) return []
   const links = extractUrls(text).map((url) => {
     const metadata = metadataForUrl(url, linkMetadata)
     return {
@@ -319,24 +369,48 @@ function fallbackItemsFromCommand(command, { referenceDate, linkMetadata = [] })
       url
     }
   })
-  const looksLikeReading = links.length || text.length > 80 || /article|paper|材料|文章|阅读|推文|good faith|arbitration/i.test(text)
-  if (!looksLikeReading) return []
+  const isReading = looksLikeReadingCommand(text, links)
+  const isAction = looksLikeActionCommand(text)
+  if (!isReading && !isAction) return []
+  const actionTitle = text.replace(/^Curacao:\s*/i, '').replace(/https?:\/\/[^\s，。；、]+/g, '').trim().slice(0, 42) || '待处理事项'
   return normalizeItems([
-    {
-      title: fallbackReadingTitle(text),
-      section: '阅读',
-      sectionKey: 'reading',
-      tone: 'today-honey',
-      date: 'reading',
-      time: '',
-      place: '',
-      priority: 'normal',
-      status: 'active',
-      links,
-      children: [],
-      summary: fallbackReadingSummary(text),
-      note: ''
-    }
+    isReading
+      ? {
+          title: fallbackReadingTitle(text),
+          contentType: 'reading',
+          section: '阅读',
+          sectionKey: 'reading',
+          tone: 'today-honey',
+          date: 'reading',
+          time: '',
+          place: '',
+          priority: 'normal',
+          importance: 'normal',
+          urgency: 'not_urgent',
+          status: 'active',
+          links,
+          children: [],
+          summary: fallbackReadingSummary(text),
+          note: ''
+        }
+      : {
+          title: actionTitle,
+          contentType: 'action',
+          section: /学工|PPT|学生|社团/.test(text) ? '学工' : '事项',
+          sectionKey: /学工|PPT|学生|社团/.test(text) ? 'xuegong' : 'action',
+          tone: 'today-blue',
+          date: normalizeDateValue(/明天/.test(text) ? 'tomorrow' : /今天|今晚/.test(text) ? 'today' : 'none', referenceDate),
+          time: '',
+          place: '',
+          priority: /重要|必须|优先|截止|ddl|提醒/.test(text) ? 'high' : 'normal',
+          importance: /重要|必须|优先/.test(text) ? 'important' : 'normal',
+          urgency: /今天|今晚|明天|截止|ddl|提醒/.test(text) ? 'urgent' : 'not_urgent',
+          status: 'active',
+          links,
+          children: [],
+          summary: fallbackReadingSummary(text),
+          note: ''
+        }
   ], { referenceDate, linkMetadata })
 }
 
@@ -415,6 +489,10 @@ ${command}`
   const errors = validateItems(safeItems)
   if (errors.length) {
     return Response.json({ error: 'INVALID_MODEL_OUTPUT', details: errors }, { status: 422 })
+  }
+
+  if (!safeItems.length) {
+    return Response.json({ mode: 'append', status: 'ignored', reason: 'not_actionable', items: [] })
   }
 
   return Response.json({ mode: parsed.mode === 'replace' ? 'replace' : 'append', items: safeItems })

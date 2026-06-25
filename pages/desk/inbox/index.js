@@ -2,6 +2,7 @@ import Head from 'next/head'
 import { DeskShell } from '@/components/DeskShell'
 import { TodayBoard } from '@/components/TodayBoard'
 import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
+import { requireDeskPage } from '@/lib/auth/deskPage'
 
 export default function InboxPage() {
   return (
@@ -18,3 +19,4 @@ export default function InboxPage() {
 }
 
 InboxPage.layout = 'bare'
+export const getServerSideProps = requireDeskPage()

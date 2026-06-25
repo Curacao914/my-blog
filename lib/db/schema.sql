@@ -315,7 +315,14 @@ create table if not exists schedule_items (
   starts_at timestamptz,
   time_label text,
   place text,
+  content_type text not null default 'action' check (content_type in ('action', 'reading')),
   priority text not null default 'normal',
+  importance text not null default 'normal' check (importance in ('important', 'normal')),
+  urgency text not null default 'not_urgent' check (urgency in ('urgent', 'not_urgent')),
+  is_pinned boolean not null default false,
+  priority_source text not null default 'ai' check (priority_source in ('ai', 'user', 'rule')),
+  importance_source text not null default 'ai' check (importance_source in ('ai', 'user', 'rule')),
+  urgency_source text not null default 'ai' check (urgency_source in ('ai', 'user', 'rule')),
   status text not null default 'active',
   links jsonb not null default '[]'::jsonb,
   children jsonb not null default '[]'::jsonb,
@@ -453,6 +460,7 @@ create index if not exists idx_captures_owner_state on captures(owner_id, state,
 create unique index if not exists idx_captures_owner_idempotency on captures(owner_id, idempotency_key) where idempotency_key is not null;
 create index if not exists idx_tasks_owner_status on tasks(owner_id, status, due_at);
 create index if not exists idx_schedule_items_owner_date on schedule_items(owner_id, schedule_date, status, starts_at);
+create index if not exists idx_schedule_items_owner_type on schedule_items(owner_id, content_type, status, schedule_date);
 create index if not exists idx_materials_owner_kind on materials(owner_id, kind, created_at desc);
 create index if not exists idx_notes_owner_status on notes(owner_id, status, updated_at desc);
 create index if not exists idx_notes_metadata on notes using gin(metadata);

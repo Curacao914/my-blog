@@ -62,7 +62,7 @@ async function parseCommand(command, items) {
 
 function formatItemSummary(item) {
   const title = item.title || '未命名事项'
-  const isReading = item.date === 'reading' || item.sectionKey === 'reading' || item.section === '阅读'
+  const isReading = item.contentType === 'reading' || item.date === 'reading' || item.sectionKey === 'reading' || item.section === '阅读'
   const date = item.date && item.date !== 'none' && item.date !== 'reading' ? item.date : ''
   const when = [date, item.time].filter(Boolean).join(' ')
 
@@ -117,6 +117,34 @@ function formatReply(parsed, savedRows) {
   }
 }
 
+function captureKeyFor(req) {
+  const headerKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key']
+  if (headerKey) return String(headerKey)
+  const source = req.body?.source || 'capture'
+  const senderId = req.body?.senderId || ''
+  const messageId = req.body?.messageId || req.body?.sourceMessageId || ''
+  if (messageId) return `${source}:${senderId || 'unknown'}:${messageId}`
+  return ''
+}
+
+function findExistingCapture(items, captureKey) {
+  if (!captureKey) return null
+  return items.find((item) => item.captureKey === captureKey || item.aiTrace?.captureKey === captureKey) || null
+}
+
+function hasExplicitModifyIntent(command = '') {
+  return /修改|改到|改成|换到|延期|提前|完成|读完|取消|删掉|不用了|刚刚|刚才|上一条|上一个|这条|这篇|这个/.test(command)
+}
+
+function preventAccidentalReplace(parsed, command) {
+  if (parsed.mode !== 'replace' || hasExplicitModifyIntent(command)) return parsed
+  return {
+    ...parsed,
+    mode: 'append',
+    items: (parsed.items || []).map(({ id, ...item }) => item)
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -126,10 +154,10 @@ export default async function handler(req, res) {
   const source = req.body?.source || 'capture'
   const senderId = req.body?.senderId || ''
   if (!isAuthorized(req, source)) {
-    return res.status(401).json({
+      return res.status(401).json({
       ok: false,
       error: 'UNAUTHORIZED',
-      replyText: '这条内容尚未添加成功，请稍后重试。'
+      replyText: '保存失败，请稍后重试。'
     })
   }
 
@@ -138,7 +166,7 @@ export default async function handler(req, res) {
     return res.status(500).json({
       ok: false,
       error: 'No owner configured',
-      replyText: '这条内容尚未添加成功，请稍后重试。'
+      replyText: '保存失败，请稍后重试。'
     })
   }
 
@@ -151,19 +179,39 @@ export default async function handler(req, res) {
     const { profile } = await ensureProfile({ clerkUserId })
     const existingRows = await listScheduleRows(profile.id)
     const currentItems = (existingRows || []).map(fromDbScheduleItem)
+    const captureKey = captureKeyFor(req)
+    const existingCapture = findExistingCapture(currentItems, captureKey)
+    if (existingCapture) {
+      return res.status(200).json({
+        ok: true,
+        action: 'duplicate',
+        status: 'duplicate',
+        type: existingCapture.contentType === 'reading' ? 'reading' : 'schedule',
+        recordId: existingCapture.id,
+        title: existingCapture.title,
+        replyText:
+          existingCapture.contentType === 'reading'
+            ? `已保存到阅读：《${existingCapture.title}》`
+            : `已添加日程：${existingCapture.title}`,
+        items: currentItems
+      })
+    }
     const contextItems = selectRelevantItems(command, currentItems)
-    const parsed = await parseCommand(command, contextItems)
+    const parsed = preventAccidentalReplace(await parseCommand(command, contextItems), command)
 
     if (!Array.isArray(parsed.items) || !parsed.items.length) {
-      return res.status(422).json({
-        ok: false,
-        error: 'EMPTY_RESULT',
-        replyText: '这条内容尚未添加成功，请稍后重试。'
+      return res.status(200).json({
+        ok: true,
+        status: 'ignored',
+        action: 'ignored',
+        reason: parsed.reason || 'not_actionable',
+        replyText: '未识别到需要保存的事项或阅读内容。',
+        items: currentItems
       })
     }
 
     const rows = parsed.items.map(item =>
-      toDbScheduleItem({ ...item, source }, profile.id)
+      toDbScheduleItem({ ...item, source, captureKey }, profile.id)
     )
     const savedRows = await upsertScheduleRows(rows)
     await syncRemindersForScheduleItems({
@@ -181,7 +229,7 @@ export default async function handler(req, res) {
     return res.status(error.status || 502).json({
       ok: false,
       error: error instanceof Error ? error.message : 'PROCESSING_FAILED',
-      replyText: '这条内容尚未添加成功，请稍后重试。'
+      replyText: '保存失败，请稍后重试。'
     })
   }
 }

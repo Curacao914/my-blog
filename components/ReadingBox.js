@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 function isReadingItem(item) {
-  return item.section === '阅读' || item.sectionKey === 'reading' || item.date === 'reading' || item.links?.length
+  return item.contentType === 'reading' || item.aiTrace?.contentType === 'reading' || item.section === '阅读' || item.sectionKey === 'reading' || item.date === 'reading'
 }
 
 function dateText(item) {

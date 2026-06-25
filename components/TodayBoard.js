@@ -10,7 +10,8 @@ const viewTabs = [
   { key: 'today', label: '今天' },
   { key: 'upcoming', label: '接下来' },
   { key: 'all', label: '全部' },
-  { key: 'reading', label: '阅读' }
+  { key: 'reading', label: '阅读' },
+  { key: 'matrix', label: '四象限' }
 ]
 
 const toneClasses = ['today-leaf', 'today-blue', 'today-honey', 'today-rose', 'today-lilac']
@@ -96,7 +97,7 @@ function fallbackDate(text) {
   if (/明天/.test(text)) return 'tomorrow'
   if (/后天|下周|周[一二三四五六日天]|星期[一二三四五六日天]/.test(text)) return 'upcoming'
   if (/今天|今晚|上午|中午|下午|晚上|早上/.test(text)) return 'today'
-  return /https?:\/\//.test(text) || text.length > 80 ? 'reading' : 'today'
+  return /微信|文章|阅读|读|书|https?:\/\//.test(text) && !/提醒|记得|要|需要|截止|举办|会议|论坛|活动|PPT|学工/.test(text) ? 'reading' : 'today'
 }
 
 function fallbackTime(text) {
@@ -130,11 +131,18 @@ function fallbackParse(text) {
       title: cleanTitle(chunk) || '未命名事项',
       section,
       sectionKey,
+      contentType: section === '阅读' ? 'reading' : 'action',
       tone: toneFor(sectionKey),
       date: fallbackDate(chunk),
       time: fallbackTime(chunk),
       place: '',
       priority: /重要|必须|截止|ddl|尽快|今天.*完|记得/.test(chunk) ? 'high' : 'normal',
+      importance: /重要|必须|优先/.test(chunk) ? 'important' : 'normal',
+      urgency: /今天|今晚|明天|截止|ddl|记得/.test(chunk) ? 'urgent' : 'not_urgent',
+      isPinned: false,
+      prioritySource: 'rule',
+      importanceSource: 'rule',
+      urgencySource: 'rule',
       status: 'active',
       links,
       children: [],
@@ -144,19 +152,38 @@ function fallbackParse(text) {
   })
 }
 
+function inferContentType(item, section, sectionKey) {
+  if (item.contentType === 'reading' || item.content_type === 'reading' || item.aiTrace?.contentType === 'reading') return 'reading'
+  if (item.contentType === 'action' || item.content_type === 'action' || item.aiTrace?.contentType === 'action') return 'action'
+  if (sectionKey === 'reading' || section === '阅读' || item.date === 'reading') return 'reading'
+  return 'action'
+}
+
+function isReadingItem(item) {
+  return item.contentType === 'reading'
+}
+
 function normalizeItem(item) {
   const section = item.section || item.kind || '其他'
   const sectionKey = item.sectionKey || sectionKeyFrom(section)
+  const contentType = inferContentType(item, section, sectionKey)
   return {
     id: item.id || makeId(sectionKey),
     title: item.title || '未命名事项',
     section,
     sectionKey,
+    contentType,
     tone: item.tone || toneFor(sectionKey),
     date: item.date || 'today',
     time: item.time || '',
     place: item.place || '',
     priority: item.priority || 'normal',
+    importance: item.importance || item.aiTrace?.importance || (item.priority === 'high' ? 'important' : 'normal'),
+    urgency: item.urgency || item.aiTrace?.urgency || (dateKind(item.date) === 'today' || dateKind(item.date) === 'overdue' ? 'urgent' : 'not_urgent'),
+    isPinned: Boolean(item.isPinned || item.aiTrace?.isPinned),
+    prioritySource: item.prioritySource || item.aiTrace?.prioritySource || 'ai',
+    importanceSource: item.importanceSource || item.aiTrace?.importanceSource || 'ai',
+    urgencySource: item.urgencySource || item.aiTrace?.urgencySource || 'ai',
     status: item.status || (item.done ? 'done' : 'active'),
     links: Array.isArray(item.links) ? item.links : [],
     children: Array.isArray(item.children)
@@ -178,6 +205,12 @@ function sortItems(items) {
   return [...items].sort((a, b) => {
     if (a.status === 'done' && b.status !== 'done') return 1
     if (a.status !== 'done' && b.status === 'done') return -1
+    if (a.isPinned && !b.isPinned) return -1
+    if (!a.isPinned && b.isPinned) return 1
+    if (a.importance === 'important' && b.importance !== 'important') return -1
+    if (a.importance !== 'important' && b.importance === 'important') return 1
+    if (a.urgency === 'urgent' && b.urgency !== 'urgent') return -1
+    if (a.urgency !== 'urgent' && b.urgency === 'urgent') return 1
     const aKind = dateKind(a.date, referenceDate)
     const bKind = dateKind(b.date, referenceDate)
     if ((dateScore[aKind] ?? 9) !== (dateScore[bKind] ?? 9)) return (dateScore[aKind] ?? 9) - (dateScore[bKind] ?? 9)
@@ -288,12 +321,28 @@ export function TodayBoard() {
     () => sortItems(items).filter((item) => item.status === 'active' && dateKind(item.date) === 'upcoming').slice(0, 6),
     [items]
   )
+  const focusItems = useMemo(() => {
+    return sortItems(items)
+      .filter((item) => {
+        if (item.status !== 'active') return false
+        if (item.isPinned) return true
+        if (item.importance === 'important' && item.urgency === 'urgent') return true
+        if (['today', 'overdue'].includes(dateKind(item.date)) && item.time) return true
+        return item.priority === 'high' && !isReadingItem(item)
+      })
+      .filter((item) => {
+        if (!isReadingItem(item)) return true
+        return item.isPinned || ['today', 'overdue'].includes(dateKind(item.date)) || (item.importance === 'important' && item.urgency === 'urgent')
+      })
+      .slice(0, 2)
+  }, [items])
 
   const visibleItems = useMemo(() => {
     const sorted = sortItems(items)
     if (view === 'all') return sorted
     if (view === 'upcoming') return sorted.filter((item) => item.status === 'active' && dateKind(item.date) === 'upcoming')
-    if (view === 'reading') return sorted.filter((item) => item.section === '阅读' || item.date === 'reading' || item.links.length)
+    if (view === 'reading') return sorted.filter(isReadingItem)
+    if (view === 'matrix') return sorted.filter((item) => item.status === 'active')
     return sorted.filter((item) => item.status === 'active' && ['today', 'overdue'].includes(dateKind(item.date)))
   }, [items, view])
 
@@ -306,6 +355,13 @@ export function TodayBoard() {
     }, {})
   }, [visibleItems])
 
+  const matrixGroups = useMemo(() => ({
+    importantUrgent: visibleItems.filter((item) => item.importance === 'important' && item.urgency === 'urgent'),
+    importantNotUrgent: visibleItems.filter((item) => item.importance === 'important' && item.urgency !== 'urgent'),
+    urgentNotImportant: visibleItems.filter((item) => item.importance !== 'important' && item.urgency === 'urgent'),
+    normal: visibleItems.filter((item) => item.importance !== 'important' && item.urgency !== 'urgent')
+  }), [visibleItems])
+
   async function runCommand() {
     if (!command.trim()) return
     setIsLoading(true)
@@ -316,6 +372,7 @@ export function TodayBoard() {
         const context = new Set(returnedIds.length ? returnedIds : result.contextIds)
         setItems(sortItems([...items.filter((item) => !context.has(item.id)), ...result.items]))
       } else {
+        if (!result.items.length) return
         setItems(sortItems([...items, ...result.items]))
       }
       setCommand('')
@@ -366,6 +423,53 @@ export function TodayBoard() {
         ))}
       </nav>
 
+      {view === 'today' && focusItems.length ? (
+        <section className={`focus-strip focus-count-${focusItems.length}`}>
+          {focusItems.map((item) => (
+            <article className={`today-card focus-card ${item.tone || toneFor(item.sectionKey)}`} key={`focus-${item.id}`}>
+              <div className="today-card-body">
+                <div className="today-card-head">
+                  <button className="card-title-button" type="button" onClick={() => setExpandedId(expandedId === item.id ? '' : item.id)}>
+                    {item.title}
+                  </button>
+                  <div className="card-actions">
+                    {item.isPinned ? <b>置顶</b> : null}
+                    {item.importance === 'important' ? <b>重要</b> : null}
+                    {item.urgency === 'urgent' ? <b>紧急</b> : null}
+                  </div>
+                </div>
+                <div className="today-meta">
+                  <span>{dateLabel(item.date)}</span>
+                  {item.time ? <span>{item.time}</span> : null}
+                  {item.place ? <span>{item.place}</span> : null}
+                  <span>{item.section}</span>
+                </div>
+                {item.summary ? <p className="card-summary">{item.summary}</p> : null}
+                {item.children.length && expandedId === item.id ? (
+                  <div className="mini-list">
+                    {item.children.map((child) => (
+                      <label key={child.id}>
+                        <input type="checkbox" checked={child.done} onChange={() => toggleChild(item.id, child.id)} />
+                        <span>{child.title}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : null}
+                {item.links.length ? (
+                  <div className="link-chips">
+                    {item.links.slice(0, 3).map((link) => (
+                      <a key={`focus-${item.id}-${link.url}`} href={link.url} target="_blank" rel="noreferrer">
+                        {link.title || link.url}
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </article>
+          ))}
+        </section>
+      ) : null}
+
       {view === 'today' && overdueItems.length ? (
         <section className="carry-strip">
           {overdueItems.map((item) => (
@@ -376,6 +480,39 @@ export function TodayBoard() {
         </section>
       ) : null}
 
+      {view === 'matrix' ? (
+        <section className="matrix-board">
+          {[
+            ['importantUrgent', '重要且紧急'],
+            ['importantNotUrgent', '重要不紧急'],
+            ['urgentNotImportant', '紧急不重要'],
+            ['normal', '不重要不紧急']
+          ].map(([key, label]) => (
+            <div className="matrix-lane" key={key}>
+              <div className="today-lane-title">
+                <span>{label}</span>
+                <small>{matrixGroups[key].length}</small>
+              </div>
+              {matrixGroups[key].map((item) => (
+                <article className={`today-card compact-card ${item.tone || toneFor(item.sectionKey)} ${item.status === 'done' ? 'is-done' : ''}`} key={`matrix-${item.id}`}>
+                  <div className="today-card-body">
+                    <div className="today-card-head">
+                      <button className="card-title-button" type="button" onClick={() => setEditingId(editingId === item.id ? '' : item.id)}>
+                        {item.title}
+                      </button>
+                    </div>
+                    <div className="today-meta">
+                      <span>{dateLabel(item.date)}</span>
+                      {item.time ? <span>{item.time}</span> : null}
+                      <span>{item.section}</span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ))}
+        </section>
+      ) : (
       <section className="today-lanes">
         {Object.entries(grouped).map(([sectionKey, group]) => (
           <div className="today-lane" key={sectionKey}>
@@ -399,7 +536,9 @@ export function TodayBoard() {
                       {item.title}
                     </button>
                     <div className="card-actions">
-                      {item.priority === 'high' ? <b>重要</b> : null}
+                      {item.isPinned ? <b>置顶</b> : null}
+                      {item.importance === 'important' ? <b>重要</b> : null}
+                      {item.urgency === 'urgent' ? <b>紧急</b> : null}
                       <button type="button" onClick={() => setEditingId(editingId === item.id ? '' : item.id)}>
                         编辑
                       </button>
@@ -439,10 +578,26 @@ export function TodayBoard() {
                         <input value={item.date} onChange={(event) => updateItem(item.id, { date: event.target.value })} placeholder="YYYY-MM-DD / reading / none" />
                         <input value={item.time} onChange={(event) => updateItem(item.id, { time: event.target.value })} placeholder="时间" />
                         <input value={item.place} onChange={(event) => updateItem(item.id, { place: event.target.value })} placeholder="地点" />
+                        <select value={item.contentType} onChange={(event) => updateItem(item.id, { contentType: event.target.value })}>
+                          <option value="action">事项</option>
+                          <option value="reading">阅读</option>
+                        </select>
                         <select value={item.priority} onChange={(event) => updateItem(item.id, { priority: event.target.value })}>
                           <option value="high">重要</option>
                           <option value="normal">普通</option>
                           <option value="low">轻量</option>
+                        </select>
+                        <select value={item.importance} onChange={(event) => updateItem(item.id, { importance: event.target.value, importanceSource: 'user' })}>
+                          <option value="important">重要</option>
+                          <option value="normal">普通</option>
+                        </select>
+                        <select value={item.urgency} onChange={(event) => updateItem(item.id, { urgency: event.target.value, urgencySource: 'user' })}>
+                          <option value="urgent">紧急</option>
+                          <option value="not_urgent">不紧急</option>
+                        </select>
+                        <select value={item.isPinned ? 'yes' : 'no'} onChange={(event) => updateItem(item.id, { isPinned: event.target.value === 'yes' })}>
+                          <option value="no">不置顶</option>
+                          <option value="yes">置顶</option>
                         </select>
                         <select value={item.status} onChange={(event) => updateItem(item.id, { status: event.target.value })}>
                           <option value="active">进行中</option>
@@ -463,6 +618,7 @@ export function TodayBoard() {
           </div>
         ))}
       </section>
+      )}
 
       {view === 'today' && upcomingStrip.length ? (
         <section className="upcoming-strip">
