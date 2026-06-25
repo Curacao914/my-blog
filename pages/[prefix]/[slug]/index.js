@@ -5,6 +5,7 @@ import Slug from '..'
 import { checkSlugHasOneSlash } from '@/lib/utils/post'
 import { isExport } from '@/lib/utils/buildMode'
 import { getPriorityPages, prefetchAllBlockMaps } from '@/lib/build/prefetch'
+import { shouldSkipNotionRoute } from '@/lib/notionRouteGuard'
 
 /**
  * 根据notion的slug访问页面
@@ -55,6 +56,10 @@ export async function getStaticPaths() {
 }
 
 export async function getStaticProps({ params: { prefix, slug }, locale }) {
+  if (shouldSkipNotionRoute(prefix)) {
+    return { notFound: true }
+  }
+
   const props = await resolvePostProps({
     prefix,
     slug,

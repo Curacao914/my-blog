@@ -5,6 +5,7 @@ import { checkSlugHasMorThanTwoSlash } from '@/lib/utils/post'
 import Slug from '..'
 import { isExport } from '@/lib/utils/buildMode'
 import { getPriorityPages, prefetchAllBlockMaps } from '@/lib/build/prefetch'
+import { shouldSkipNotionRoute } from '@/lib/notionRouteGuard'
 
 /**
  * 根据notion的slug访问页面
@@ -66,6 +67,10 @@ export async function getStaticProps({
   params: { prefix, slug, suffix },
   locale
 }) {
+  if (shouldSkipNotionRoute(prefix)) {
+    return { notFound: true }
+  }
+
   const props = await resolvePostProps({
     prefix,
     slug,

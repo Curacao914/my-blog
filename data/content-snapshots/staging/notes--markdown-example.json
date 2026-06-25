@@ -1,0 +1,40 @@
+{
+  "id": "markdown-notes-markdown-example",
+  "slug": "notes/markdown-example",
+  "title": "Markdown 内容中转示例",
+  "type": "article",
+  "visibility": "private",
+  "status": "draft",
+  "summary": "这是一个默认私有的 Markdown 内容快照示例。",
+  "tags": [
+    "示例",
+    "Markdown"
+  ],
+  "category": "法律之上",
+  "updatedAt": "2026-06-23T23:27:17.481Z",
+  "source": "markdown",
+  "sourceId": "content/markdown/example-private-note.md",
+  "bodyMarkdown": "# Markdown 内容中转示例\n\n这个文件用于演示从 Markdown 导入内容中转层。\n\n默认配置是：\n\n- 草稿；\n- 私有；\n- 不进入搜索、RSS 或 sitemap；\n- 需要通过内容配置台逐篇决定是否公开。",
+  "assets": [],
+  "access": {
+    "mode": "private",
+    "allowIndexing": false,
+    "allowRss": false,
+    "allowSitemap": false
+  },
+  "display": {
+    "category": "法律之上",
+    "tags": [
+      "示例",
+      "Markdown"
+    ],
+    "pinned": false,
+    "showInRecent": true
+  },
+  "folder": {
+    "path": [
+      "示例/Markdown"
+    ]
+  },
+  "checksum": "2222f10f500298c7c8eca6acefa02b50e1803b93f6c96e7c4a3e043cda9ff925"
+}

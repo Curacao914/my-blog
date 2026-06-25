@@ -38,13 +38,14 @@ const MyApp = ({ Component, pageProps }) => {
   useAdjustStyle()
 
   const route = useRouter()
+  const notionTheme = pageProps?.NOTION_CONFIG?.THEME
   const theme = useMemo(() => {
     return (
       getQueryParam(route.asPath, 'theme') ||
-      pageProps?.NOTION_CONFIG?.THEME ||
+      notionTheme ||
       BLOG.THEME
     )
-  }, [route])
+  }, [route.asPath, notionTheme])
 
   // 整体布局
   const GLayout = useCallback(
@@ -56,17 +57,19 @@ const MyApp = ({ Component, pageProps }) => {
   )
 
   const enableClerk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-  const content = (
+  const useBareLayout = Component.layout === 'bare'
+  const content = useBareLayout ? (
+    <Component {...pageProps} />
+  ) : (
     <GlobalContextProvider {...pageProps}>
       <GLayout {...pageProps}>
         <SEO {...pageProps} />
         <Component {...pageProps} />
       </GLayout>
       <ExternalPlugins {...pageProps} />
-      
+
       {/* 【核心新增 2】：将聊天挂件放置在最外层，确保它悬浮在所有主题之上 */}
       <NativeDifyChat />
-      
     </GlobalContextProvider>
   )
   

@@ -14,6 +14,13 @@ import SearchDrawer from './SearchDrawer'
 import SideBar from './SideBar'
 import SideBarDrawer from './SideBarDrawer'
 import TagGroups from './TagGroups'
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignUpButton,
+  UserButton
+} from '@clerk/nextjs'
 
 let windowTop = 0
 
@@ -175,6 +182,32 @@ const Header = props => {
             </div>
             {showSearchButton && <SearchButton />}
             {showRandomButton && <ButtonRandomPost {...props} />}
+            {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && (
+              <div className='flex items-center gap-1 ml-1'>
+                <SignedOut>
+                  <SignInButton mode='modal'>
+                    <button className='text-sm px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'>
+                      登录
+                    </button>
+                  </SignInButton>
+                  <SignUpButton mode='modal'>
+                    <button className='text-sm px-2 py-1 rounded bg-indigo-500 text-white hover:bg-indigo-600 transition-colors'>
+                      注册
+                    </button>
+                  </SignUpButton>
+                </SignedOut>
+                <SignedIn>
+                  <UserButton
+                    afterSignOutUrl='/'
+                    appearance={{
+                      elements: {
+                        avatarBox: 'w-8 h-8'
+                      }
+                    }}
+                  />
+                </SignedIn>
+              </div>
+            )}
           </div>
         </div>
       </div>

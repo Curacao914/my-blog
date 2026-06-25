@@ -1,48 +1,92 @@
-import BLOG from '@/blog.config'
-import { siteConfig } from '@/lib/config'
-import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
-import { DynamicLayout } from '@/themes/theme'
+import { SignUp } from '@clerk/nextjs'
+import Head from 'next/head'
+import Link from 'next/link'
 
-/**
- * 注册
- * @param {*} props
- * @returns
- */
-const SignUp = props => {
-  const theme = siteConfig('THEME', BLOG.THEME, props.NOTION_CONFIG)
-  return <DynamicLayout theme={theme} layoutName='LayoutSignUp' {...props} />
+const SignUpPage = () => {
+  return (
+    <>
+      <Head>
+        <title>注册 · law-tech.dev</title>
+        <meta name='robots' content='noindex,nofollow' />
+      </Head>
+
+      <main className='auth-page'>
+        <Link className='brand' href='/'>
+          law-tech.dev
+        </Link>
+        <section className='auth-card'>
+          <div className='copy'>
+            <p>工作台</p>
+            <h1>工作台</h1>
+          </div>
+          <SignUp
+            fallbackRedirectUrl='/desk'
+            forceRedirectUrl='/desk'
+            path='/sign-up'
+            routing='path'
+            signInUrl='/sign-in'
+          />
+        </section>
+      </main>
+
+      <style jsx>{`
+        .auth-page {
+          min-height: 100vh;
+          display: grid;
+          place-items: center;
+          padding: 32px 20px;
+          color: #1e2322;
+          background:
+            radial-gradient(circle at 20% 12%, rgba(201, 154, 59, 0.12), transparent 22rem),
+            radial-gradient(circle at 85% 16%, rgba(49, 90, 140, 0.1), transparent 18rem),
+            linear-gradient(180deg, #fcfefd 0%, #f7f9f8 100%);
+          font-family:
+            -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC',
+            'PingFang SC', sans-serif;
+        }
+
+        .brand {
+          position: fixed;
+          top: 28px;
+          left: 32px;
+          color: #66716b;
+          font-size: 14px;
+          font-weight: 720;
+          letter-spacing: -0.03em;
+        }
+
+        .auth-card {
+          width: min(520px, 100%);
+          display: grid;
+          gap: 24px;
+          align-items: center;
+          padding: 28px;
+          border: 1px solid rgba(223, 231, 225, 0.9);
+          border-radius: 34px;
+          background: rgba(255, 255, 255, 0.72);
+          box-shadow: 0 24px 80px rgba(37, 55, 48, 0.08);
+          backdrop-filter: blur(22px);
+        }
+
+        .copy p {
+          margin: 0 0 14px;
+          color: #c99a3b;
+          font-size: 13px;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+        }
+
+        .copy h1 {
+          margin: 0;
+          font-size: 24px;
+          line-height: 1.2;
+          letter-spacing: -0.04em;
+        }
+      `}</style>
+    </>
+  )
 }
 
-export async function getStaticProps(req) {
-  const { locale } = req
+SignUpPage.layout = 'bare'
 
-  const from = 'SignIn'
-  const props = await fetchGlobalAllData({ from, locale })
-
-  delete props.allPages
-  return {
-    props,
-    revalidate: process.env.EXPORT
-      ? undefined
-      : siteConfig(
-          'NEXT_REVALIDATE_SECOND',
-          BLOG.NEXT_REVALIDATE_SECOND,
-          props.NOTION_CONFIG
-        )
-  }
-}
-
-/**
- * catch-all route for clerk
- * @returns
- */
-export function getStaticPaths() {
-  return {
-    paths: [
-      { params: { index: [] } }, // 使 /sign-up 路径可访问
-      { params: { index: ['sign-up'] } } // 明确 sign-up 生成路径
-    ],
-    fallback: 'blocking' // 使用 'blocking' 模式让未生成的路径也能正确响应
-  }
-}
-export default SignUp
+export default SignUpPage

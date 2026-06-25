@@ -37,8 +37,10 @@ yarn-error.log*
 # dev
 /data.json
 /pnpm-lock.yaml
+tsconfig.tsbuildinfo
 .idea
 .vscode
+.firecrawl/
 
 
 # sitemap
