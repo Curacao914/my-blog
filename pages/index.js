@@ -1,465 +1,333 @@
 import Head from 'next/head'
 import Image from 'next/image'
 import Link from 'next/link'
+import { PublicHeader } from '@/components/law-tech/PublicHeader'
 
-const navItems = [
-  { label: '内容', href: '/content' },
-  { label: '项目', href: '#projects' },
-  { label: '工具', href: '/tools' },
-  { label: '关于', href: '#about' },
-  { label: '工作台', href: '/desk', accent: true }
-]
-
-const siteSections = [
+const sections = [
   {
-    id: 'content',
     title: '内容',
-    copy: '文章、课程笔记、读书记录。公开的放在这里，没想好的先不打扰别人。'
+    href: '/content',
+    body: '笔记、博客、课程整理和读书记录。'
   },
   {
-    id: 'projects',
-    title: '项目',
-    copy: '一些真正用得上的小东西。能留下来，再慢慢写清楚。'
-  },
-  {
-    id: 'tools',
     title: '工具',
-    copy: 'OCR、引注，还有以后可能继续长出来的工具。'
+    href: '/tools',
+    body: 'OCR、引注，以及一些已经能用的小工具。'
   },
   {
-    id: 'about',
-    title: '关于',
-    copy: '一个前非法本、现法硕非法学生的主页。'
-  },
-  {
-    id: 'workspace',
     title: '工作台',
-    copy: '给自己用的地方。事项、课程、资料、草稿，都先在那里安顿。'
+    href: '/desk',
+    body: '私人入口，处理事项、材料、课程和发布设置。'
   }
 ]
 
-const fallbackRecent = [
-  {
-    type: '文章',
-    title: '从“比特”到“词元”',
-    summary: '技术改变了材料，也改变了问题本身。',
-    href: '/article/from_bit_to_token'
-  },
-  {
-    type: '课程笔记',
-    title: '刑事诉讼法',
-    summary: '课堂、制度和案例之间的来回走动。',
-    href: '/article/criminal-procedure-law'
-  },
-  {
-    type: '项目',
-    title: '课程整理',
-    summary: '把课件、转录稿和笔记放到同一条线上。',
-    href: '#projects'
-  }
-]
-
-const Home = ({ recentItems = fallbackRecent }) => {
-  const recent = recentItems.length ? recentItems : fallbackRecent
-
+export default function HomePage() {
   return (
     <>
       <Head>
         <title>Curacao · law-tech.dev</title>
         <meta
           name='description'
-          content='Curacao 的个人主页：法学笔记、文章、课程整理和一些自己会用的小工具。'
+          content='Curacao 的个人主页：法学笔记、文章、课程整理和工具。'
         />
-        <meta name='theme-color' content='#f7f9f8' />
+        <meta name='theme-color' content='#f7f6f1' />
       </Head>
-
-      <div className='home-page'>
-        <div className='wrap'>
-          <nav className='top-nav' aria-label='主导航'>
-            <Link className='brand' href='/'>
-              law-tech.dev
-            </Link>
-            <div className='nav-links'>
-              {navItems.map(item => (
-                <a
-                  key={item.label}
-                  className={item.accent ? 'desk-link' : ''}
-                  href={item.href}>
-                  {item.label}
-                </a>
-              ))}
-            </div>
-          </nav>
-
-          <main className='main'>
-            <section className='hero' aria-labelledby='home-title'>
-              <div>
-                <div className='identity'>
-                  <Image
-                    className='avatar'
-                    src='/curacao-avatar.png'
-                    alt='Curacao 的像素头像'
-                    width={92}
-                    height={92}
-                    priority
-                  />
-                  <div>
-                    <h1 id='home-title'>Curacao</h1>
-                    <p className='role'>前非法本法学生，现法硕非法学生</p>
-                  </div>
-                </div>
-
-                <p className='question'>
-                  你也在思考<span>意义</span>有什么意义吗？
-                </p>
-
-                <div className='map' aria-label='站点栏目'>
-                  {siteSections.map(section => (
-                    <section
-                      className='map-row'
-                      id={section.id}
-                      key={section.title}>
-                      <h2>{section.title}</h2>
-                      <p>{section.copy}</p>
-                    </section>
-                  ))}
-                </div>
+      <main className='public-page lawtech-public-home'>
+        <div className='shell'>
+          <PublicHeader />
+          <section className='hero'>
+            <div>
+              <span className='eyebrow'>Curacao · law-tech.dev</span>
+              <h1>你也在思考意义有什么意义吗？</h1>
+              <p>
+                前非法本法学生，现法硕非法学生。这里放一些写完的东西，也放几个自己真的会用上的小工具。
+              </p>
+              <div className='hero-actions'>
+                <Link className='primary-link' href='/desk'>
+                  进入工作台
+                </Link>
+                <Link className='ghost-link' href='/content'>
+                  看公开内容
+                </Link>
               </div>
-
-              <aside className='aside' aria-label='最近更新'>
-                <div className='aside-head'>
-                  <h2>最近</h2>
-                  <span>慢慢更新</span>
-                </div>
-                {recent.map(item => (
-                  <a className='recent' href={item.href} key={item.title}>
-                    <small>{item.type}</small>
-                    <strong>{item.title}</strong>
-                    <p>{item.summary}</p>
-                  </a>
-                ))}
-              </aside>
-            </section>
-
-            <footer className='footer-mark'>
-              <span>Curacao · law-tech.dev</span>
-              <span>你也在思考意义有什么意义吗？</span>
-            </footer>
-          </main>
+            </div>
+            <aside className='portrait-card' aria-label='Curacao'>
+              <p className='portrait-note'>写作 / 法学 / 小工具</p>
+              <Image
+                src='/avatar.png'
+                alt='Curacao 头像'
+                width={640}
+                height={640}
+                priority
+              />
+            </aside>
+          </section>
+          <section className='section-grid' aria-label='首页入口'>
+            {sections.map(section => (
+              <Link className='glass-card' key={section.title} href={section.href}>
+                <h2>{section.title}</h2>
+                <p>{section.body}</p>
+              </Link>
+            ))}
+          </section>
         </div>
-      </div>
-
-      <style jsx>{`
-        .home-page {
-          --bg: #f7f9f8;
-          --ink: #1e2322;
-          --muted: #66716b;
-          --quiet: #87938c;
-          --line: #dfe7e1;
-          --panel: #ffffff;
-          --green: #3f5f3a;
-          --blue: #315a8c;
-          --gold: #c99a3b;
+      </main>
+      <style jsx global>{`
+        .lawtech-public-home {
+          --paper: #f7f6f1;
+          --paper-deep: #ebe8dd;
+          --ink: #17231d;
+          --muted: #69756f;
+          --leaf: #183f32;
+          --leaf-soft: #dce9df;
+          --honey: #d7a43d;
+          --honey-soft: #f4e4b8;
+          --blue: #8daab7;
+          --blue-soft: #e2edf1;
+          --line: rgba(23, 35, 29, 0.12);
+          --glass: rgba(255, 255, 255, 0.62);
+          --shadow: 0 24px 80px rgba(24, 63, 50, 0.14);
+          --ease: cubic-bezier(0.16, 1, 0.3, 1);
+          position: relative;
           min-height: 100vh;
+          padding: 28px 0 72px;
+          overflow: hidden;
           color: var(--ink);
           background:
             radial-gradient(
-              circle at 10% 10%,
-              rgba(201, 154, 59, 0.085),
-              transparent 20rem
+              circle at 16% 10%,
+              rgba(216, 164, 61, 0.24),
+              transparent 28rem
             ),
-            linear-gradient(
-              115deg,
-              rgba(63, 95, 58, 0.075),
-              transparent 38%
+            radial-gradient(
+              circle at 86% 0%,
+              rgba(141, 170, 183, 0.24),
+              transparent 34rem
             ),
-            linear-gradient(180deg, #fcfefd 0%, var(--bg) 100%);
-          font-family:
-            -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC',
-            'PingFang SC', sans-serif;
+            linear-gradient(135deg, #fbfaf5 0%, #eef4ee 56%, #f7f6f1 100%);
+          font-family: ui-serif, 'Songti SC', 'STSong', Georgia, serif;
         }
 
-        .home-page::before {
+        .lawtech-public-home::before {
           content: '';
           position: fixed;
           inset: 0;
           pointer-events: none;
-          opacity: 0.45;
-          background:
-            radial-gradient(
-              circle at 18% 28%,
-              rgba(63, 95, 58, 0.09),
-              transparent 22rem
-            ),
-            radial-gradient(
-              circle at 90% 8%,
-              rgba(49, 90, 140, 0.07),
-              transparent 18rem
-            );
+          opacity: 0.28;
+          background-image:
+            linear-gradient(rgba(23, 35, 29, 0.045) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(23, 35, 29, 0.035) 1px, transparent 1px);
+          background-size: 44px 44px;
+          mask-image: linear-gradient(to bottom, #000, transparent 76%);
         }
 
-        .wrap {
+        .lawtech-public-home a {
+          color: inherit;
+          text-decoration: none;
+        }
+
+        .lawtech-public-home .shell {
           position: relative;
           z-index: 1;
-          width: min(1040px, calc(100% - 40px));
+          width: min(1180px, calc(100vw - 40px));
           margin: 0 auto;
         }
 
-        .top-nav {
-          height: 82px;
+        .lawtech-public-home .topbar {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          font-size: 14px;
-        }
-
-        .brand {
-          font-weight: 720;
-          letter-spacing: -0.03em;
-        }
-
-        .nav-links {
-          display: flex;
-          align-items: center;
-          gap: 24px;
-          color: var(--muted);
-        }
-
-        .nav-links a {
-          position: relative;
-          padding: 6px 0;
-        }
-
-        .nav-links a:hover {
-          color: var(--ink);
-        }
-
-        .nav-links a:hover::after {
-          content: '';
-          position: absolute;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          height: 2px;
-          background: var(--gold);
-        }
-
-        .desk-link {
-          padding: 8px 12px !important;
+          gap: 20px;
+          padding: 14px 16px;
           border: 1px solid var(--line);
           border-radius: 999px;
-          background: rgba(255, 255, 255, 0.68);
-          color: var(--blue) !important;
+          background: rgba(255, 255, 255, 0.58);
+          backdrop-filter: blur(24px) saturate(1.2);
+          box-shadow: 0 18px 40px rgba(24, 63, 50, 0.08);
         }
 
-        .main {
-          padding: 52px 0 96px;
+        .lawtech-public-home .brand {
+          display: inline-flex;
+          align-items: center;
+          gap: 12px;
+          font-weight: 700;
+          letter-spacing: 0.02em;
         }
 
-        .hero {
+        .lawtech-public-home .brand-mark {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) 390px;
-          gap: 70px;
-          align-items: start;
+          place-items: center;
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          background: var(--leaf);
+          color: #fff7dd;
+          box-shadow: inset 0 -4px 10px rgba(0, 0, 0, 0.22);
         }
 
-        .identity {
+        .lawtech-public-home .nav {
           display: flex;
           align-items: center;
-          gap: 20px;
-          margin-bottom: 30px;
+          gap: 6px;
         }
 
-        .avatar {
-          width: 92px;
-          height: 92px;
-          object-fit: contain;
-          display: block;
-        }
-
-        h1,
-        h2,
-        p {
-          margin: 0;
-        }
-
-        h1 {
-          font-size: 36px;
-          line-height: 1;
-          letter-spacing: -0.05em;
-        }
-
-        .role {
-          margin-top: 9px;
+        .lawtech-public-home .nav a,
+        .lawtech-public-home .ghost-link,
+        .lawtech-public-home .primary-link {
+          border-radius: 999px;
+          padding: 10px 14px;
           color: var(--muted);
-          font-size: 14px;
+          transition:
+            transform 0.35s var(--ease),
+            background 0.35s var(--ease),
+            color 0.35s var(--ease);
         }
 
-        .question {
-          max-width: 660px;
-          font-size: clamp(23px, 3.2vw, 36px);
-          line-height: 1.35;
-          letter-spacing: -0.035em;
-          font-weight: 700;
-          color: #202724;
+        .lawtech-public-home .nav a:hover,
+        .lawtech-public-home .ghost-link:hover {
+          transform: translateY(-2px);
+          color: var(--ink);
+          background: rgba(24, 63, 50, 0.08);
         }
 
-        .question span {
-          color: var(--green);
+        .lawtech-public-home .primary-link {
+          color: #fff8e6;
+          background: var(--leaf);
+          box-shadow: 0 12px 28px rgba(24, 63, 50, 0.22);
         }
 
-        .map {
-          margin-top: 48px;
+        .lawtech-public-home .primary-link:hover {
+          transform: translateY(-2px);
+        }
+
+        .lawtech-public-home .hero {
           display: grid;
-          gap: 22px;
-          max-width: 720px;
+          grid-template-columns: 1.15fr 0.85fr;
+          gap: 48px;
+          align-items: center;
+          padding: 82px 0 64px;
         }
 
-        .map-row {
-          display: grid;
-          grid-template-columns: 112px 1fr;
-          gap: 24px;
-          padding-top: 20px;
-          border-top: 1px solid var(--line);
-          scroll-margin-top: 24px;
+        .lawtech-public-home .eyebrow {
+          color: var(--leaf);
+          font-size: 13px;
+          letter-spacing: 0.22em;
+          text-transform: uppercase;
         }
 
-        .map-row h2 {
-          color: var(--blue);
-          font-size: 16px;
-          font-weight: 720;
-          letter-spacing: -0.02em;
+        .lawtech-public-home .hero h1 {
+          margin: 18px 0 20px;
+          max-width: 760px;
+          font-size: clamp(38px, 5.4vw, 78px);
+          line-height: 1.02;
+          letter-spacing: -0.055em;
         }
 
-        .map-row p {
-          color: #58645e;
-          line-height: 1.75;
-          font-size: 15px;
+        .lawtech-public-home .hero p {
+          max-width: 620px;
+          color: var(--muted);
+          font-size: 19px;
+          line-height: 1.9;
         }
 
-        .aside {
+        .lawtech-public-home .hero-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          margin-top: 34px;
+        }
+
+        .lawtech-public-home .portrait-card {
+          position: relative;
+          min-height: 440px;
+          border: 1px solid var(--line);
+          border-radius: 42px;
           background: linear-gradient(
-            180deg,
-            rgba(255, 255, 255, 0.82),
-            rgba(250, 252, 250, 0.68)
+            145deg,
+            rgba(255, 255, 255, 0.74),
+            rgba(255, 255, 255, 0.28)
           );
+          box-shadow: var(--shadow);
+          overflow: hidden;
+        }
+
+        .lawtech-public-home .portrait-card::before {
+          content: '';
+          position: absolute;
+          inset: 18px;
+          border: 1px solid rgba(24, 63, 50, 0.13);
+          border-radius: 32px;
+        }
+
+        .lawtech-public-home .portrait-card img {
+          position: absolute;
+          right: 28px;
+          bottom: 28px;
+          width: min(62%, 260px);
+          height: auto;
+          object-fit: contain;
+          border-radius: 28px;
+          filter: saturate(0.92) contrast(1.02);
+        }
+
+        .lawtech-public-home .portrait-note {
+          position: absolute;
+          left: 34px;
+          top: 34px;
+          max-width: 220px;
+          color: var(--muted);
+          line-height: 1.8;
+        }
+
+        .lawtech-public-home .section-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 18px;
+        }
+
+        .lawtech-public-home .glass-card {
+          min-height: 178px;
+          padding: 24px;
           border: 1px solid var(--line);
           border-radius: 28px;
-          padding: 22px 22px 8px;
-          box-shadow: 0 18px 52px rgba(37, 55, 48, 0.055);
+          background: var(--glass);
+          backdrop-filter: blur(22px) saturate(1.1);
+          box-shadow: 0 16px 42px rgba(24, 63, 50, 0.09);
+          transition:
+            transform 0.45s var(--ease),
+            box-shadow 0.45s var(--ease),
+            border-color 0.45s var(--ease);
         }
 
-        .aside-head {
-          display: flex;
-          justify-content: space-between;
-          align-items: baseline;
-          margin-bottom: 8px;
+        .lawtech-public-home .glass-card:hover {
+          transform: translateY(-6px);
+          border-color: rgba(24, 63, 50, 0.22);
+          box-shadow: 0 26px 58px rgba(24, 63, 50, 0.14);
         }
 
-        .aside-head h2 {
-          font-size: 16px;
-          letter-spacing: -0.02em;
+        .lawtech-public-home .glass-card h2 {
+          margin: 18px 0 12px;
+          font-size: 28px;
+          letter-spacing: -0.04em;
         }
 
-        .aside-head span {
-          color: var(--quiet);
-          font-size: 12px;
-        }
-
-        .recent {
-          display: block;
-          padding: 18px 0;
-          border-top: 1px solid var(--line);
-        }
-
-        .recent small {
-          display: block;
-          color: var(--green);
-          font-size: 12px;
-          margin-bottom: 7px;
-        }
-
-        .recent strong {
-          display: block;
-          font-size: 18px;
-          line-height: 1.35;
-          letter-spacing: -0.025em;
-        }
-
-        .recent p {
-          margin-top: 8px;
+        .lawtech-public-home .glass-card p {
+          margin: 0;
           color: var(--muted);
-          font-size: 13px;
-          line-height: 1.7;
+          line-height: 1.75;
         }
 
-        .note {
-          margin-top: 24px;
-          color: #87938c;
-          font-size: 12px;
-          line-height: 1.7;
-        }
-
-        .footer-mark {
-          margin-top: 80px;
-          border-top: 1px solid var(--line);
-          padding-top: 18px;
-          color: #87938c;
-          font-size: 12px;
-          display: flex;
-          justify-content: space-between;
-          gap: 20px;
-        }
-
-        @media (max-width: 820px) {
-          .top-nav {
-            height: auto;
-            padding: 24px 0;
-            align-items: flex-start;
-            flex-direction: column;
-            gap: 14px;
-          }
-
-          .nav-links {
-            width: 100%;
-            justify-content: space-between;
-            gap: 10px;
-            font-size: 13px;
-          }
-
-          .desk-link {
-            padding: 6px 9px !important;
-          }
-
-          .main {
-            padding-top: 36px;
-          }
-
-          .hero {
+        @media (max-width: 900px) {
+          .lawtech-public-home .hero {
             grid-template-columns: 1fr;
-            gap: 44px;
           }
 
-          .identity {
-            align-items: flex-start;
-          }
-
-          .avatar {
-            width: 76px;
-            height: 76px;
-          }
-
-          h1 {
-            font-size: 32px;
-          }
-
-          .map-row {
+          .lawtech-public-home .section-grid {
             grid-template-columns: 1fr;
-            gap: 8px;
           }
 
-          .footer-mark {
-            flex-direction: column;
+          .lawtech-public-home .nav {
+            display: none;
           }
         }
       `}</style>
@@ -467,6 +335,4 @@ const Home = ({ recentItems = fallbackRecent }) => {
   )
 }
 
-Home.layout = 'bare'
-
-export default Home
+HomePage.layout = 'bare'
