@@ -51,4 +51,35 @@ const notionCompatibilityMiddleware = async (req: NextRequest) => {
   return NextResponse.next()
 }
 
-export default clerkMiddleware(async (_auth, req) => notionCompatibilityMiddleware(req as NextRequest))
+const hasClerkMiddlewareConfig = Boolean(
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
+    process.env.CLERK_SECRET_KEY
+)
+
+const privatePrefixes = [
+  '/desk',
+  '/api/schedule/items',
+  '/api/notes',
+  '/api/content/config',
+  '/api/courses',
+  '/api/tasks/'
+]
+
+function needsClerkMiddleware(req: NextRequest) {
+  const path = req.nextUrl.pathname
+  if (path === '/api/tasks/inbox' || path.startsWith('/api/tasks/inbox/')) return false
+  if (path === '/api/tasks/capture') return false
+  if (path === '/api/tasks/reminders/send') return false
+  return privatePrefixes.some(prefix => path === prefix || path.startsWith(`${prefix}/`))
+}
+
+const clerkPrivateMiddleware = hasClerkMiddlewareConfig
+  ? clerkMiddleware(async (_auth, req) => notionCompatibilityMiddleware(req as NextRequest))
+  : null
+
+export default function middleware(req: NextRequest, event: any) {
+  if (clerkPrivateMiddleware && needsClerkMiddleware(req)) {
+    return clerkPrivateMiddleware(req, event)
+  }
+  return notionCompatibilityMiddleware(req)
+}
