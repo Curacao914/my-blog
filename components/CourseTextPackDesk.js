@@ -131,25 +131,96 @@ function NodeWorkbench({ lesson, onAction, busy, onlineBusy }) {
   const [draft, setDraft] = useState(selected?.draft || '')
   const [request, setRequest] = useState('')
   const [humanReason, setHumanReason] = useState('')
-  useEffect(() => { const next = nodes.find(node => node.id === selectedId) || nodes[0]; if (next && next.id !== selectedId) setSelectedId(next.id); setDraft(next?.draft || ''); setRequest(''); setHumanReason('') }, [lesson.key, selectedId, selected?.draft, nodes.length])
+  const [activePane, setActivePane] = useState('draft')
+
+  useEffect(() => {
+    const next = nodes.find(node => node.id === selectedId) || nodes[0]
+    if (next && next.id !== selectedId) setSelectedId(next.id)
+    setDraft(next?.draft || '')
+    setRequest('')
+    setHumanReason('')
+    setActivePane('draft')
+  }, [lesson.key, selectedId, selected?.draft, nodes.length])
+
   if (!nodes.length) return <section className='course-stage-card'><LoadingLine label={onlineBusy ? '正在准备正文…' : '等待准备正文'} /></section>
+
   const report = latestReview(selected)
   const reviewIsCurrent = Number(report?.reviewedDraftVersion || 0) === Number(selected?.versions?.length || 0)
   const canApprove = report?.decision === 'approve' && reviewIsCurrent
   const needsHuman = report?.decision === 'human_review' && reviewIsCurrent
   const needsRevision = selected?.status === 'node_revision_required' || report?.decision === 'revise'
+  const panes = [
+    ['draft', '正文'],
+    ['review', `审查${report?.issues?.length ? ` ${report.issues.length}` : ''}`],
+    ['source', '来源'],
+    ['versions', `版本 ${selected?.versions?.length || 0}`]
+  ]
+
   return <section className='course-stage-card course-node-workbench'>
-    <div className='course-stage-heading'><div><span>正文与审查</span><h3>逐节点整理</h3></div><p>每个节点单独生成、检查和确认。</p></div>
-    {onlineBusy ? <LoadingLine label='正在处理…' /> : null}
+    <div className='course-stage-heading compact'>
+      <div><span>正文与审查</span><h3>逐节点整理</h3></div>
+      <p>{onlineBusy ? '正在处理…' : `${nodes.filter(node => node.status === 'node_approved').length}/${nodes.length} 已确认`}</p>
+    </div>
     <div className='course-node-layout'>
-      <nav className='course-node-nav' aria-label='正文节点'>{nodes.map((node, index) => <button key={node.id} type='button' className={node.id === selected?.id ? 'active' : ''} onClick={() => setSelectedId(node.id)}><i>{index + 1}</i><span><b>{node.title}</b><small>{humanStatus(node.status)}</small></span></button>)}</nav>
-      {selected ? <div className='course-node-editor'><header><div><span>转录 {selected.lineRange?.join('–')} 行 · 课件 {selected.slideRange?.join('–')} 页</span><h4>{selected.title}</h4></div><strong>{humanStatus(selected.status)}</strong></header>
-        <label>节点正文<textarea value={draft} onChange={event => setDraft(event.target.value)} placeholder='正文会自动生成，也可以在这里修改。' /></label>
-        <div className='course-primary-row'><button className='soft-button' type='button' disabled={busy || !draft.trim()} onClick={() => onAction({ type: 'save-node-draft', lessonKey: lesson.key, nodeId: selected.id, markdown: draft }, '节点草稿已保存。')}>保存草稿</button>{canApprove ? <button className='soft-button primary' type='button' disabled={busy} onClick={() => onAction({ type: 'approve-node', lessonKey: lesson.key, nodeId: selected.id }, '节点已确认。')}>确认本节点</button> : null}</div>
-        {!reviewIsCurrent && report ? <p className='empty-copy'>正文已修改，等待重新检查。</p> : <ReviewReport report={report} />}
-        {needsRevision ? <div className='course-feedback-box'><label>补充修改要求<textarea value={request} onChange={event => setRequest(event.target.value)} placeholder='指出需要补充、删改或重新核对的内容。' /></label><button className='soft-button primary' type='button' disabled={busy || !request.trim()} onClick={() => onAction({ type: 'request-node-revision', lessonKey: lesson.key, nodeId: selected.id, request }, '修改要求已提交。')}>提交局部修改</button></div> : null}
-        {needsHuman ? <div className='course-feedback-box'><label>人工判断说明<textarea value={humanReason} onChange={event => setHumanReason(event.target.value)} placeholder='说明接受当前版本的理由。' /></label><button className='soft-button primary' type='button' disabled={busy || !humanReason.trim()} onClick={() => onAction({ type: 'approve-node-human', lessonKey: lesson.key, nodeId: selected.id, reason: humanReason }, '节点已由你确认。')}>人工确认本节点</button></div> : null}
-        <details className='course-source-drawer'><summary>查看本节点来源</summary><pre>{selected.sourceText || '没有可显示的转录来源。'}</pre>{selected.pptText ? <pre>{selected.pptText}</pre> : null}</details>
+      <nav className='course-node-nav' aria-label='正文节点'>
+        {nodes.map((node, index) => <button key={node.id} type='button' className={node.id === selected?.id ? 'active' : ''} onClick={() => setSelectedId(node.id)}>
+          <i>{index + 1}</i>
+          <span><b>{node.title}</b><small>{humanStatus(node.status)}</small></span>
+        </button>)}
+      </nav>
+
+      {selected ? <div className='course-node-editor'>
+        <header className='course-node-editor-head'>
+          <div>
+            <span>转录 {selected.lineRange?.join('–')} 行 · 课件 {selected.slideRange?.join('–')} 页</span>
+            <h4>{selected.title}</h4>
+          </div>
+          <strong>{humanStatus(selected.status)}</strong>
+        </header>
+
+        <nav className='course-editor-tabs' aria-label='节点工作区'>
+          {panes.map(([key, label]) => <button key={key} type='button' aria-pressed={activePane === key} onClick={() => setActivePane(key)}>{label}</button>)}
+        </nav>
+
+        <div className='course-editor-pane'>
+          {onlineBusy ? <LoadingLine label='正在处理…' /> : null}
+
+          {activePane === 'draft' ? <div className='course-draft-pane'>
+            <label>节点正文<textarea value={draft} onChange={event => setDraft(event.target.value)} placeholder='正文会自动生成，也可以在这里修改。' /></label>
+            <footer className='course-editor-footer'>
+              <span>{draft.length.toLocaleString('zh-CN')} 字 · {reviewIsCurrent ? '审查与当前版本一致' : report ? '修改后需要重新审查' : '等待审查'}</span>
+              <div className='course-primary-row'>
+                <button className='soft-button' type='button' disabled={busy || !draft.trim()} onClick={() => onAction({ type: 'save-node-draft', lessonKey: lesson.key, nodeId: selected.id, markdown: draft }, '节点草稿已保存。')}>保存草稿</button>
+                {canApprove ? <button className='soft-button primary' type='button' disabled={busy} onClick={() => onAction({ type: 'approve-node', lessonKey: lesson.key, nodeId: selected.id }, '节点已确认。')}>确认本节点</button> : null}
+              </div>
+            </footer>
+          </div> : null}
+
+          {activePane === 'review' ? <div className='course-review-pane'>
+            {!reviewIsCurrent && report ? <p className='empty-copy'>正文已修改，等待重新检查。</p> : <ReviewReport report={report} />}
+            {needsRevision ? <div className='course-feedback-box'>
+              <label>补充修改要求<textarea value={request} onChange={event => setRequest(event.target.value)} placeholder='指出需要补充、删改或重新核对的内容。' /></label>
+              <button className='soft-button primary' type='button' disabled={busy || !request.trim()} onClick={() => onAction({ type: 'request-node-revision', lessonKey: lesson.key, nodeId: selected.id, request }, '修改要求已提交。')}>提交局部修改</button>
+            </div> : null}
+            {needsHuman ? <div className='course-feedback-box'>
+              <label>人工判断说明<textarea value={humanReason} onChange={event => setHumanReason(event.target.value)} placeholder='说明接受当前版本的理由。' /></label>
+              <button className='soft-button primary' type='button' disabled={busy || !humanReason.trim()} onClick={() => onAction({ type: 'approve-node-human', lessonKey: lesson.key, nodeId: selected.id, reason: humanReason }, '节点已由你确认。')}>人工确认本节点</button>
+            </div> : null}
+            {!needsRevision && !needsHuman && canApprove ? <div className='course-primary-row'><button className='soft-button primary' type='button' disabled={busy} onClick={() => onAction({ type: 'approve-node', lessonKey: lesson.key, nodeId: selected.id }, '节点已确认。')}>确认本节点</button></div> : null}
+          </div> : null}
+
+          {activePane === 'source' ? <div className='course-source-pane'>
+            <section><header><strong>课堂转录</strong><span>{selected.lineRange?.join('–')} 行</span></header><pre>{selected.sourceText || '没有可显示的转录来源。'}</pre></section>
+            {selected.pptText ? <section><header><strong>课件</strong><span>{selected.slideRange?.join('–')} 页</span></header><pre>{selected.pptText}</pre></section> : null}
+          </div> : null}
+
+          {activePane === 'versions' ? <div className='course-version-pane'>
+            {(selected.versions || []).length ? [...selected.versions].reverse().map((version, index) => <article key={version.id || index}>
+              <div><strong>版本 {(selected.versions || []).length - index}</strong><span>{version.createdAt ? new Date(version.createdAt).toLocaleString('zh-CN') : '已保存'}</span></div>
+              <p>{String(version.markdown || version.draft || '').slice(0, 260) || '该版本没有可显示的摘要。'}</p>
+            </article>) : <p className='empty-copy'>当前还没有历史版本。</p>}
+          </div> : null}
+        </div>
       </div> : null}
     </div>
   </section>

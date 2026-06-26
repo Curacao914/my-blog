@@ -9,6 +9,8 @@ import {
 } from '@/lib/contentRepository'
 import Head from 'next/head'
 import Link from 'next/link'
+import { PublicHeader } from '@/components/law-tech/PublicHeader'
+import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
 
 const typeLabels = {
   article: '文章',
@@ -74,20 +76,7 @@ const ContentPage = ({ snapshots, facets, stats }) => {
 
       <div className='content-page'>
         <div className='wrap'>
-          <nav className='top-nav' aria-label='主导航'>
-            <Link className='brand' href='/'>
-              law-tech.dev
-            </Link>
-            <div className='nav-links'>
-              <Link href='/content'>内容</Link>
-              <Link href='/#projects'>项目</Link>
-              <Link href='/tools'>工具</Link>
-              <Link href='/#about'>关于</Link>
-              <Link className='desk-link' href='/desk'>
-                工作台
-              </Link>
-            </div>
-          </nav>
+          <PublicHeader active='content' />
 
           <main className='main'>
             <section className='hero'>
@@ -561,6 +550,7 @@ const ContentPage = ({ snapshots, facets, stats }) => {
           }
         }
       `}</style>
+      <LawTechDeskStyles />
     </>
   )
 }

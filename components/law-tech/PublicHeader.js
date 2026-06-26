@@ -1,21 +1,22 @@
 import Link from 'next/link'
 import { publicNav } from '@/lib/domain/navigation'
+import { LawTechIcon } from '@/components/LawTechIcons'
 
-export function PublicHeader() {
+export function PublicHeader({ active = '' }) {
   return (
-    <header className='topbar'>
-      <Link className='brand' href='/'>
+    <header className='public-header'>
+      <Link className='public-brand' href='/'>
         <span className='brand-mark'>C</span>
-        <span>Curacao</span>
+        <span>Curacao<small>law-tech.dev</small></span>
       </Link>
-      <nav className='nav' aria-label='公开导航'>
-        {publicNav.map(item => (
-          <Link key={item.href} href={item.href}>
+      <nav className='public-nav' aria-label='公开导航'>
+        {publicNav.filter(item => item.href !== '/desk').map(item => (
+          <Link key={item.href} href={item.href} aria-current={active && item.href.includes(active) ? 'page' : undefined}>
             {item.label}
           </Link>
         ))}
+        <Link className='public-desk-link' href='/desk'><LawTechIcon name='spark' size={15} />工作台</Link>
       </nav>
     </header>
   )
 }
-
