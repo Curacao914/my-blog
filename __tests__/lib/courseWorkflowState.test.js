@@ -5,8 +5,10 @@ import {
   assembleFinalNote,
   completeFinalReview,
   createInitialWorkflow,
+  failStep,
   mergeTextPackIntoWorkflow,
   planNodesFromOutline,
+  resumeWorkflow,
   saveCourseSpec,
   saveNodeDraft,
   startOutlineReview
@@ -48,6 +50,8 @@ describe('controlled course workflow', () => {
     const first = planned.lessons[0].nodes[0]
     const drafted = saveNodeDraft(planned, 'lesson-01', first.id, '## 草稿\n\n正文', { source: 'worker' })
     expect(drafted.lessons[0].nodes[0].status).toBe('node_review')
+    expect(drafted.lessons[0].status).toBe('node_pending')
+    expect(drafted.status).toBe('node_pending')
     expect(() => approveNode(drafted, 'lesson-01', first.id)).toThrow(/Reviewer approval/)
 
     const reviewed = applyNodeReview(drafted, 'lesson-01', first.id, { coverage: 90, grounding: 90, logic: 90, detail: 90, sourceCoverage: 90, issues: [], decision: 'approve' })
@@ -92,6 +96,20 @@ describe('controlled course workflow', () => {
       lessonKey: 'lesson-01',
       outline: [{ title: '不完整大纲', lineRange: [2, 4], slideRange: [1, 1], rationale: '遗漏首尾' }]
     })).toThrow(/start from transcript line 1|uncovered/)
+  })
+
+  it('archives the active failure on retry instead of presenting it as a new current error', () => {
+    const workflow = { ...sampleWorkflow(), status: 'node_pending', currentStep: 'node_generating' }
+    const failed = failStep(workflow, { step: 'write-node', error: '格式异常', taskKey: 'write:1' })
+    const duplicate = failStep(failed, { step: 'write-node', error: '格式异常', taskKey: 'write:1' })
+    expect(duplicate.errors).toHaveLength(1)
+    expect(duplicate.activeErrorId).toBe(duplicate.errors[0].id)
+
+    const resumed = resumeWorkflow(duplicate)
+    expect(resumed.status).toBe('node_pending')
+    expect(resumed.activeErrorId).toBeNull()
+    expect(resumed.errors[0].resolvedAt).toBeTruthy()
+    expect(resumed.taskLease).toBeNull()
   })
 
   it('adds supplemental material to the target lesson without recreating unrelated lessons', () => {

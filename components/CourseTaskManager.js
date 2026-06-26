@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useRouter } from 'next/router'
 
 import { CourseApiError, formatCourseApiError, requestCourseJson } from '@/lib/course/clientApi'
+import { formatCourseWorkflowError, getCurrentCourseError } from '@/lib/course/errorState'
 
 const CourseTaskContext = createContext(null)
 const STORAGE_KEY = 'law-tech-course-active-tasks-v2'
@@ -48,7 +49,16 @@ function safeStoredTasks() {
   if (typeof window === 'undefined') return {}
   try {
     const value = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '{}')
-    return value && typeof value === 'object' ? value : {}
+    if (!value || typeof value !== 'object') return {}
+    return Object.fromEntries(Object.entries(value).map(([jobId, task]) => [jobId, task?.state === 'error' ? {
+      ...task,
+      jobId,
+      active: true,
+      state: 'running',
+      label: '正在同步课程进度',
+      error: '',
+      retryCount: 0
+    } : task]))
   } catch {
     return {}
   }
@@ -120,13 +130,14 @@ export function CourseTaskProvider({ children }) {
       let workflow = workflowData.workflow
       let state = taskStateForWorkflow(workflow)
       let status = workflowStatus(workflow)
+      const currentError = getCurrentCourseError(workflow)
       patchTask(jobId, {
         workflow,
         state,
         label: labelForWorkflow(workflow),
         progress: Number(workflow?.progress || 0),
         active: state === 'running',
-        error: state === 'error' ? workflow?.errors?.at?.(-1)?.message || '课程处理失败' : ''
+        error: state === 'error' ? formatCourseWorkflowError(currentError) : ''
       })
 
       if (state !== 'running' || !AUTO_STATUSES.has(status)) return
@@ -153,7 +164,8 @@ export function CourseTaskProvider({ children }) {
     } catch (error) {
       const previous = tasksRef.current[jobId] || {}
       const status = error instanceof CourseApiError ? Number(error.status || 0) : 0
-      const retryable = !status || status === 408 || status === 429 || status >= 500
+      const persistedStepFailure = error instanceof CourseApiError && status === 502 && Boolean(error.stage)
+      const retryable = !persistedStepFailure && (!status || status === 408 || status === 429 || status >= 500)
       const retryCount = Number(previous.retryCount || 0) + 1
       if (retryable && retryCount <= MAX_RECONNECT_ATTEMPTS) {
         patchTask(jobId, {
@@ -203,6 +215,7 @@ export function CourseTaskProvider({ children }) {
       courseName: meta.courseName || tasks[jobId]?.courseName || '',
       label: meta.label || tasks[jobId]?.label || '课程处理中',
       error: '',
+      lastError: '',
       retryCount: 0
     })
     schedule(jobId, 20)
@@ -222,12 +235,13 @@ export function CourseTaskProvider({ children }) {
 
   const value = useMemo(() => ({ tasks, startTask, pauseTask, dismissTask, taskFor: jobId => tasks[jobId] || null }), [tasks, startTask, pauseTask, dismissTask])
   const visibleTask = Object.values(tasks)
-    .filter(task => task.state === 'running' || task.state === 'error' || task.state === 'waiting')
+    .filter(task => task.state === 'running' || task.state === 'error' || (task.state === 'waiting' && task.active))
     .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))[0]
+  const showGlobalTask = visibleTask && router.pathname !== '/desk/courses'
 
   return <CourseTaskContext.Provider value={value}>
     {children}
-    {visibleTask ? <div className={`course-global-task is-${visibleTask.state}`} role='status'>
+    {showGlobalTask ? <div className={`course-global-task is-${visibleTask.state}`} role='status'>
       <button type='button' onClick={() => router.push(`/desk/courses?job=${encodeURIComponent(visibleTask.jobId)}`)}>
         <i aria-hidden='true' />
         <span><b>{visibleTask.courseName || '课程整理'}</b><small>{visibleTask.error || visibleTask.label || '处理中'}{visibleTask.state === 'running' ? ` · ${visibleTask.progress || 0}%` : ''}</small></span>

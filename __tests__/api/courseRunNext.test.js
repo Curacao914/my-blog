@@ -90,7 +90,8 @@ describe('/api/courses/jobs/[id]/run-next', () => {
     expect(applyCourseWorkflowActionForWorker).toHaveBeenCalledWith('job-1', expect.objectContaining({
       type: 'fail-step',
       step: 'write-node',
-      retryable: true
+      retryable: true,
+      taskKey: expect.stringMatching(/^writer:node-1:failed:/)
     }))
   })
 })

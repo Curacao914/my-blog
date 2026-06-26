@@ -67,4 +67,33 @@ describe('CourseTextPackDesk', () => {
     expect(screen.getAllByRole('button', { name: '移除' })).toHaveLength(3)
   })
 
+  it('shows one current failure and keeps deduplicated old failures in history', async () => {
+    const failedWorkflow = {
+      ...workflow,
+      status: 'failed',
+      activeErrorId: 'current-error',
+      lessons: [{ ...workflow.lessons[0], status: 'node_pending', nodes: [] }],
+      errors: [
+        { id: 'old-error-1', step: 'generate-outline', message: 'outline leaves transcript lines 531-2001 uncovered', resolvedAt: '2026-06-26T08:00:00.000Z' },
+        { id: 'old-error-2', step: 'generate-outline', message: 'outline leaves transcript lines 531-2001 uncovered', resolvedAt: '2026-06-26T09:00:00.000Z' },
+        { id: 'current-error', step: 'review-node', message: 'Model response must be valid JSON' }
+      ]
+    }
+    fetch.mockImplementation((url, options = {}) => {
+      if (String(url).includes('/api/courses/capabilities')) return response({ ok: true, courseWriting: { configured: true, models: {} }, onlineOcr: { configured: true } })
+      if (String(url).includes('/api/courses/jobs/job-1/workflow')) return response({ ok: true, workflow: failedWorkflow, job: { id: 'job-1' } })
+      if (String(url).includes('/api/courses/textpack') && !options.method) return response({ ok: true, jobs: [{ id: 'job-1', course_name: '证据法', preferences: { textpack_stats: { lessonCount: 1 } }, preprocess_result: { workflow: failedWorkflow } }] })
+      return response({ ok: true })
+    })
+
+    render(<CourseTextPackDesk />)
+    await waitFor(() => expect(screen.getAllByText('证据法').length).toBeGreaterThan(0))
+    fireEvent.click(screen.getByRole('button', { name: '继续整理' }))
+
+    await waitFor(() => expect(screen.getByText('Model response must be valid JSON · 阶段：审查正文')).toBeInTheDocument())
+    expect(screen.getAllByText(/Model response must be valid JSON/)).toHaveLength(1)
+    expect(screen.getByText('历史诊断（1）')).toBeInTheDocument()
+    expect(screen.queryByText('查看诊断信息')).not.toBeInTheDocument()
+  })
+
 })

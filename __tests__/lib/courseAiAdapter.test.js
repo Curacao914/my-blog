@@ -1,4 +1,4 @@
-import { buildPrompt, parseJsonResponse, requireCourseModelConfig } from '@/lib/course/aiAdapter'
+import { buildPrompt, extractCourseModelContent, parseJsonResponse, requireCourseModelConfig } from '@/lib/course/aiAdapter'
 
 describe('course AI adapter', () => {
   it('builds role-specific prompts with source material and prompt version', () => {
@@ -31,5 +31,16 @@ describe('course AI adapter', () => {
     expect(parseJsonResponse('```json\n{"decision":"approve"}\n```')).toEqual({ decision: 'approve' })
     expect(() => parseJsonResponse('')).toThrow(/empty/)
     expect(() => parseJsonResponse('not json')).toThrow(/valid JSON/)
+  })
+
+  it('recovers common OpenAI-compatible JSON formatting defects', () => {
+    expect(parseJsonResponse('<think>先分析</think>\n结果如下：\n```json\n{"decision":"approve",}\n```')).toEqual({ decision: 'approve' })
+    expect(parseJsonResponse('说明文字\n{"markdown":"第一段\n\n第二段"}\n结束')).toEqual({ markdown: '第一段\n\n第二段' })
+    expect(parseJsonResponse('"{\\"decision\\":\\"revise\\"}"')).toEqual({ decision: 'revise' })
+  })
+
+  it('accepts structured and multipart model content', () => {
+    expect(extractCourseModelContent({ choices: [{ message: { content: { decision: 'approve' } } }] })).toEqual({ decision: 'approve' })
+    expect(extractCourseModelContent({ choices: [{ message: { content: [{ type: 'text', text: '{"decision":' }, { type: 'text', text: '"approve"}' }] } }] })).toBe('{"decision":"approve"}')
   })
 })

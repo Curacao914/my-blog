@@ -44,7 +44,7 @@ export default async function handler(req, res) {
         step: task.type,
         error: error instanceof Error ? error.message : String(error),
         retryable: true,
-        taskKey: `${task.taskKey || task.type}:failed`
+        taskKey: `${task.taskKey || task.type}:failed:${requestId}`
       })
       return res.status(502).json({
         ok: false,

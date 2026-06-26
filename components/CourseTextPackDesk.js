@@ -15,6 +15,7 @@ import {
   wholeMaterialAssignment
 } from '@/lib/course/materialParsers'
 import { formatCourseApiError, requestCourseJson } from '@/lib/course/clientApi'
+import { formatCourseWorkflowError, getCourseErrorHistory, getCurrentCourseError } from '@/lib/course/errorState'
 import { buildTextPack, safeName, summarizeTextPack } from '@/lib/course/textpack'
 import { getCourseUiState } from '@/lib/course/uiState'
 
@@ -251,6 +252,9 @@ function CourseWorkbench({ jobId, workflow, capabilities, onAction, onRefresh, o
   const onlineBusy = task?.state === 'running'
   const lesson = workflow.lessons?.find(item => item.key === activeLessonKey) || firstIncomplete
   const ui = getCourseUiState(workflow, lesson)
+  const currentWorkflowError = getCurrentCourseError(workflow)
+  const currentErrorMessage = task?.error || (currentWorkflowError ? formatCourseWorkflowError(currentWorkflowError) : '')
+  const errorHistory = getCourseErrorHistory(workflow)
 
   useEffect(() => { if (!workflow.lessons?.some(item => item.key === activeLessonKey)) setActiveLessonKey(firstIncomplete?.key || ''); setCourseSpec(workflow.courseSpec || {}) }, [workflow.updatedAt, activeLessonKey, firstIncomplete?.key])
   useEffect(() => { if (task?.updatedAt) onRefresh(jobId).catch(() => {}) }, [task?.updatedAt, jobId])
@@ -281,7 +285,7 @@ function CourseWorkbench({ jobId, workflow, capabilities, onAction, onRefresh, o
   return <section className='course-detail-shell'>
     <header className='course-detail-topbar'><button className='course-back-button' type='button' onClick={onBack}>← 课程库</button><div><span>课程整理</span><h2>{workflow.courseSpec?.courseName || '课程工作台'}</h2><p>{workflow.courseSpec?.teacher || '未填写教师'} · {ui.stageLabel}</p></div><div className='course-progress-box'><strong>{workflow.progress || 0}%</strong><span>{onlineBusy ? humanStatus(lesson.status || workflow.status) : ui.stageLabel}</span></div><ServiceLights capabilities={capabilities} /><div className='course-row-actions'><button className='soft-button' type='button' onClick={() => onSupplement(jobId, workflow)}>补充资料</button>{workflow.status === 'failed' ? <button className='soft-button primary' type='button' disabled={busy} onClick={() => run({ type: 'retry' }, '正在重试。')}>重试</button> : null}{capabilities?.courseWriting?.configured && AUTO_STATUSES.has(lesson.status || workflow.status) ? <button className='soft-button primary' type='button' disabled={onlineBusy || busy} onClick={() => startTask(jobId, { courseName: workflow.courseSpec?.courseName })}>{onlineBusy ? '处理中…' : '继续处理'}</button> : null}{ui.canPause ? <button className='soft-button' type='button' disabled={busy} onClick={() => { pauseTask(jobId); run({ type: 'pause' }, '已暂停后续处理。', false) }}>暂停</button> : null}{ui.canResume ? <button className='soft-button' type='button' disabled={busy} onClick={() => run({ type: 'resume' }, '已恢复处理。')}>恢复</button> : null}</div></header>
     <ProgressStepper ui={ui} />
-    <div className='course-workbench-grid'><aside className='course-lesson-rail'><h3>课次</h3>{(workflow.lessons || []).map(item => <button key={item.key} type='button' className={item.key === lesson.key ? 'active' : ''} onClick={() => setActiveLessonKey(item.key)}><b>{item.title}</b><span>{humanStatus(item.status)}</span></button>)}</aside><main className='course-stage-stack'>{stageContent}{message ? <p className={`status-line ${/失败|错误|不能|缺少|HTTP/.test(message) ? 'error' : ''}`}>{message}</p> : null}{task?.error ? <details className='course-diagnostics' open><summary>处理失败</summary><p>{task.error}</p></details> : null}{(workflow.errors || []).length ? <details className='course-diagnostics'><summary>查看诊断信息</summary>{workflow.errors.map(error => <p key={error.id}>{error.message}</p>)}</details> : null}</main></div>
+    <div className='course-workbench-grid'><aside className='course-lesson-rail'><h3>课次</h3>{(workflow.lessons || []).map(item => <button key={item.key} type='button' className={item.key === lesson.key ? 'active' : ''} onClick={() => setActiveLessonKey(item.key)}><b>{item.title}</b><span>{humanStatus(item.status)}</span></button>)}</aside><main className='course-stage-stack'>{stageContent}{message ? <p className={`status-line ${/失败|错误|不能|缺少|HTTP/.test(message) ? 'error' : ''}`}>{message}</p> : null}{currentErrorMessage ? <details className='course-diagnostics' open><summary>处理失败</summary><p>{currentErrorMessage}</p></details> : null}{errorHistory.length ? <details className='course-diagnostics'><summary>历史诊断（{errorHistory.length}）</summary>{errorHistory.map(error => <p key={error.id}>{formatCourseWorkflowError(error)}{error.resolvedAt ? ' · 已结束' : ''}</p>)}</details> : null}</main></div>
   </section>
 }
 
