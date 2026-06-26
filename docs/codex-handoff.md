@@ -10,7 +10,7 @@ This handoff is for continuing `Curacao914/my-blog` on branch `codex/homepage-ph
 - Upstream: `https://github.com/tangly1024/NotionNext.git`.
 - Branch at audit time: `codex/homepage-phase1`, tracking `origin/codex/homepage-phase1`.
 - Handoff baseline for the notes/reading phase: `54b0e7a6 Refine desk today and reading layouts`.
-- This phase modified workspace frontend files, the existing notes API, schedule parse/domain normalization for reading tags, focused tests, and status docs.
+- This phase modified workspace frontend files, the existing notes API, schedule parse/domain normalization for reading tags, the course TextPack v1 import flow, focused tests, and status docs.
 - No Supabase table rewrite, Clerk middleware, WeChat/OpenClaw, cron/reminder, production, public blog routing, or `main` changes were made.
 
 Recent relevant commits:
@@ -19,6 +19,7 @@ Recent relevant commits:
 | --- | --- |
 | `39f8b0af` | Documented the handoff baseline for this frontend phase. |
 | `54b0e7a6` | Refined desk Today and Reading layouts with collapsed history sections. |
+| `188617ae` | Fixed Today single-focus title layout so Chinese titles no longer collapse into vertical characters. |
 | `52ed7d47` | Removed Today frontend sample/fallback writes and added a small status notice. |
 | `869d6411` | Broadened OpenClaw/WeChat relay channel matching. |
 | `b74fb720` | Removed Clerk from Edge middleware after Vercel middleware failures. |
@@ -100,6 +101,46 @@ Notes:
 - Owner isolation is enforced by deriving the profile from `getScheduleOwnerUserId(req)` and filtering all note reads/writes by `owner_id`. Client-supplied owner values are ignored.
 - Reading-to-draft is idempotent by `owner_id + metadata.sourceReadingId`, with legacy fallback to `metadata.scheduleItemId`. Existing drafts are returned without overwriting user-edited body content.
 - Non-UUID/local-only reading items remain disabled in the Reading UI rather than pretending to create a persistent draft.
+
+### Course TextPack Chain
+
+Current code path:
+
+```text
+/desk/courses
+→ components/CourseTextPackDesk.js
+→ browser File API parses SRT locally
+→ JSZip reads PPTX slide/notes XML locally
+→ lib/course/textpack.js builds TextPack v1
+→ POST /api/courses/textpack
+→ server resolves current profile
+→ lib/courseRepository.importCourseTextPack
+→ Supabase course_jobs.preprocess_result.textPack + course_lessons rows
+→ course_jobs.preprocess_result.workflow
+→ /api/courses/jobs/:id/workflow
+→ components/CourseTextPackDesk.js single-lesson workbench
+```
+
+Local worker fallback:
+
+```text
+npm run course:worker:build-pack -- --course-dir <local-course-dir> --output <textpack.json>
+→ copy allowed files into /tmp/law-tech-course/<job-id>/raw
+→ run haoke-notes deterministic scan/parse/extract/split scripts in temp dir
+→ write pure TextPack JSON
+→ remove temp dir on success
+```
+
+Notes:
+
+- `docs/course-workflow-spec.md` records the full target architecture: TextPack, CourseSpec, outline approval, node queue, node writing/review, assembly, consistency checks, versioning, and resumability.
+- Current implementation covers the single-lesson MVP path in code shape: preflight preferences, outline save/edit/approval, forced node planning, node draft/reviewer report save, node approval, final Markdown assembly, pause/resume/cancel, and error recording.
+- Real model calls are executed by local worker path only when course AI env vars are configured. Worker offline is displayed as waiting; the UI does not claim work has run.
+- Raw SRT/PPT/PPTX files are not uploaded by the new TextPack path. `pages/api/courses/assets.js` and old storage-backed course asset helpers still exist for the previous partial workflow; do not use them for the TextPack v1 path unless the product boundary is revisited.
+- Owner is derived server-side from the current Clerk/local profile and stored in `preferences.web_adapter.ownerProfileId`; TextPack routes filter and delete against that value. A first-class `course_jobs.owner_id` column remains a future hardening step.
+- `.ppt` is rejected with a save-as-PPTX warning. Low-text PPTX decks are marked `ocrRequired`; the UI/API do not invent slide text.
+- Token-protected worker route: `/api/courses/jobs/:id/worker-step`, requiring `COURSE_WORKER_TOKEN`.
+- Local worker commands: `npm run course:worker:build-pack` and `npm run course:worker:run-job`.
 
 ### WeChat Chain
 
@@ -202,7 +243,9 @@ Local audit of `.env.local` found these configured locally: Supabase, database U
 | NoteDraft | Local integration verified + unit/component tested | `/api/notes` supports quick notes and reading drafts. Fresh local API verification created/patched/archived a quick note and created/found an idempotent reading draft. |
 | Publishing/content access system | Partial code/docs | Content snapshot docs and content pages exist; full DB-backed publish/access workflow unfinished. |
 | Blog fusion | Partial | New public pages coexist with NotionNext routes. Full gradual Notion independence unfinished. |
-| Course workflow | Code and docs exist; not complete | Course job APIs and worker scripts exist. Full upload-to-final-note browser workflow not freshly verified. |
+| Course single-lesson MVP | Code exists + unit/API/component covered | Browser/local TextPack generation, preview, import API, workflow state machine, preferences, outline, node planning/draft/review/approval, final assembly, worker-step route, and worker runner exist. Full live Supabase/model/browser visual pass still needs fresh verification. |
+| Course AI workflow | Partial / env-dependent | Role adapter and worker polling exist. Real outline/writer/reviewer/final review calls require `COURSE_AI_*` env and were not run here. |
+| Full-course integration | Partial / unfinished | Knowledge graph, law tables, comparison tables, case bank, course Q&A, writing and publish handoff are documented only. |
 | WeChat input | Code exists; prior real test reported | OpenClaw currently points to Preview; this handoff did not re-run a real WeChat message. |
 
 ## 6. Known Incidents and Lessons
@@ -240,11 +283,12 @@ Schedule/reading plan:
 
 Course plan:
 
-- Course work is a workflow over uploaded SRT/PPT/PPTX/materials, not a static page.
+- Course work is a workflow over local SRT/PPTX transformed into TextPack pure text, not a static page or a raw-file storage dump.
 - Multiple SRT files may represent multiple classes and should run sequentially while preserving cross-lesson context.
 - Multiple PPT/PPTX files may correspond to one or more SRT files. Mapping should be explicit or model-assisted, but not hidden from the user.
-- The web version may adapt the current `haoke-notes` strategy, but should not mutate the original local skill source unless explicitly requested.
-- The desired path is upload/collect materials, preprocess, confirm preferences, generate outline, user confirms outline, generate node notes, verify, save to library/content, optionally publish.
+- The web version adapts the current `haoke-notes` strategy but must not mutate the original local skill source unless explicitly requested.
+- The current MVP path is local deterministic preprocessing, TextPack import, preflight, CourseSpec confirmation, outline save/generation, user confirms outline, forced node planning, node writing/review, node approval, single-lesson assembly, final Markdown review/export.
+- The later path extends this to full-course integration, writing, content library, and optional publish controls.
 
 Content/publishing plan:
 
