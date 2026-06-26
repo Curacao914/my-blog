@@ -34,7 +34,8 @@ describe('CourseTextPackDesk', () => {
 
     await waitFor(() => expect(screen.getByText('确定笔记整理方式')).toBeInTheDocument())
     expect(screen.getByRole('button', { name: '保存偏好并继续' })).toBeInTheDocument()
-    expect(screen.getAllByText('在线文字识别').length).toBeGreaterThan(0)
+    expect(screen.getByLabelText('服务状态')).toBeInTheDocument()
+    expect(screen.getByText('OCR')).toBeInTheDocument()
     expect(screen.queryByText('本地处理服务')).not.toBeInTheDocument()
     expect(screen.queryByText('大纲编辑')).not.toBeInTheDocument()
     expect(screen.queryByText('最终 Markdown')).not.toBeInTheDocument()

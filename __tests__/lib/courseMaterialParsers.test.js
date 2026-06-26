@@ -7,6 +7,8 @@ import {
   parseCourseMaterialFile,
   parseDocxBuffer,
   suggestLessonGroups,
+  suggestLessonWorkspace,
+  applyAiGroupingSuggestion,
   applyOcrResultToMaterial
 } from '@/lib/course/materialParsers'
 import { buildTextPack, validateTextPack } from '@/lib/course/textpack'
@@ -103,6 +105,85 @@ describe('course material parsers', () => {
     const done = applyOcrResultToMaterial(scan, { pages: [{ page: 1, markdown: '# 第一页' }], markdown: '## 第 1 页\n\n# 第一页' })
     expect(done.ocrRequired).toBe(false)
     expect(done.text).toContain('第一页')
+  })
+
+
+  it('keeps materials separate from lessons and supports one deck across multiple lessons', async () => {
+    const first = await parseCourseMaterialFile(fileFromText('第一课.srt', '1\n00:00:01,000 --> 00:00:02,000\n第一课内容'))
+    const second = await parseCourseMaterialFile(fileFromText('第二课.srt', '1\n00:00:01,000 --> 00:00:02,000\n第二课内容'))
+    const deck = {
+      kind: 'deck', role: 'slides', clientKey: 'deck-1', sourceFile: '总课件.pptx', title: '总课件', text: '全部课件', charCount: 4,
+      slideCount: 4,
+      slides: [1, 2, 3, 4].map(page => ({ slideNumber: page, text: `第${page}页` })),
+      assignments: [
+        { id: 'a1', materialKey: 'deck-1', lessonKey: 'lesson-1', scope: 'lesson', range: { unit: 'page', start: 1, end: 2 }, locked: true },
+        { id: 'a2', materialKey: 'deck-1', lessonKey: 'lesson-2', scope: 'lesson', range: { unit: 'page', start: 3, end: 4 }, locked: true }
+      ]
+    }
+    first.assignments = [{ id: 't1', materialKey: first.clientKey, lessonKey: 'lesson-1', scope: 'lesson', range: { unit: 'line', start: 1, end: 1 }, locked: true }]
+    second.assignments = [{ id: 't2', materialKey: second.clientKey, lessonKey: 'lesson-2', scope: 'lesson', range: { unit: 'line', start: 1, end: 1 }, locked: true }]
+
+    const input = materialsToTextPackInput({
+      materials: [first, second, deck],
+      lessonGroups: [
+        { key: 'lesson-1', title: '第一课', order: 1 },
+        { key: 'lesson-2', title: '第二课', order: 2 }
+      ],
+      courseName: '国际法'
+    })
+
+    expect(input.lessons).toHaveLength(2)
+    expect(input.decks).toHaveLength(2)
+    expect(input.decks[0].slides.map(slide => slide.slideNumber)).toEqual([1, 2])
+    expect(input.decks[1].slides.map(slide => slide.slideNumber)).toEqual([3, 4])
+  })
+
+  it('does not create one lesson for every unanchored slide deck', () => {
+    const workspace = suggestLessonWorkspace([
+      { kind: 'deck', role: 'slides', clientKey: 'p1', sourceFile: '课件甲.pptx', title: '课件甲', text: '内容甲', slideCount: 2, slides: [] },
+      { kind: 'deck', role: 'slides', clientKey: 'p2', sourceFile: '课件乙.pptx', title: '课件乙', text: '内容乙', slideCount: 3, slides: [] }
+    ])
+
+    expect(workspace.groups).toHaveLength(1)
+    expect(workspace.materials.every(material => material.assignments.length === 0)).toBe(true)
+  })
+
+  it('preserves locked manual assignments while applying AI suggestions to other materials', () => {
+    const materials = [
+      { kind: 'transcript', role: 'transcript', clientKey: 'locked', text: 'a', lineCount: 1, assignments: [{ id: 'manual', materialKey: 'locked', lessonKey: 'l1', scope: 'lesson', range: { unit: 'line', start: 1, end: 1 }, locked: true }] },
+      { kind: 'deck', role: 'slides', clientKey: 'new', text: 'b', slideCount: 2, slides: [] }
+    ]
+    const result = applyAiGroupingSuggestion(materials, [{ key: 'l1', title: '第一课', order: 1 }], {
+      lessons: [],
+      assignments: [{ materialKey: 'new', lessonKey: 'l1', scope: 'lesson', range: { unit: 'page', start: 1, end: 2 }, confidence: 'high', reason: '内容对应' }]
+    })
+
+    expect(result.materials[0].assignments[0].id).toBe('manual')
+    expect(result.materials[1].assignments[0].source).toBe('ai')
+  })
+
+  it('keeps explicitly unassigned material unassigned even when only one lesson exists', () => {
+    const material = {
+      kind: 'deck',
+      role: 'slides',
+      clientKey: 'deck-unassigned',
+      sourceFile: '总论课件.pptx',
+      title: '总论课件',
+      text: '第一页',
+      markdown: '第一页',
+      charCount: 3,
+      slideCount: 1,
+      slides: [{ slideNumber: 1, text: '第一页' }],
+      assignments: []
+    }
+    const input = materialsToTextPackInput({
+      materials: [material],
+      lessonGroups: [{ key: 'lesson-1', title: '第一课', order: 1 }],
+      courseName: '国际法',
+      teacher: ''
+    })
+    expect(input.decks).toHaveLength(0)
+    expect(input.warnings.join(' ')).toContain('尚未归档')
   })
 
 })

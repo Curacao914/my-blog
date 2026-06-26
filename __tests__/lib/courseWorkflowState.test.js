@@ -5,6 +5,7 @@ import {
   assembleFinalNote,
   completeFinalReview,
   createInitialWorkflow,
+  mergeTextPackIntoWorkflow,
   planNodesFromOutline,
   saveCourseSpec,
   saveNodeDraft,
@@ -91,6 +92,26 @@ describe('controlled course workflow', () => {
       lessonKey: 'lesson-01',
       outline: [{ title: '不完整大纲', lineRange: [2, 4], slideRange: [1, 1], rationale: '遗漏首尾' }]
     })).toThrow(/start from transcript line 1|uncovered/)
+  })
+
+  it('adds supplemental material to the target lesson without recreating unrelated lessons', () => {
+    const workflow = saveCourseSpec(sampleWorkflow(true), { qualityThreshold: 75 })
+    const supplement = buildTextPack({
+      course: { name: '证据法', teacher: '张老师' },
+      lessons: [{ order: 1, key: 'lesson-01', title: '第1课', transcript: '补充讲义第一行\n补充讲义第二行' }],
+      decks: [{ key: 'deck-extra', title: '补充课件', lessonOrder: 1, markdown: '补充课件内容', slides: [{ slideNumber: 1, text: '补充课件内容' }] }]
+    })
+
+    const merged = mergeTextPackIntoWorkflow(workflow, supplement)
+    const first = merged.lessons.find(lesson => lesson.key === 'lesson-01')
+    const second = merged.lessons.find(lesson => lesson.key === 'lesson-02')
+
+    expect(first.transcript).toContain('补充讲义第一行')
+    expect(first.pptText.some(deck => deck.title === '补充课件')).toBe(true)
+    expect(first.status).toBe('outline_pending')
+    expect(second.transcript).toContain('第二课第一行')
+    expect(second.status).toBe('outline_pending')
+    expect(merged.feedback.at(-1)).toEqual(expect.objectContaining({ type: 'materials-supplemented' }))
   })
 
 })

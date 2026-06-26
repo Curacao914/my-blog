@@ -22,6 +22,7 @@ import dynamic from 'next/dynamic'
 
 // 【核心新增 1】：引入我们刚刚自己写的 React 原生聊天挂件
 import NativeDifyChat from '@/components/NativeDifyChat'
+import { CourseTaskProvider } from '@/components/CourseTaskManager'
 
 // import { ClerkProvider } from '@clerk/nextjs'
 const ClerkProvider = dynamic(() =>
@@ -74,13 +75,13 @@ const MyApp = ({ Component, pageProps }) => {
   )
   
   return (
-    <>
+    <CourseTaskProvider>
       {enableClerk ? (
         <ClerkProvider localization={zhCN}>{content}</ClerkProvider>
       ) : (
         content
       )}
-    </>
+    </CourseTaskProvider>
   )
 }
 
