@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { deskNav } from '@/lib/domain/navigation'
 
 export function DeskShell({ active = 'today', title, kicker, children }) {
+  const activeItem = deskNav.flatMap((group) => group.items).find((item) => item.key === active)
+
   return (
     <div className="desk-layout">
       <aside className="desk-sidebar">
@@ -24,13 +26,27 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
       </aside>
       <main className="desk-main">
         <div className="desk-topbar">
-          <span className="eyebrow">{kicker}</span>
+          <div>
+            <span className="eyebrow">{kicker}</span>
+            <strong>{activeItem?.label || title}</strong>
+          </div>
           <Link className="ghost-link" href="/">
             回到首页
           </Link>
         </div>
-        <section className="desk-hero">
-          <span className="eyebrow">{active}</span>
+        <details className="desk-mobile-nav">
+          <summary>工作台导航</summary>
+          <nav aria-label="移动端工作台导航">
+            {deskNav.flatMap((group) =>
+              group.items.map((item) => (
+                <Link key={item.key} href={item.href} aria-current={active === item.key ? 'page' : undefined}>
+                  {item.label}
+                </Link>
+              ))
+            )}
+          </nav>
+        </details>
+        <section className="desk-page">
           <h1>{title}</h1>
           {children}
         </section>

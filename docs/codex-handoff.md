@@ -9,16 +9,15 @@ This handoff is for continuing `Curacao914/my-blog` on branch `codex/homepage-ph
 - Repository: `https://github.com/Curacao914/my-blog.git`.
 - Upstream: `https://github.com/tangly1024/NotionNext.git`.
 - Branch at audit time: `codex/homepage-phase1`, tracking `origin/codex/homepage-phase1`.
-- HEAD before this documentation handoff commit: `52ed7d4710c68a4751eeb77d48136b409aaf1021`.
-- `git status --short --branch` before docs edits: clean.
-- Uncommitted business code before docs edits: none.
-- Current docs-only edits in this handoff: `AGENTS.md`, `docs/codex-handoff.md`, `docs/law-tech-migration-matrix.md`.
-- It is safe to continue modifying frontend files after this handoff, but the next window must first read the files listed at the end of this document.
+- Handoff baseline for this frontend phase: `39f8b0af0006ea77f9242bb34a881047ebd72a92`.
+- This phase modified only frontend workspace files, a focused component test, and status docs.
+- No backend, API, Supabase schema, Clerk, middleware, WeChat/OpenClaw, cron/reminder, production, or `main` changes were made.
 
 Recent relevant commits:
 
 | Commit | Purpose |
 | --- | --- |
+| `39f8b0af` | Documented the handoff baseline for this frontend phase. |
 | `52ed7d47` | Removed Today frontend sample/fallback writes and added a small status notice. |
 | `869d6411` | Broadened OpenClaw/WeChat relay channel matching. |
 | `b74fb720` | Removed Clerk from Edge middleware after Vercel middleware failures. |
@@ -161,9 +160,11 @@ Local audit of `.env.local` found these configured locally: Supabase, database U
 | Supabase persistence | Code exists; previously tested | Schedule/read/note/reminder server code uses Supabase REST. Fresh DB write not run here. |
 | Edit/complete/delete schedule items | Code exists | `TodayBoard` mutates local state and PUTs `/api/schedule/items`; delete uses `deletedIds`. Fresh UI test not run. |
 | Content classification | Code exists | `contentType`, section, `sectionKey`, importance, urgency, and pinning normalize through parse/domain. |
-| Focus area | Code exists | `TodayBoard` computes up to two focus items. Visual refinement still pending. |
-| Four-quadrant view | Code exists | `TodayBoard` has `matrix` view. Visual refinement pending. |
-| Reading box | Code exists; needs frontend refinement | `ReadingBox` lists reading items and has detail/note actions. Fresh note write not run. |
+| Workspace shell | Build verified + component covered | `DeskShell` keeps full left navigation on desktop, adds mobile folded nav, and uses a lighter page frame. |
+| Focus area | Build verified + component covered | `TodayBoard` computes up to two active focus items; completed items are excluded from focus. |
+| Today default layout | Build verified + component covered | Active main/flexible stacks are independent; completed/history items move to a collapsed cross-page section. |
+| Four-quadrant view | Build verified + component covered | `TodayBoard` keeps `matrix` as an independent view with compact editable cards. |
+| Reading box | Build verified + component covered | `ReadingBox` now uses active reading list + detail, with read items in a collapsed compact history section. Fresh note write not run. |
 | Clerk page permissions | Not proven strict | Anonymous Preview `/desk/today` returned 200. Current code checks cookies only when Clerk env exists. |
 | API permissions for schedule/notes | Not proven strict | Anonymous Preview `/api/schedule/items` and `/api/notes` returned 200. |
 | Capture API token permission | Code exists; route reachable | `/api/schedule/capture` checks bearer token for POST. Anonymous GET returns 405. |
@@ -184,6 +185,7 @@ Local audit of `.env.local` found these configured locally: Supabase, database U
 - Older reading logic used link presence to classify reading. Current `ReadingBox` and domain logic use `contentType`, reading section/date markers, and `aiTrace`; verify code before making claims.
 - Localhost, Preview, production, and real WeChat tests must be reported separately.
 - Do not infer that a feature never existed because the current HEAD lacks it. Check Git history, old branches, and the independent `law-tech` repo when relevant.
+- Local dev browser checks in this phase needed temporary local Clerk env clearing to avoid the existing desk redirect; this did not change code. The dev server also printed Watchpack `EMFILE` watcher warnings, but production build passed.
 
 ## 7. Current Product Plan
 
@@ -228,34 +230,32 @@ Design principles:
 - Maintain a calm, personal, restrained visual system: warm white, pale blue-green, deep ink green, serif type, large radius, soft shadows.
 - Current frontend target is restrained static light glass, not complex animated liquid glass.
 
-## 8. Current Frontend Requirements
+## 8. Current Frontend Status
 
-Confirmed constraints for the next frontend-only phase:
+This frontend-only phase has implemented the confirmed Shell, Today, and Reading direction:
 
-- Do not overthrow the existing warm white / pale blue-green / deep ink green / serif / large-radius / soft-shadow direction.
-- Do not implement complex dynamic liquid glass. Use restrained static light glass.
-- Keep the left module navigation. Do not delete entries without auditing their routes and meaning.
-- Today is a daily command center, not a full module collection.
-- Top focus area should show at most two items.
-- Preserve importance, urgency, pinning, and user manual overrides as separate concepts.
-- Keep four-quadrant as its own view.
-- Default Today content should use about a 62/38 two-stack layout, with independent vertical stacks rather than shared grid row heights.
-- Fix the visual imbalance where one side grows tall while the other side leaves large empty space.
-- Mobile should become a reasonable single-column experience.
-- Reading target is reading list plus detail panel.
-- Do not change backend, AI, Supabase, WeChat, Clerk, middleware, schema, or deployment in this frontend phase.
-- Do not handle images or multimodal input in this phase.
-- Do not introduce a large UI library.
-- Do not duplicate multiple business components for layout variants; use variants or props where needed.
-- Visual acceptance needs screenshots or browser inspection for `/desk/today` and `/desk/reading` at desktop and mobile widths.
+- `DeskShell` preserves every existing desk navigation route and makes the desktop sidebar stable while the main content scrolls.
+- Mobile desk navigation is a folded top section; no route entries were removed.
+- Today input is visually smaller and no longer uses example placeholder text.
+- Today focus is capped at two active items, using existing pin/importance/urgency/time logic.
+- Today default view uses independent main/flexible stacks only when that structure is useful. It no longer forces completed/history content into a heavy right column.
+- Completed schedule items are in a keyboard-operable collapsed history section with `aria-expanded`; expanded content uses compact cards and can restore items.
+- Four-quadrant remains an independent view and uses compact editable cards.
+- Reading uses active reading list plus detail panel; read items are in a collapsed compact `已读` history section with restore action.
+- Note draft action remains connected to `/api/notes` only for UUID-backed schedule records. Local-only items show a disabled "草稿后续接入" action.
+- Visual direction remains warm white / pale blue-green / deep ink green / serif / large-radius / soft-shadow, with restrained static glass.
+- Focused component coverage was added in `__tests__/components/DeskWorkspace.test.js`.
 
-## 9. Next Window Task
+Fresh checks from this phase:
 
-The next Codex window's only task should be:
+- `git diff --check`: passed.
+- `npm test -- __tests__/components/DeskWorkspace.test.js --runInBand`: passed 4/4.
+- `npm run build`: passed.
+- Full `npm test -- --runInBand`: failed in pre-existing unrelated suites (`validation`, `LazyImage` theme alias, OpenClaw relay test environment response). The new workspace test passed.
 
-> Only complete frontend layout and visual refinement for the workspace Shell, Today, and Reading. Do not modify backend chains.
+## 9. Next Window Notes
 
-Files the next window must read first:
+If continuing after this phase, read first:
 
 - `AGENTS.md`
 - `docs/codex-handoff.md`
@@ -272,7 +272,5 @@ Files the next window must read first:
 Suggested first checks:
 
 - `git status --short --branch`
-- Inspect `/desk/today` and `/desk/reading` in browser before editing.
-- Verify no user-facing explanatory copy is introduced.
-- After frontend edits, run `git diff --check` and `npm run build`.
-
+- Check the latest Preview deployment before claiming public behavior.
+- If doing auth/security work, audit Clerk page/API session verification separately; this frontend phase did not change it.

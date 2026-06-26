@@ -4,13 +4,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { selectRelevantItems } from '@/lib/domain/schedule-context'
 
 const storageKey = 'law-tech.schedule.v2'
-const commandPlaceholder = '写一句话：明天上午10点检查微信入口，或把公众号链接发进阅读箱。'
+const commandPlaceholder = '写下今天要处理的事、阅读材料或提醒。'
 
 const viewTabs = [
   { key: 'today', label: '今天' },
   { key: 'upcoming', label: '接下来' },
   { key: 'all', label: '全部' },
-  { key: 'reading', label: '阅读' },
+  { key: 'reading', label: '今日阅读' },
   { key: 'matrix', label: '四象限' }
 ]
 
@@ -179,6 +179,151 @@ function dateLabel(date) {
   return '接下来'
 }
 
+function groupItems(items = []) {
+  return items.reduce((acc, item) => {
+    const key = item.sectionKey || 'other'
+    acc[key] ||= { label: item.section || '其他', items: [] }
+    acc[key].items.push(item)
+    return acc
+  }, {})
+}
+
+function itemHasFixedTime(item) {
+  return Boolean(item.time) || ['today', 'overdue', 'upcoming'].includes(dateKind(item.date))
+}
+
+function ItemCard({
+  item,
+  variant = 'standard',
+  expandedId,
+  editingId,
+  setExpandedId,
+  setEditingId,
+  updateItem,
+  removeItem,
+  toggleChild
+}) {
+  const isExpanded = expandedId === item.id
+  const isEditing = editingId === item.id
+  const showDetails = isExpanded || isEditing || variant === 'focus'
+  const isCompact = variant === 'compact'
+  const canComplete = variant !== 'focus' && variant !== 'compact'
+  const isHistory = variant === 'compact' && item.status === 'done'
+
+  return (
+    <article
+      className={`today-card ${variant}-card ${item.tone || toneFor(item.sectionKey)} ${item.status === 'done' ? 'is-done' : ''}`}
+      data-variant={variant}
+    >
+      {canComplete ? (
+        <label className="today-check" aria-label={item.status === 'done' ? '标记为未完成' : '标记为完成'}>
+          <input
+            type="checkbox"
+            checked={item.status === 'done'}
+            onChange={() => updateItem(item.id, { status: item.status === 'done' ? 'active' : 'done' })}
+          />
+          <span />
+        </label>
+      ) : null}
+      <div className="today-card-body">
+        <div className="today-card-head">
+          <button
+            className="card-title-button"
+            type="button"
+            onClick={() => setExpandedId(expandedId === item.id ? '' : item.id)}
+          >
+            {item.title}
+          </button>
+          <div className="card-actions">
+            {item.isPinned ? <b>置顶</b> : null}
+            {item.importance === 'important' ? <b>重要</b> : null}
+            {item.urgency === 'urgent' ? <b>紧急</b> : null}
+            {variant !== 'focus' ? (
+              isHistory ? (
+                <button type="button" onClick={() => updateItem(item.id, { status: 'active' })}>
+                  恢复
+                </button>
+              ) : (
+                <button type="button" onClick={() => setEditingId(editingId === item.id ? '' : item.id)}>
+                  编辑
+                </button>
+              )
+            ) : null}
+          </div>
+        </div>
+        <div className="today-meta">
+          <span>{dateLabel(item.date)}</span>
+          {item.time ? <span>{item.time}</span> : null}
+          {item.place ? <span>{item.place}</span> : null}
+          <span>{item.section}</span>
+        </div>
+        {item.summary && !isCompact ? <p className="card-summary">{item.summary}</p> : null}
+        {showDetails && item.children.length ? (
+          <div className="mini-list">
+            {item.children.map((child) => (
+              <label key={child.id}>
+                <input type="checkbox" checked={child.done} onChange={() => toggleChild(item.id, child.id)} />
+                <span>{child.title}</span>
+              </label>
+            ))}
+          </div>
+        ) : null}
+        {item.links.length && !isCompact ? (
+          <div className="link-chips">
+            {item.links.slice(0, variant === 'focus' ? 3 : item.links.length).map((link) => (
+              <a key={`${variant}-${item.id}-${link.url}`} href={link.url} target="_blank" rel="noreferrer">
+                {link.title || link.url}
+              </a>
+            ))}
+          </div>
+        ) : null}
+        {isEditing ? (
+          <div className="item-editor">
+            <input value={item.title} onChange={(event) => updateItem(item.id, { title: event.target.value })} />
+            <div className="editor-grid">
+              <input value={item.section} onChange={(event) => updateItem(item.id, { section: event.target.value })} placeholder="类别" />
+              <input value={item.date} onChange={(event) => updateItem(item.id, { date: event.target.value })} placeholder="YYYY-MM-DD / reading / none" />
+              <input value={item.time} onChange={(event) => updateItem(item.id, { time: event.target.value })} placeholder="时间" />
+              <input value={item.place} onChange={(event) => updateItem(item.id, { place: event.target.value })} placeholder="地点" />
+              <select value={item.contentType} onChange={(event) => updateItem(item.id, { contentType: event.target.value })}>
+                <option value="action">事项</option>
+                <option value="reading">阅读</option>
+              </select>
+              <select value={item.priority} onChange={(event) => updateItem(item.id, { priority: event.target.value })}>
+                <option value="high">重要</option>
+                <option value="normal">普通</option>
+                <option value="low">轻量</option>
+              </select>
+              <select value={item.importance} onChange={(event) => updateItem(item.id, { importance: event.target.value, importanceSource: 'user' })}>
+                <option value="important">重要</option>
+                <option value="normal">普通</option>
+              </select>
+              <select value={item.urgency} onChange={(event) => updateItem(item.id, { urgency: event.target.value, urgencySource: 'user' })}>
+                <option value="urgent">紧急</option>
+                <option value="not_urgent">不紧急</option>
+              </select>
+              <select value={item.isPinned ? 'yes' : 'no'} onChange={(event) => updateItem(item.id, { isPinned: event.target.value === 'yes' })}>
+                <option value="no">不置顶</option>
+                <option value="yes">置顶</option>
+              </select>
+              <select value={item.status} onChange={(event) => updateItem(item.id, { status: event.target.value })}>
+                <option value="active">进行中</option>
+                <option value="done">完成</option>
+                <option value="cancelled">取消</option>
+              </select>
+            </div>
+            <textarea value={item.summary} onChange={(event) => updateItem(item.id, { summary: event.target.value })} placeholder="摘要" />
+            <textarea value={item.note} onChange={(event) => updateItem(item.id, { note: event.target.value })} placeholder="备注" />
+            <button type="button" onClick={() => removeItem(item.id)}>
+              删除
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </article>
+  )
+}
+
 export function TodayBoard() {
   const [command, setCommand] = useState('')
   const [view, setView] = useState('today')
@@ -189,6 +334,7 @@ export function TodayBoard() {
   const [isReady, setIsReady] = useState(false)
   const [cloudEnabled, setCloudEnabled] = useState(false)
   const [notice, setNotice] = useState('')
+  const [showCompleted, setShowCompleted] = useState(false)
   const deletedIdsRef = useRef([])
 
   useEffect(() => {
@@ -267,17 +413,53 @@ export function TodayBoard() {
     if (view === 'upcoming') return sorted.filter((item) => item.status === 'active' && dateKind(item.date) === 'upcoming')
     if (view === 'reading') return sorted.filter(isReadingItem)
     if (view === 'matrix') return sorted.filter((item) => item.status === 'active')
-    return sorted.filter((item) => item.status === 'active' && ['today', 'overdue'].includes(dateKind(item.date)))
+    return sorted.filter(
+      (item) =>
+        item.status === 'active' &&
+        (['today', 'overdue'].includes(dateKind(item.date)) || dateKind(item.date) === 'none' || isReadingItem(item))
+    )
   }, [items, view])
 
-  const grouped = useMemo(() => {
-    return visibleItems.reduce((acc, item) => {
-      const key = item.sectionKey || 'other'
-      acc[key] ||= { label: item.section || '其他', items: [] }
-      acc[key].items.push(item)
-      return acc
-    }, {})
-  }, [visibleItems])
+  const completedItems = useMemo(() => {
+    const sorted = sortItems(items).filter((item) => item.status === 'done')
+    if (view === 'matrix') return []
+    if (view === 'reading') return sorted.filter(isReadingItem)
+    if (view === 'upcoming') return sorted.filter((item) => dateKind(item.date) === 'upcoming')
+    if (view === 'all') return sorted
+    return sorted.filter((item) => ['today', 'overdue', 'none'].includes(dateKind(item.date)) || isReadingItem(item))
+  }, [items, view])
+
+  const focusIds = useMemo(() => new Set(focusItems.map((item) => item.id)), [focusItems])
+
+  const columnGroups = useMemo(() => {
+    const withoutFocus = view === 'today' ? visibleItems.filter((item) => !focusIds.has(item.id)) : visibleItems
+    const activeItems = withoutFocus.filter((item) => item.status !== 'done')
+    const mainItems = activeItems.filter((item) => !isReadingItem(item) && itemHasFixedTime(item))
+    const sideItems = activeItems.filter((item) => !mainItems.some((mainItem) => mainItem.id === item.id))
+
+    if (view === 'reading') {
+      return {
+        main: groupItems(activeItems),
+        side: {}
+      }
+    }
+
+    if (view === 'all') {
+      return {
+        main: groupItems(mainItems),
+        side: groupItems(sideItems)
+      }
+    }
+
+    return {
+      main: groupItems(mainItems),
+      side: groupItems(sideItems)
+    }
+  }, [focusIds, visibleItems, view])
+
+  const hasMainColumn = Object.keys(columnGroups.main).length > 0
+  const hasSideColumn = Object.keys(columnGroups.side).length > 0
+  const useSplitColumns = hasMainColumn && hasSideColumn && ['today', 'upcoming', 'all'].includes(view)
 
   const matrixGroups = useMemo(() => ({
     importantUrgent: visibleItems.filter((item) => item.importance === 'important' && item.urgency === 'urgent'),
@@ -354,46 +536,18 @@ export function TodayBoard() {
       {view === 'today' && focusItems.length ? (
         <section className={`focus-strip focus-count-${focusItems.length}`}>
           {focusItems.map((item) => (
-            <article className={`today-card focus-card ${item.tone || toneFor(item.sectionKey)}`} key={`focus-${item.id}`}>
-              <div className="today-card-body">
-                <div className="today-card-head">
-                  <button className="card-title-button" type="button" onClick={() => setExpandedId(expandedId === item.id ? '' : item.id)}>
-                    {item.title}
-                  </button>
-                  <div className="card-actions">
-                    {item.isPinned ? <b>置顶</b> : null}
-                    {item.importance === 'important' ? <b>重要</b> : null}
-                    {item.urgency === 'urgent' ? <b>紧急</b> : null}
-                  </div>
-                </div>
-                <div className="today-meta">
-                  <span>{dateLabel(item.date)}</span>
-                  {item.time ? <span>{item.time}</span> : null}
-                  {item.place ? <span>{item.place}</span> : null}
-                  <span>{item.section}</span>
-                </div>
-                {item.summary ? <p className="card-summary">{item.summary}</p> : null}
-                {item.children.length && expandedId === item.id ? (
-                  <div className="mini-list">
-                    {item.children.map((child) => (
-                      <label key={child.id}>
-                        <input type="checkbox" checked={child.done} onChange={() => toggleChild(item.id, child.id)} />
-                        <span>{child.title}</span>
-                      </label>
-                    ))}
-                  </div>
-                ) : null}
-                {item.links.length ? (
-                  <div className="link-chips">
-                    {item.links.slice(0, 3).map((link) => (
-                      <a key={`focus-${item.id}-${link.url}`} href={link.url} target="_blank" rel="noreferrer">
-                        {link.title || link.url}
-                      </a>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </article>
+            <ItemCard
+              key={`focus-${item.id}`}
+              item={item}
+              variant="focus"
+              expandedId={expandedId}
+              editingId={editingId}
+              setExpandedId={setExpandedId}
+              setEditingId={setEditingId}
+              updateItem={updateItem}
+              removeItem={removeItem}
+              toggleChild={toggleChild}
+            />
           ))}
         </section>
       ) : null}
@@ -422,141 +576,124 @@ export function TodayBoard() {
                 <small>{matrixGroups[key].length}</small>
               </div>
               {matrixGroups[key].map((item) => (
-                <article className={`today-card compact-card ${item.tone || toneFor(item.sectionKey)} ${item.status === 'done' ? 'is-done' : ''}`} key={`matrix-${item.id}`}>
-                  <div className="today-card-body">
-                    <div className="today-card-head">
-                      <button className="card-title-button" type="button" onClick={() => setEditingId(editingId === item.id ? '' : item.id)}>
-                        {item.title}
-                      </button>
-                    </div>
-                    <div className="today-meta">
-                      <span>{dateLabel(item.date)}</span>
-                      {item.time ? <span>{item.time}</span> : null}
-                      <span>{item.section}</span>
-                    </div>
-                  </div>
-                </article>
+                <ItemCard
+                  key={`matrix-${item.id}`}
+                  item={item}
+                  variant="compact"
+                  expandedId={expandedId}
+                  editingId={editingId}
+                  setExpandedId={setExpandedId}
+                  setEditingId={setEditingId}
+                  updateItem={updateItem}
+                  removeItem={removeItem}
+                  toggleChild={toggleChild}
+                />
               ))}
+              {!matrixGroups[key].length ? <p className="lane-empty">暂无</p> : null}
             </div>
           ))}
         </section>
       ) : (
-      <section className="today-lanes">
-        {Object.entries(grouped).map(([sectionKey, group]) => (
-          <div className="today-lane" key={sectionKey}>
-            <div className="today-lane-title">
-              <span>{group.label}</span>
-              <small>{group.items.length}</small>
-            </div>
-            {group.items.map((item) => (
-              <article className={`today-card ${item.tone || toneFor(item.sectionKey)} ${item.status === 'done' ? 'is-done' : ''}`} key={item.id}>
-                <label className="today-check">
-                  <input
-                    type="checkbox"
-                    checked={item.status === 'done'}
-                    onChange={() => updateItem(item.id, { status: item.status === 'done' ? 'active' : 'done' })}
-                  />
-                  <span />
-                </label>
-                <div className="today-card-body">
-                  <div className="today-card-head">
-                    <button className="card-title-button" type="button" onClick={() => setExpandedId(expandedId === item.id ? '' : item.id)}>
-                      {item.title}
-                    </button>
-                    <div className="card-actions">
-                      {item.isPinned ? <b>置顶</b> : null}
-                      {item.importance === 'important' ? <b>重要</b> : null}
-                      {item.urgency === 'urgent' ? <b>紧急</b> : null}
-                      <button type="button" onClick={() => setEditingId(editingId === item.id ? '' : item.id)}>
-                        编辑
-                      </button>
-                    </div>
+        <section className={`today-lanes ${useSplitColumns ? '' : 'is-single'}`}>
+          <div className="today-stack today-stack-main">
+            {hasMainColumn ? (
+              Object.entries(columnGroups.main).map(([sectionKey, group]) => (
+                <div className="today-lane" key={sectionKey}>
+                  <div className="today-lane-title">
+                    <span>{group.label}</span>
+                    <small>{group.items.length}</small>
                   </div>
-                  <div className="today-meta">
+                  {group.items.map((item) => (
+                    <ItemCard
+                      key={item.id}
+                      item={item}
+                      variant={item.status === 'done' ? 'completed' : 'standard'}
+                      expandedId={expandedId}
+                      editingId={editingId}
+                      setExpandedId={setExpandedId}
+                      setEditingId={setEditingId}
+                      updateItem={updateItem}
+                      removeItem={removeItem}
+                      toggleChild={toggleChild}
+                    />
+                  ))}
+                </div>
+              ))
+            ) : (
+              <div className="lane-empty">没有固定时间事项</div>
+            )}
+          </div>
+          {hasSideColumn ? (
+          <div className="today-stack today-stack-side">
+            {hasSideColumn ? (
+              Object.entries(columnGroups.side).map(([sectionKey, group]) => (
+                <div className="today-lane" key={sectionKey}>
+                  <div className="today-lane-title">
+                    <span>{view === 'reading' && sectionKey === 'reading' ? '已读' : group.label}</span>
+                    <small>{group.items.length}</small>
+                  </div>
+                  {group.items.map((item) => (
+                    <ItemCard
+                      key={item.id}
+                      item={item}
+                      variant={item.status === 'done' ? 'completed' : 'standard'}
+                      expandedId={expandedId}
+                      editingId={editingId}
+                      setExpandedId={setExpandedId}
+                      setEditingId={setEditingId}
+                      updateItem={updateItem}
+                      removeItem={removeItem}
+                      toggleChild={toggleChild}
+                    />
+                  ))}
+                </div>
+              ))
+            ) : null}
+            {view === 'today' && upcomingStrip.length ? (
+              <section className="upcoming-strip">
+                {upcomingStrip.map((item) => (
+                  <button key={item.id} type="button" onClick={() => setExpandedId(expandedId === item.id ? '' : item.id)}>
                     <span>{dateLabel(item.date)}</span>
                     {item.time ? <span>{item.time}</span> : null}
-                    {item.place ? <span>{item.place}</span> : null}
-                    <span>{item.section}</span>
-                  </div>
-                  {item.summary ? <p className="card-summary">{item.summary}</p> : null}
-                  {(expandedId === item.id || editingId === item.id) && item.children.length ? (
-                    <div className="mini-list">
-                      {item.children.map((child) => (
-                        <label key={child.id}>
-                          <input type="checkbox" checked={child.done} onChange={() => toggleChild(item.id, child.id)} />
-                          <span>{child.title}</span>
-                        </label>
-                      ))}
-                    </div>
-                  ) : null}
-                  {item.links.length ? (
-                    <div className="link-chips">
-                      {item.links.map((link) => (
-                        <a key={`${item.id}-${link.url}`} href={link.url} target="_blank" rel="noreferrer">
-                          {link.title || link.url}
-                        </a>
-                      ))}
-                    </div>
-                  ) : null}
-                  {editingId === item.id ? (
-                    <div className="item-editor">
-                      <input value={item.title} onChange={(event) => updateItem(item.id, { title: event.target.value })} />
-                      <div className="editor-grid">
-                        <input value={item.section} onChange={(event) => updateItem(item.id, { section: event.target.value })} placeholder="类别" />
-                        <input value={item.date} onChange={(event) => updateItem(item.id, { date: event.target.value })} placeholder="YYYY-MM-DD / reading / none" />
-                        <input value={item.time} onChange={(event) => updateItem(item.id, { time: event.target.value })} placeholder="时间" />
-                        <input value={item.place} onChange={(event) => updateItem(item.id, { place: event.target.value })} placeholder="地点" />
-                        <select value={item.contentType} onChange={(event) => updateItem(item.id, { contentType: event.target.value })}>
-                          <option value="action">事项</option>
-                          <option value="reading">阅读</option>
-                        </select>
-                        <select value={item.priority} onChange={(event) => updateItem(item.id, { priority: event.target.value })}>
-                          <option value="high">重要</option>
-                          <option value="normal">普通</option>
-                          <option value="low">轻量</option>
-                        </select>
-                        <select value={item.importance} onChange={(event) => updateItem(item.id, { importance: event.target.value, importanceSource: 'user' })}>
-                          <option value="important">重要</option>
-                          <option value="normal">普通</option>
-                        </select>
-                        <select value={item.urgency} onChange={(event) => updateItem(item.id, { urgency: event.target.value, urgencySource: 'user' })}>
-                          <option value="urgent">紧急</option>
-                          <option value="not_urgent">不紧急</option>
-                        </select>
-                        <select value={item.isPinned ? 'yes' : 'no'} onChange={(event) => updateItem(item.id, { isPinned: event.target.value === 'yes' })}>
-                          <option value="no">不置顶</option>
-                          <option value="yes">置顶</option>
-                        </select>
-                        <select value={item.status} onChange={(event) => updateItem(item.id, { status: event.target.value })}>
-                          <option value="active">进行中</option>
-                          <option value="done">完成</option>
-                          <option value="cancelled">取消</option>
-                        </select>
-                      </div>
-                      <textarea value={item.summary} onChange={(event) => updateItem(item.id, { summary: event.target.value })} placeholder="摘要" />
-                      <textarea value={item.note} onChange={(event) => updateItem(item.id, { note: event.target.value })} placeholder="备注" />
-                      <button type="button" onClick={() => removeItem(item.id)}>
-                        删除
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              </article>
-            ))}
+                    <strong>{item.title}</strong>
+                  </button>
+                ))}
+              </section>
+            ) : null}
           </div>
-        ))}
-      </section>
+          ) : null}
+        </section>
       )}
 
-      {view === 'today' && upcomingStrip.length ? (
-        <section className="upcoming-strip">
-          {upcomingStrip.map((item) => (
-            <button key={item.id} type="button" onClick={() => setExpandedId(expandedId === item.id ? '' : item.id)}>
-              <span>{dateLabel(item.date)}</span>
-              {item.time ? <span>{item.time}</span> : null}
-              <strong>{item.title}</strong>
-            </button>
-          ))}
+      {view !== 'matrix' && completedItems.length ? (
+        <section className="history-section">
+          <button
+            className="history-toggle"
+            type="button"
+            aria-expanded={showCompleted}
+            onClick={() => setShowCompleted((value) => !value)}
+          >
+            <span>已完成 {completedItems.length}</span>
+            <b>{showCompleted ? '收起' : '展开'}</b>
+          </button>
+          {showCompleted ? (
+            <div className="history-list">
+              {completedItems.map((item) => (
+                <ItemCard
+                  key={`completed-${item.id}`}
+                  item={item}
+                  variant="compact"
+                  expandedId={expandedId}
+                  editingId={editingId}
+                  setExpandedId={setExpandedId}
+                  setEditingId={setEditingId}
+                  updateItem={updateItem}
+                  removeItem={removeItem}
+                  toggleChild={toggleChild}
+                />
+              ))}
+            </div>
+          ) : null}
         </section>
       ) : null}
     </div>

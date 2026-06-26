@@ -32,9 +32,9 @@ Status labels:
 
 | Scope | Current target | Status | Evidence / caveat |
 | --- | --- | --- | --- |
-| Workspace shell | `components/DeskShell.js`, `lib/domain/navigation.js` | Code exists, frontend refinement pending | Current shell is structurally thin; next phase must refine layout and navigation without backend changes. |
-| Today page | `pages/desk/today/index.js`, `components/TodayBoard.js` | Code exists, frontend refinement pending | Uses schedule APIs and no longer writes frontend sample fallback. Visual/product layout still pending. |
-| Reading page | `pages/desk/reading/index.js`, `components/ReadingBox.js` | Code exists, frontend refinement pending | Reading list/detail/note actions exist. Fresh note write not verified in this handoff. |
+| Workspace shell | `components/DeskShell.js`, `lib/domain/navigation.js` | Build verified + component covered | Desktop sidebar remains stable with all existing entries preserved; mobile uses folded navigation. No route behavior changed. |
+| Today page | `pages/desk/today/index.js`, `components/TodayBoard.js` | Build verified + component covered | Focus capped at two active items; default view uses independent main/flexible stacks; completed items collapse into compact history. No backend changes. |
+| Reading page | `pages/desk/reading/index.js`, `components/ReadingBox.js` | Build verified + component covered | Active reading list/detail implemented; read items collapse into compact history with restore action. Fresh note POST not verified publicly. |
 | Inbox page | `pages/desk/inbox/index.js` | Code exists, not verified | Route exists; not part of next frontend-only task. |
 | Tasks page | `pages/desk/tasks/index.js` | Code exists, not verified | Route exists; behavior not audited here. |
 | Courses page | `pages/desk/courses/index.js` | Partial / unfinished | Page and course APIs exist, but full upload-to-notes workflow is not proven. |
@@ -53,8 +53,8 @@ Status labels:
 | Frontend fallback cleanup | `components/TodayBoard.js` | Build verified | `52ed7d47` removed sample input and client split fallback writes. |
 | Ignored/not_actionable | `pages/api/schedule/parse.js`, `pages/api/schedule/capture.js` | Code exists, not freshly tested | Code returns ignored for no actionable content. |
 | Duplicate messageId idempotency | `pages/api/schedule/capture.js` | Code exists, previously locally tested | `captureKeyFor`/`findExistingCapture` implement duplicate handling. Fresh public test not run here. |
-| Reading classification | `components/ReadingBox.js`, `lib/domain/schedule.js` | Code exists | Current code uses `contentType` and reading markers, not `links.length` alone. |
-| Note draft API | `pages/api/notes/index.js` | Code exists, not verified | Anonymous Preview GET returned 200. POST/write behavior not freshly tested. |
+| Reading classification | `components/ReadingBox.js`, `lib/domain/schedule.js` | Build verified + component covered | Current code uses `contentType` and reading markers, not `links.length` alone; active/read presentation is status-driven. |
+| Note draft API | `pages/api/notes/index.js` | Code exists, not verified | Anonymous Preview GET returned 200. POST/write behavior not freshly tested; frontend disables note draft for non-UUID local items. |
 | OpenClaw relay plugin | `integrations/openclaw/law-tech-wechat-relay` | Unit tested | `node --test integrations/openclaw/law-tech-wechat-relay/tests/normalize-message.test.js` previously passed 6/6. |
 | Current OpenClaw target | Local OpenClaw config | Public route configured | Audit found `captureUrl` set to `https://preview.law-tech.dev/api/schedule/capture`; token redacted. |
 | WeChat public end-to-end | WeChat → OpenClaw → Preview → Supabase → page | Prior reported evidence only | User previously reported successful bot reply. This handoff did not re-run real WeChat or verify page visibility. |
