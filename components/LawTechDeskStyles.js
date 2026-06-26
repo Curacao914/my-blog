@@ -801,11 +801,24 @@ textarea {
 }
 
 .focus-card .today-card-head {
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: stretch;
 }
 
 .focus-card .card-actions {
+  width: 100%;
   max-width: 100%;
+  justify-content: flex-start;
+}
+
+.focus-card .card-title-button {
+  display: block;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  flex-basis: auto;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .card-title-button {
