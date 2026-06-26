@@ -49,6 +49,8 @@ export function ReadingBox() {
   const [isSaving, setIsSaving] = useState(false)
   const [showListOnMobile, setShowListOnMobile] = useState(true)
   const [showReadItems, setShowReadItems] = useState(false)
+  const [scheduleDate, setScheduleDate] = useState('today')
+  const [scheduleTime, setScheduleTime] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -143,6 +145,36 @@ export function ReadingBox() {
     setStatus('Markdown 已复制')
   }
 
+  async function scheduleReading(item) {
+    const title = `阅读：${item.title || '未命名阅读'}`
+    const action = {
+      title,
+      section: '阅读安排',
+      sectionKey: 'reading-plan',
+      contentType: 'action',
+      date: scheduleDate || 'today',
+      time: scheduleTime || '',
+      status: 'active',
+      priority: 'normal',
+      importance: 'normal',
+      urgency: scheduleDate === 'today' ? 'urgent' : 'not_urgent',
+      links: item.links || [],
+      summary: item.summary || '',
+      source: 'reading-box',
+      aiTrace: {
+        contentType: 'action',
+        linkedReadingId: item.id,
+        linkedReadingTitle: item.title || '',
+        source: 'reading-box'
+      }
+    }
+    const saved = await persist([...items, action], '已加入日程')
+    if (saved) {
+      setScheduleDate('today')
+      setScheduleTime('')
+    }
+  }
+
   return (
     <div className={`reading-box ${showListOnMobile ? '' : 'show-detail'}`}>
       <div className="reading-workspace">
@@ -222,6 +254,28 @@ export function ReadingBox() {
                     placeholder="可以粘贴原文片段，也可以写几句自己的判断。"
                   />
                 </label>
+
+                <div className="reading-schedule-box">
+                  <div>
+                    <strong>安排阅读</strong>
+                    <span>阅读材料仍留在阅读箱，只在日程中创建一项关联任务。</span>
+                  </div>
+                  <label>
+                    日期
+                    <select value={scheduleDate} onChange={(event) => setScheduleDate(event.target.value)}>
+                      <option value="today">今天</option>
+                      <option value="tomorrow">明天</option>
+                      <option value="none">暂不定日期</option>
+                    </select>
+                  </label>
+                  <label>
+                    时间
+                    <input value={scheduleTime} onChange={(event) => setScheduleTime(event.target.value)} placeholder="例如 20:00" />
+                  </label>
+                  <button type="button" onClick={() => scheduleReading(activeItem)} disabled={isSaving}>
+                    加入日程
+                  </button>
+                </div>
 
                 <div className="reading-actions">
                   <button type="button" onClick={() => saveNote(activeItem)} disabled={isSaving || !isUuid(activeItem.id)}>

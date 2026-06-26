@@ -318,16 +318,16 @@ This frontend-only phase has implemented the confirmed Shell, Today, and Reading
 - Completed schedule items are in a keyboard-operable collapsed history section with `aria-expanded`; expanded content uses compact cards and can restore items.
 - Four-quadrant remains an independent view and uses compact editable cards.
 - Reading uses active reading list plus detail panel; read items are in a collapsed compact `已读` history section with restore action.
-- Note draft action remains connected to `/api/notes` only for UUID-backed schedule records. Local-only items show a disabled "草稿后续接入" action.
+- Note draft action remains connected to `/api/notes` only for UUID-backed schedule records. Local-only items show a disabled "需要真实来源" action.
 - Reading metadata display now filters placeholder values (`none`, `null`, `undefined`, empty strings) through `lib/domain/metadata.js`; the Reading page no longer repeats the generic `阅读` content-type tag.
 - Today cards also clean display metadata before rendering, so `"none"` time/place values do not become pills or fixed-time layout signals.
-- Today single-card vertical-title regression was fixed at the actual card branch in `components/TodayBoard.js`. The prior structure put title/meta content and optional actions in the same flexible head, while focus-specific CSS also overrode the head layout. That allowed the title/meta column to collapse toward min-content while the card shell stayed wide. The card now renders a stable `today-card-layout` with `minmax(0, 1fr) auto`, a dedicated `today-card-content`, and an optional actions column that is not rendered when empty.
+- Today single-card vertical-title regression is fixed at the outer card-grid branch in `components/TodayBoard.js`. The prior structure put title/meta content and optional actions in the same flexible head, while focus-specific CSS also overrode the head layout. That allowed the title/meta column to collapse toward min-content while the card shell stayed wide. The card now renders a stable `today-card-layout` with `minmax(0, 1fr) auto`, a dedicated `today-card-content`, and an optional actions column that is not rendered when empty.
 - Today layout invariants are covered by component and CSS-contract tests: focus and standard cards expose stable test ids, the content column must exist, focus head is no longer overridden into a shrinking grid, and empty actions do not reserve a column.
 - `随手记` is now a real NoteDraft workspace with list/editor, optional title, Markdown/plain text body, save status, archive, delete, and `/desk/inbox?noteId=...` selection.
 - Reading parse can now request up to three optional content-derived topic tags in the existing AI parse response; these are stored in `ai_trace.tags` and reused by Reading/Today display when present.
 - Visual direction remains warm white / pale blue-green / deep ink green / serif / large-radius / soft-shadow, with restrained static glass.
 - Course workspace now has browser-local parsers for SRT, PPTX, DOCX, TXT, and Markdown. Legacy `.ppt` and `.doc` are rejected with conversion guidance. Raw files stay local; only normalized text/material metadata are submitted for import.
-- Course import UI now uses user-facing language such as "课程资料", "本地处理服务", and "课程写作服务"; ordinary workspace pages are guarded by a product-copy test against rough implementation wording.
+- Course import UI now uses user-facing language such as "课程资料", "在线文字识别", and "课程写作服务"; ordinary workspace pages are guarded by a product-copy test against rough implementation wording.
 - Course capability API exists at `/api/courses/capabilities` and returns only non-sensitive configuration state/model names for course writing and local processing.
 - Focused component/API coverage exists in `__tests__/components/DeskWorkspace.test.js`, `__tests__/api/notes.test.js`, and the course tests listed in `docs/course-workflow-e2e-report.md`.
 
@@ -369,3 +369,14 @@ Suggested first checks:
 - Worker 已拆分 Writer、Reviewer、Revision、Final Review 任务，带任务租约、幂等键、暂停恢复和多课次推进。
 - Final Review 的 `revise` 与 `human_review` 均为正常质量状态，不再变成技术失败。
 - 16 个相关测试套件、44 个测试通过；真实模型和 Vercel Preview 仍需在有环境变量的部署环境验收。
+
+
+## 9. Online Course/OCR Update (2026-06-26)
+
+- The normal course path has no local daemon requirement. `OCR_SERVICE_URL` points to `https://curacao914-law-ocr.hf.space`; `LAW_TECH_OCR_SIGNING_SECRET` is shared server-side only.
+- Browser-local parsers handle SRT, text PPTX, DOCX, TXT, and Markdown. PDF/images/low-density PPTX use the signed OCR Space API; raw binaries never enter Supabase.
+- File selection is additive and deduplicated. The import wizard is Select materials -> Confirm lessons -> Confirm import. Grouping suggestions use dates, ordinals, internal titles/text, and similarity, but remain manually editable.
+- Course UI is compact: course library, import wizard, then a per-course workbench with lesson rail, progress stepper, one current stage, collapsible service state, and expandable diagnostics/source material.
+- Online processing uses `POST /api/courses/jobs/:id/run-next`, one model step per request. It reuses repository leases, idempotency, owner checks, structured output validation, Writer/Reviewer separation, revision limits, and final-review routing.
+- Today excludes reading records in every schedule view. Focus cards include completion and edit controls. Reading Box owns reading materials and can explicitly create a linked schedule action via “安排阅读”.
+- Relevant tests include OCR session signing, online-runner ownership/one-step execution, repeated file selection/drop, multi-lesson grouping, Today/Reading separation, and deterministic course workflow gates.

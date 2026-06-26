@@ -22,5 +22,12 @@ export default async function handler(req, res) {
   if (!models.writer) missing.push('COURSE_WRITER_MODEL 或 COURSE_AI_MODEL')
   if (!models.reviewer) missing.push('COURSE_REVIEWER_MODEL 或 COURSE_AI_MODEL')
   if (!models.finalReview) missing.push('COURSE_FINAL_REVIEW_MODEL 或 COURSE_AI_MODEL')
-  return res.status(200).json({ ok: true, courseWriting: { configured: missing.length === 0, models, missing }, localProcessing: { configured: Boolean(process.env.COURSE_WORKER_TOKEN), status: 'unknown' } })
+  const ocrServiceUrl = String(process.env.OCR_SERVICE_URL || '').trim().replace(/\/$/, '')
+  const onlineOcrConfigured = Boolean(ocrServiceUrl && process.env.LAW_TECH_OCR_SIGNING_SECRET)
+  return res.status(200).json({
+    ok: true,
+    courseWriting: { configured: missing.length === 0, models, missing },
+    onlineOcr: { configured: onlineOcrConfigured, serviceUrl: onlineOcrConfigured ? ocrServiceUrl : '', missing: [!ocrServiceUrl ? 'OCR_SERVICE_URL' : '', !process.env.LAW_TECH_OCR_SIGNING_SECRET ? 'LAW_TECH_OCR_SIGNING_SECRET' : ''].filter(Boolean) },
+    onlineProcessing: { configured: missing.length === 0 }
+  })
 }

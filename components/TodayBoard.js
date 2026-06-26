@@ -11,7 +11,6 @@ const viewTabs = [
   { key: 'today', label: '今天' },
   { key: 'upcoming', label: '接下来' },
   { key: 'all', label: '全部' },
-  { key: 'reading', label: '今日阅读' },
   { key: 'matrix', label: '四象限' }
 ]
 
@@ -210,7 +209,7 @@ function ItemCard({
   const isEditing = editingId === item.id
   const showDetails = isExpanded || isEditing || variant === 'focus'
   const isCompact = variant === 'compact'
-  const canComplete = variant !== 'focus' && variant !== 'compact'
+  const canComplete = variant !== 'compact'
   const isHistory = variant === 'compact' && item.status === 'done'
   const meta = [
     dateLabel(item.date),
@@ -224,8 +223,7 @@ function ItemCard({
     item.importance === 'important' ? '重要' : '',
     item.urgency === 'urgent' ? '紧急' : ''
   ].filter(Boolean)
-  const actionButton = variant !== 'focus'
-    ? isHistory
+  const actionButton = isHistory
       ? {
           label: '恢复',
           onClick: () => updateItem(item.id, { status: 'active' })
@@ -234,7 +232,6 @@ function ItemCard({
           label: '编辑',
           onClick: () => setEditingId(editingId === item.id ? '' : item.id)
         }
-    : null
   const hasActions = badges.length > 0 || Boolean(actionButton)
 
   return (
@@ -301,13 +298,10 @@ function ItemCard({
                 <input value={item.title} onChange={(event) => updateItem(item.id, { title: event.target.value })} />
                 <div className="editor-grid">
                   <input value={item.section} onChange={(event) => updateItem(item.id, { section: event.target.value })} placeholder="类别" />
-                  <input value={item.date} onChange={(event) => updateItem(item.id, { date: event.target.value })} placeholder="YYYY-MM-DD / reading / none" />
+                  <input value={item.date} onChange={(event) => updateItem(item.id, { date: event.target.value })} placeholder="YYYY-MM-DD / none" />
                   <input value={item.time} onChange={(event) => updateItem(item.id, { time: event.target.value })} placeholder="时间" />
                   <input value={item.place} onChange={(event) => updateItem(item.id, { place: event.target.value })} placeholder="地点" />
-                  <select value={item.contentType} onChange={(event) => updateItem(item.id, { contentType: event.target.value })}>
-                    <option value="action">事项</option>
-                    <option value="reading">阅读</option>
-                  </select>
+                  <input value="事项" readOnly aria-label="内容类型" />
                   <select value={item.priority} onChange={(event) => updateItem(item.id, { priority: event.target.value })}>
                     <option value="high">重要</option>
                     <option value="normal">普通</option>
@@ -419,75 +413,50 @@ export function TodayBoard() {
     return () => window.clearTimeout(timer)
   }, [items, isReady, cloudEnabled])
 
-  const overdueItems = useMemo(() => items.filter((item) => item.status === 'active' && dateKind(item.date) === 'overdue'), [items])
+  const scheduleItems = useMemo(() => items.filter((item) => !isReadingItem(item)), [items])
+  const overdueItems = useMemo(() => scheduleItems.filter((item) => item.status === 'active' && dateKind(item.date) === 'overdue'), [scheduleItems])
   const upcomingStrip = useMemo(
-    () => sortItems(items).filter((item) => item.status === 'active' && dateKind(item.date) === 'upcoming').slice(0, 6),
-    [items]
+    () => sortItems(scheduleItems).filter((item) => item.status === 'active' && dateKind(item.date) === 'upcoming').slice(0, 6),
+    [scheduleItems]
   )
   const focusItems = useMemo(() => {
-    return sortItems(items)
+    return sortItems(scheduleItems)
       .filter((item) => {
         if (item.status !== 'active') return false
         if (item.isPinned) return true
         if (item.importance === 'important' && item.urgency === 'urgent') return true
         if (['today', 'overdue'].includes(dateKind(item.date)) && item.time) return true
-        return item.priority === 'high' && !isReadingItem(item)
-      })
-      .filter((item) => {
-        if (!isReadingItem(item)) return true
-        return item.isPinned || ['today', 'overdue'].includes(dateKind(item.date)) || (item.importance === 'important' && item.urgency === 'urgent')
+        return item.priority === 'high'
       })
       .slice(0, 2)
-  }, [items])
+  }, [scheduleItems])
 
   const visibleItems = useMemo(() => {
-    const sorted = sortItems(items)
+    const sorted = sortItems(scheduleItems)
     if (view === 'all') return sorted
     if (view === 'upcoming') return sorted.filter((item) => item.status === 'active' && dateKind(item.date) === 'upcoming')
-    if (view === 'reading') return sorted.filter(isReadingItem)
     if (view === 'matrix') return sorted.filter((item) => item.status === 'active')
     return sorted.filter(
-      (item) =>
-        item.status === 'active' &&
-        (['today', 'overdue'].includes(dateKind(item.date)) || dateKind(item.date) === 'none' || isReadingItem(item))
+      (item) => item.status === 'active' && ['today', 'overdue', 'none'].includes(dateKind(item.date))
     )
-  }, [items, view])
+  }, [scheduleItems, view])
 
   const completedItems = useMemo(() => {
-    const sorted = sortItems(items).filter((item) => item.status === 'done')
+    const sorted = sortItems(scheduleItems).filter((item) => item.status === 'done')
     if (view === 'matrix') return []
-    if (view === 'reading') return sorted.filter(isReadingItem)
     if (view === 'upcoming') return sorted.filter((item) => dateKind(item.date) === 'upcoming')
     if (view === 'all') return sorted
-    return sorted.filter((item) => ['today', 'overdue', 'none'].includes(dateKind(item.date)) || isReadingItem(item))
-  }, [items, view])
+    return sorted.filter((item) => ['today', 'overdue', 'none'].includes(dateKind(item.date)))
+  }, [scheduleItems, view])
 
   const focusIds = useMemo(() => new Set(focusItems.map((item) => item.id)), [focusItems])
 
   const columnGroups = useMemo(() => {
     const withoutFocus = view === 'today' ? visibleItems.filter((item) => !focusIds.has(item.id)) : visibleItems
     const activeItems = withoutFocus.filter((item) => item.status !== 'done')
-    const mainItems = activeItems.filter((item) => !isReadingItem(item) && itemHasFixedTime(item))
+    const mainItems = activeItems.filter(itemHasFixedTime)
     const sideItems = activeItems.filter((item) => !mainItems.some((mainItem) => mainItem.id === item.id))
-
-    if (view === 'reading') {
-      return {
-        main: groupItems(activeItems),
-        side: {}
-      }
-    }
-
-    if (view === 'all') {
-      return {
-        main: groupItems(mainItems),
-        side: groupItems(sideItems)
-      }
-    }
-
-    return {
-      main: groupItems(mainItems),
-      side: groupItems(sideItems)
-    }
+    return { main: groupItems(mainItems), side: groupItems(sideItems) }
   }, [focusIds, visibleItems, view])
 
   const hasMainColumn = Object.keys(columnGroups.main).length > 0
@@ -662,7 +631,7 @@ export function TodayBoard() {
               Object.entries(columnGroups.side).map(([sectionKey, group]) => (
                 <div className="today-lane" key={sectionKey}>
                   <div className="today-lane-title">
-                    <span>{view === 'reading' && sectionKey === 'reading' ? '已读' : group.label}</span>
+                    <span>{group.label}</span>
                     <small>{group.items.length}</small>
                   </div>
                   {group.items.map((item) => (

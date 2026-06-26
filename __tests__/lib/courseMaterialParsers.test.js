@@ -5,7 +5,9 @@ import {
   decodeTextBuffer,
   materialsToTextPackInput,
   parseCourseMaterialFile,
-  parseDocxBuffer
+  parseDocxBuffer,
+  suggestLessonGroups,
+  applyOcrResultToMaterial
 } from '@/lib/course/materialParsers'
 import { buildTextPack, validateTextPack } from '@/lib/course/textpack'
 
@@ -84,6 +86,23 @@ describe('course material parsers', () => {
     expect(input.lessons).toHaveLength(1)
     expect(input.lessons[0].transcript).toContain('教师讲授内容')
     expect(input.lessons[0].materials[0].role).toBe('handout')
+  })
+
+  it('suggests date-based lesson groups and keeps low-confidence materials editable', async () => {
+    const transcript = await parseCourseMaterialFile(fileFromText('2026-03-12课堂转录.srt', '1\n00:00:01,000 --> 00:00:02,000\n第一句'))
+    const handout = await parseCourseMaterialFile(fileFromText('2026.3.12讲义.txt', '讲义内容'), 'handout')
+    const grouped = suggestLessonGroups([transcript, handout])
+
+    expect(grouped.groups).toHaveLength(1)
+    expect(grouped.materials[0].lessonGroupId).toBe(grouped.materials[1].lessonGroupId)
+  })
+
+  it('represents scan files as OCR-required and applies page markdown without binary data', async () => {
+    const scan = await parseCourseMaterialFile(fileFromText('扫描件.pdf', 'fake pdf', 'application/pdf'), 'handout')
+    expect(scan.ocrRequired).toBe(true)
+    const done = applyOcrResultToMaterial(scan, { pages: [{ page: 1, markdown: '# 第一页' }], markdown: '## 第 1 页\n\n# 第一页' })
+    expect(done.ocrRequired).toBe(false)
+    expect(done.text).toContain('第一页')
   })
 
 })

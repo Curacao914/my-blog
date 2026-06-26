@@ -33,4 +33,19 @@ describe('course worker task planner', () => {
     const capped = { ...lesson, nodes: [{ ...node, revisionCount: 2 }] }
     expect(getNextCourseWorkerTask(workflowWith('node_revision_required', [capped]))).toEqual(expect.objectContaining({ type: 'idle', reason: 'waiting-node-human-review' }))
   })
+
+  it('gives each node enough neighboring context without sending an unbounded chat history', () => {
+    const lesson = {
+      key: 'lesson-01', order: 1, status: 'node_pending', outline: [], blueprint: {},
+      nodes: [
+        { id: 'node-1', title: '前一节点', status: 'node_approved', draft: '已经确认的前一节点正文。', writerBrief: {} },
+        { id: 'node-2', title: '当前节点', status: 'node_pending', versions: [], reviewerReports: [], writerBrief: { currentNodeGoal: '解释当前规则' } },
+        { id: 'node-3', title: '下一节点', status: 'node_pending', writerBrief: { currentNodeGoal: '进入案例分析' } }
+      ]
+    }
+    const task = getNextCourseWorkerTask(workflowWith('node_pending', [lesson]))
+    expect(task.node.writerBrief.previousNodeSummary).toContain('前一节点正文')
+    expect(task.node.writerBrief.nextNodeTarget).toBe('进入案例分析')
+  })
+
 })

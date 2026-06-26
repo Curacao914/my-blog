@@ -127,9 +127,9 @@ describe('workspace desk views', () => {
     expect(container.querySelector('.focus-strip')).not.toHaveTextContent('已经完成的重要事项')
     expect(container.querySelectorAll('.today-stack')).toHaveLength(2)
     expect(screen.getByText('无固定时间事项')).toBeInTheDocument()
-    expect(screen.getByText('待读长文章')).toBeInTheDocument()
-    expect(screen.getByText('今日阅读')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /已完成 2/ })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('待读长文章')).not.toBeInTheDocument()
+    expect(screen.queryByText('今日阅读')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /已完成 1/ })).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('keeps Today card title and metadata inside a stable content column', async () => {
@@ -147,8 +147,10 @@ describe('workspace desk views', () => {
     expect(layout).toContainElement(content)
     expect(content).toContainElement(title)
     expect(content).toContainElement(meta)
-    expect(card).toHaveClass('no-check')
-    expect(card.querySelector('[data-testid="today-card-actions"]')).toBeNull()
+    expect(card).toHaveClass('has-check')
+    expect(card.querySelector('.today-check')).not.toBeNull()
+    expect(card.querySelector('[data-testid="today-card-actions"]')).not.toBeNull()
+    expect(card.querySelector('[data-testid="today-card-actions"]')).toHaveTextContent('编辑')
     expect(title).toHaveTextContent('置顶焦点事项')
   })
 

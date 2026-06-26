@@ -198,7 +198,7 @@ User-facing terminology maps internal names as follows:
 - TextPack -> 课程资料
 - Job -> 处理任务
 - Step -> 处理阶段
-- Worker -> 本地处理服务
+- Worker / Runner -> 在线课程处理
 - Artifact -> 课程内容 / 处理结果
 - AI Provider -> 课程写作服务
 
@@ -234,7 +234,7 @@ Returns the non-sensitive runtime state needed by the course UI:
 
 - whether course writing is configured
 - non-sensitive model names for outline/writer/reviewer/revision/final review roles
-- whether local processing has enough configuration to connect
+- whether online OCR and online course writing are configured
 
 The route must not return API keys, worker tokens, full prompts, or internal request payloads.
 
@@ -243,14 +243,11 @@ The route must not return API keys, worker tokens, full prompts, or internal req
 Applies one user action through repository gates:
 
 - `save-course-spec`
-- `save-outline`
 - `edit-outline`
 - `approve-outline`
-- `plan-nodes`
-- `update-node-draft`
+- `save-node-draft`
 - `approve-node`
 - `assemble`
-- `complete-final-review`
 - `pause`
 - `resume`
 - `cancel`
@@ -258,7 +255,15 @@ Applies one user action through repository gates:
 
 The server rejects illegal transitions such as generating outlines before preflight, node planning before outline approval, assembly before every node is approved, or completion before final review approval.
 
-### `GET /api/courses/jobs/:id/worker-step`
+### `POST /api/courses/jobs/:id/run-next`
+
+Owner-protected online runner endpoint. It claims exactly one durable workflow task, calls the configured course model for that role, validates the structured result, persists it through the same lease/idempotency gates, and returns the updated workflow. Browser closure pauses future steps; reopening the course resumes from persisted state.
+
+### `POST /api/courses/ocr/session`
+
+Owner-protected endpoint that returns a short-lived signed upload token and the configured OCR Space URL. It never returns the signing secret or Paddle token. The browser uploads OCR-only files directly to the Space, polls progress, imports page Markdown, and deletes the temporary Space job.
+
+### Legacy `GET /api/courses/jobs/:id/worker-step`
 
 Token-protected by `COURSE_WORKER_TOKEN`. Returns the next worker task: `generate-outline`, `plan-nodes`, `write-node`, `assemble`, or `idle`.
 
@@ -266,11 +271,11 @@ Token-protected by `COURSE_WORKER_TOKEN`. Returns the next worker task: `generat
 
 Token-protected worker writeback for generated outline, planned nodes, node drafts/reviewer reports, assembly, final review reports, or failure records.
 
-## Current MVP Worker
+## Optional Local Compatibility Tools
 
-`npm run course:worker:build-pack -- --course-dir <dir> --output <textpack.json>` creates TextPack from local files in a controlled temp directory.
+The normal product path no longer requires a local service. `npm run course:worker:build-pack -- --course-dir <dir> --output <textpack.json>` creates TextPack from local files in a controlled temp directory.
 
-`npm run course:worker:run-job -- --job-id <id> --base-url http://127.0.0.1:3000 --token <token>` polls the app for pending steps and writes results back. With model env configured, it calls an OpenAI-compatible course AI adapter. Node writing uses a writer call followed by an independent reviewer call. Nodes marked for revision are claimed as `revise-node` and use the revision role with reviewer issues and current draft context, then run through reviewer again. Final Markdown assembly is followed by a separate final-review call; only an approving final review can mark the lesson completed. With `--deterministic`, it can run a local synthetic flow for verification; production UI does not claim deterministic output as AI success.
+The legacy/manual fallback `npm run course:worker:run-job -- --job-id <id> --base-url http://127.0.0.1:3000 --token <token>` polls the app for pending steps and writes results back. With model env configured, it calls an OpenAI-compatible course AI adapter. Node writing uses a writer call followed by an independent reviewer call. Nodes marked for revision are claimed as `revise-node` and use the revision role with reviewer issues and current draft context, then run through reviewer again. Final Markdown assembly is followed by a separate final-review call; only an approving final review can mark the lesson completed. With `--deterministic`, it can run a local synthetic flow for verification; production UI does not claim deterministic output as AI success.
 
 Environment variable names:
 
@@ -286,12 +291,23 @@ Environment variable names:
 
 ## Current MVP Limits
 
-The implemented MVP covers one lesson at a time. Multi-lesson navigation is represented by data shape but not fully expanded in the UI. Full-course knowledge graph, statute deep-reading tables, comparison tables, case banks, course Q&A, writing workflow, and publishing integration remain architecture-only.
+The product processes one lesson at a time while supporting a multi-lesson course queue, lesson navigation, manual grouping confirmation, and automatic advance to the next unfinished lesson. Full-course knowledge graph, statute deep-reading tables, comparison tables, case banks, course Q&A, writing workflow, and publishing integration remain architecture-only.
 
 ## 2026-06-26：受控工作流修订
 
-本轮将课程整理提升为 `course-workflow.v2`。浏览器只负责本地解析、人工编辑与确认；本地处理服务负责大纲、节点写作、独立审查、局部修订和最终审查。普通客户端不能提交 Reviewer 报告、任务幂等键或模型调用 trace。
+课程整理已升级为在线优先流程。浏览器负责普通文字资料的本地解析、课次确认和人工编辑；Hugging Face OCR Space 负责扫描资料的临时在线识别；Vercel API 每次执行一个大纲、写作、审查、修订或终审步骤。无需常驻本地处理服务。普通客户端不能提交 Reviewer 报告、任务幂等键或模型调用 trace。
 
 工作流以课次为执行单位，Worker 始终选择第一节尚未完成且当前可执行的课。大纲必须覆盖完整转录区间；节点按字符数和行数双阈值拆分；每个草稿版本必须接受对应版本的独立审查后才能批准。Final Reviewer 的质量意见属于正常流程：`revise` 回流到具体节点，`human_review` 等待人工判断，只有网络、鉴权、响应格式或持久化错误才进入 `failed`。
 
 前端通过 `lib/course/uiState.js` 将内部状态统一翻译为“资料、偏好、大纲、正文、审查、整理、完成”七个用户阶段。同一时刻只突出当前阶段和一个主要操作；已完成课次可以回看，未到达阶段不暴露可绕过门禁的按钮。
+
+
+## 2026-06-26：在线 OCR 与紧凑工作台
+
+- 普通 SRT、PPTX、DOCX、TXT、Markdown 在浏览器中解析，原件不上传。
+- PDF、图片和低文字密度课件通过短期签名直接上传到独立 OCR Space；Space 将原件提交 PaddleOCR 后立即删除本地临时文件，只返回逐页 Markdown。结果导入后，网页主动删除 OCR 任务；异常遗留由 TTL 清理。
+- 上传支持多次追加、拖拽、去重、单文件移除和材料角色设置，不再覆盖上一次选择。
+- 课次分组综合日期、讲次、标题、文件内部文字与名称相似度生成建议；所有建议均在导入前由用户确认，可改名、排序、新建课次和移动材料。
+- 课程页使用“课程库 / 导入资料 / 课内工作台”三级界面。课内工作台只显示当前阶段，课次列表独立滚动，来源和诊断按需展开，避免所有功能纵向堆叠。
+- `/api/courses/jobs/:id/run-next` 每次只执行一个持久化任务。浏览器打开时自动推进，人工门槛立即停止；关闭页面不会丢失状态，重新打开后继续。
+- 在线 OCR 和课程写作均有明确的等待、进度、失败和重试状态；普通界面不再出现 Worker、TextPack、schema 等实现术语。

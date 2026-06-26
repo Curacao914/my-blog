@@ -79,10 +79,10 @@ Status labels:
 | Reminder runner | `pages/api/reminders/run.js`, `vercel.json` | Public unauthorized verified | Anonymous Preview request returned 401. Email send not tested. |
 | Resend email reminders | `pages/api/reminders/run.js` | Code exists, not verified | Requires `RESEND_API_KEY` and `REMINDER_TO`; not present in local `.env.local` audit. |
 | Course TextPack API | `pages/api/courses/textpack.js`, `lib/courseRepository.js`, `lib/course/textpack.js` | Unit tested | GET/POST/DELETE route uses server-derived profile, validates normalized course text, initializes workflow JSON, imports pure text to `course_jobs.preprocess_result` and `course_lessons`, and avoids raw/base64 file upload. Live Supabase import not freshly verified. |
-| Course material parsers | `lib/course/materialParsers.js`, `lib/course/pptxText.js` | Unit tested | Supports SRT, PPTX, DOCX, TXT, and Markdown in browser-compatible code. Legacy PPT/DOC returns conversion guidance. DOCX images and image-like PPTX are warnings, not uploaded binaries. |
-| Course capability API | `pages/api/courses/capabilities.js` | Unit tested | Returns only whether course writing/local processing are configured plus non-sensitive model names. It does not expose API keys, worker tokens, or full prompts. |
+| Course material parsers | `lib/course/materialParsers.js`, `lib/course/pptxText.js` | Unit tested | Supports SRT, PPTX, DOCX, TXT, Markdown, plus OCR-required PDF/images. Text formats stay browser-local; low-density decks and scans are routed to online OCR. |
+| Course capability API | `pages/api/courses/capabilities.js` | Unit tested | Returns only whether online OCR and course writing are configured plus non-sensitive model names/service URL. It does not expose API keys, signing secrets, or full prompts. |
 | Course workflow API | `pages/api/courses/jobs/[id]/workflow.js`, `lib/course/workflowState.js` | Unit tested | Saves preflight, outline, node drafts/reviewer reports, approvals, pause/resume/cancel, and final assembly through server-side gates. |
-| Course local worker fallback | `scripts/course-worker/build-pack.js`, `scripts/course-worker/run-job.js`, `scripts/course-worker/temp-safety.js` | Unit tested + local sample verified | `build-pack` creates TextPack from a local course dir using a controlled temp root and haoke-notes deterministic scripts. `run-job` polls worker-step API and calls model adapter or deterministic verification mode. Cleanup safety is tested. |
+| Optional legacy local tools | `scripts/course-worker/build-pack.js`, `scripts/course-worker/run-job.js`, `scripts/course-worker/temp-safety.js` | Unit tested + local sample verified | `build-pack` creates TextPack from a local course dir using a controlled temp root and haoke-notes deterministic scripts. `run-job` polls worker-step API and calls model adapter or deterministic verification mode. Cleanup safety is tested. |
 | Course AI workflow | `lib/course/aiAdapter.js`, `pages/api/courses/jobs/[id]/worker-step.js` | Unit tested | Role-based adapter and token-protected worker-step route exist. Real model calls require env and were not run in this handoff. |
 | Full-course integration | `docs/course-workflow-spec.md` | Partial / unfinished | Knowledge graph, statute deep-reading tables, comparison tables, case bank, course Q&A, writing and publish integration are documented interfaces only. |
 | Content snapshot layer | `docs/content-snapshot-layer.md`, `lib/contentSnapshots.js`, scripts | Partial / unfinished | Snapshot validation/promote exists. Full DB-backed publishing remains unfinished. |
@@ -111,7 +111,9 @@ Status labels:
 
 | 能力 | 当前状态 | 数据位置 | 后续 |
 |---|---|---|---|
-| SRT/PPTX/DOCX/TXT/Markdown 本地解析 | 已完成 | 浏览器内存；仅纯文字入库 | 图片 OCR 继续使用本地处理服务 |
+| SRT/PPTX/DOCX/TXT/Markdown 浏览器解析 | 已完成 | 浏览器内存；仅纯文字入库 | 旧 PPT/DOC 仍需手动转换 |
+| PDF/图片/图片型课件在线 OCR | 已完成代码与单测，待线上实测 | HF Space 临时文件；PaddleOCR；Supabase 仅文字 | 推送 Space 后用真实文件验收进度与清理 |
+| 在线逐步骤课程处理 | 已完成代码与单测，待真实模型验收 | Vercel API + Supabase workflow JSON | 配置模型后以一节真实课程校准 Prompt |
 | 课程偏好与大纲 | 已完成 | Supabase workflow JSON | 真实模型校准 Prompt |
 | 结构化大纲编辑与批准 | 已完成 | 版本化 outline | 可继续增加拆分/合并的快捷交互 |
 | 单节点 Writer/Reviewer/Revision | 已完成程序链路 | 版本化节点与审查报告 | 使用真实课程校准阈值 |

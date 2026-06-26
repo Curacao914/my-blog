@@ -27,7 +27,9 @@ describe('user-facing product copy', () => {
       '生成预览后，这里会显示',
       'worker-step',
       'provider adapter',
-      'workflow JSON'
+      'workflow JSON',
+      '本地处理服务',
+      '今日阅读'
     ]
 
     const offenders = []

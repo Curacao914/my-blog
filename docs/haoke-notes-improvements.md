@@ -110,3 +110,10 @@ Keep internal names such as TextPack, Job, Step, Worker, and Artifact in machine
 ## 已落地的网页适配约束（2026-06-26）
 
 当前仓库已经把原 Skill 中依赖 Agent 自觉执行的关键步骤改为程序门禁：大纲覆盖校验、人工批准、节点级任务、200 行拆分基线、Writer 与 Reviewer 分离、版本对应审查、局部修订、修订次数上限、最终审查回流和多课次顺序推进。原始 Skill 仍保持只读；网页适配层只消费其确定性预处理结果和写作规则。
+
+
+## Online-first execution boundary
+
+The web adapter now keeps deterministic text extraction in the browser, routes only OCR-required binaries to a temporary signed OCR service, and executes AI work one persisted step at a time through the web API. Upstream Skill evolution should therefore expose deterministic parsers and schemas rather than assuming one long-running local Agent. The local CLI remains useful for bulk/offline recovery, but is no longer a product prerequisite.
+
+Prompt role instructions now encode the original node-writing discipline: one node per call, complete lesson blueprint context, neighboring-node context, source grounding, case-element requirements, independent structured review, local revision, and node-targeted final-review feedback.
