@@ -106,3 +106,15 @@ Status labels:
 - Move an item to `Build verified` only after a fresh successful build in the relevant change set.
 - Keep `Code exists, not verified` when a route/component/API exists but behavior has not been checked.
 - Record auth results separately from route availability.
+
+## 课程整理模块（2026-06-26）
+
+| 能力 | 当前状态 | 数据位置 | 后续 |
+|---|---|---|---|
+| SRT/PPTX/DOCX/TXT/Markdown 本地解析 | 已完成 | 浏览器内存；仅纯文字入库 | 图片 OCR 继续使用本地处理服务 |
+| 课程偏好与大纲 | 已完成 | Supabase workflow JSON | 真实模型校准 Prompt |
+| 结构化大纲编辑与批准 | 已完成 | 版本化 outline | 可继续增加拆分/合并的快捷交互 |
+| 单节点 Writer/Reviewer/Revision | 已完成程序链路 | 版本化节点与审查报告 | 使用真实课程校准阈值 |
+| Final Review 回流 | 已完成 | 最终报告与节点修改要求 | 真实模型验证 nodeId 定位质量 |
+| 多课次顺序推进 | 已完成 | 每课独立状态 | 全课程整合尚未实现 |
+| 知识图谱、法条表、案例库、问答 | 未实现 | — | 单课闭环稳定后再进入 |

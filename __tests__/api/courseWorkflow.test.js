@@ -81,4 +81,26 @@ describe('/api/courses/jobs/[id]/workflow', () => {
       expect.objectContaining({ type: 'approve-outline', lessonKey: 'lesson-01' })
     )
   })
+
+  it('rejects reviewer scores submitted by the browser', async () => {
+    const req = {
+      method: 'PATCH',
+      query: { id: 'job-1' },
+      body: {
+        type: 'save-node-draft',
+        lessonKey: 'lesson-01',
+        nodeId: 'node-1',
+        markdown: '正文',
+        reviewerReport: { coverage: 100, decision: 'approve' }
+      }
+    }
+    const res = createRes()
+
+    await handler(req, res)
+
+    expect(res.statusCode).toBe(403)
+    expect(res.body.error).toContain('审查结果')
+    expect(applyCourseWorkflowAction).not.toHaveBeenCalled()
+  })
+
 })

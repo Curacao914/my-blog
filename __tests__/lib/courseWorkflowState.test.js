@@ -1,138 +1,96 @@
 import {
+  applyNodeReview,
+  approveNode,
   approveOutline,
   assembleFinalNote,
-  approveNode,
   completeFinalReview,
   createInitialWorkflow,
-  failStep,
   planNodesFromOutline,
-  requireTransition,
   saveCourseSpec,
-  startOutlineReview,
-  updateOutline,
-  updateNodeDraft
+  saveNodeDraft,
+  startOutlineReview
 } from '@/lib/course/workflowState'
 import { buildTextPack } from '@/lib/course/textpack'
 
-function sampleWorkflow() {
-  const textPack = buildTextPack({
-    course: { name: '证据法', teacher: '张老师' },
-    lessons: [
-      {
-        order: 1,
-        title: '第1课',
-        transcript: ['第一行 证据规则', '第二行 证明责任', '第三行 案例分析'].join('\n'),
-        sourceMap: [
-          { line: 1, sourceLine: 3, time: '00:00:01 --> 00:00:03', file: '第1课.srt' },
-          { line: 2, sourceLine: 4, time: '00:00:04 --> 00:00:05', file: '第1课.srt' },
-          { line: 3, sourceLine: 5, time: '00:00:06 --> 00:00:07', file: '第1课.srt' }
-        ]
-      }
-    ],
-    decks: [
-      {
-        title: '课件',
-        slideCount: 1,
-        markdown: '## 第 1 页\n证据规则与证明责任',
-        slides: [{ slideNumber: 1, text: '证据规则与证明责任' }]
-      }
-    ]
-  })
+function sampleWorkflow(twoLessons = false) {
+  const lessons = [
+    { order: 1, title: '第1课', transcript: ['概念一', '概念二', '规则一', '案例一', '结论一'].join('\n') },
+    ...(twoLessons ? [{ order: 2, title: '第2课', transcript: '第二课第一行\n第二课第二行' }] : [])
+  ]
+  const textPack = buildTextPack({ course: { name: '证据法', teacher: '张老师' }, lessons, decks: [] })
   return createInitialWorkflow({ textPack, courseName: '证据法', teacher: '张老师' })
 }
 
-describe('course workflow state machine', () => {
-  it('requires preflight before outline and outline approval before node planning', () => {
-    const workflow = sampleWorkflow()
-
-    expect(() => requireTransition(workflow, 'outline_generating')).toThrow(/preflight/)
-
-    const withSpec = saveCourseSpec(workflow, {
-      goal: '闭卷复习',
-      detailLevel: 'high',
-      nodeSplitThreshold: 20,
-      qualityThreshold: 80
+function approveAllNodes(workflow, lessonKey) {
+  const ids = workflow.lessons.find(lesson => lesson.key === lessonKey).nodes.map(node => node.id)
+  return ids.reduce((state, id) => {
+    const drafted = saveNodeDraft(state, lessonKey, id, `## ${id}\n\n基于来源形成的正文。`, { source: 'worker' })
+    const reviewed = applyNodeReview(drafted, lessonKey, id, {
+      coverage: 90, grounding: 92, logic: 88, detail: 86, sourceCoverage: 90, issues: [], decision: 'approve'
     })
-    expect(withSpec.status).toBe('preflight_approved')
-    expect(requireTransition(withSpec, 'outline_generating')).toBe(true)
-    expect(() => requireTransition(withSpec, 'node_planning')).toThrow(/outline/)
+    return approveNode(reviewed, lessonKey, id)
+  }, workflow)
+}
+
+describe('controlled course workflow', () => {
+  it('forces line-based splitting and keeps writer, reviewer and human approval separate', () => {
+    let base = sampleWorkflow()
+    base = { ...base, lessons: base.lessons.map(lesson => lesson.key === 'lesson-01' ? { ...lesson, transcript: Array.from({ length: 45 }, (_, index) => `第${index + 1}行`).join('\n') } : lesson) }
+    const withSpec = saveCourseSpec(base, { nodeSplitThreshold: 99999, nodeSplitLineThreshold: 20, qualityThreshold: 75 })
+    const outlined = startOutlineReview(withSpec, {
+      lessonKey: 'lesson-01', mainLine: '证据规则',
+      outline: [{ title: '全部内容', lineRange: [1, 45], slideRange: [1, 1], rationale: '完整覆盖', importance: 'high' }]
+    })
+    const planned = planNodesFromOutline(approveOutline(outlined, 'lesson-01'), 'lesson-01')
+    expect(planned.lessons[0].nodes).toHaveLength(3)
+
+    const first = planned.lessons[0].nodes[0]
+    const drafted = saveNodeDraft(planned, 'lesson-01', first.id, '## 草稿\n\n正文', { source: 'worker' })
+    expect(drafted.lessons[0].nodes[0].status).toBe('node_review')
+    expect(() => approveNode(drafted, 'lesson-01', first.id)).toThrow(/Reviewer approval/)
+
+    const reviewed = applyNodeReview(drafted, 'lesson-01', first.id, { coverage: 90, grounding: 90, logic: 90, detail: 90, sourceCoverage: 90, issues: [], decision: 'approve' })
+    expect(reviewed.lessons[0].nodes[0].status).toBe('node_review')
+    expect(approveNode(reviewed, 'lesson-01', first.id).lessons[0].nodes[0].status).toBe('node_approved')
   })
 
-  it('plans forced subnodes and blocks assembly until every node is approved', () => {
-    const withSpec = saveCourseSpec(sampleWorkflow(), {
-      goal: '全面笔记',
-      detailLevel: 'high',
-      nodeSplitThreshold: 8,
-      qualityThreshold: 75
+  it('returns final-review revision to the cited node instead of failing the workflow', () => {
+    const spec = saveCourseSpec(sampleWorkflow(), { qualityThreshold: 75, nodeSplitLineThreshold: 200 })
+    const outline = startOutlineReview(spec, { lessonKey: 'lesson-01', outline: [{ title: '总论', lineRange: [1, 5], slideRange: [1, 1], rationale: '主线' }] })
+    const planned = planNodesFromOutline(approveOutline(outline, 'lesson-01'), 'lesson-01')
+    const approved = approveAllNodes(planned, 'lesson-01')
+    const assembled = assembleFinalNote(approved, 'lesson-01')
+    const nodeId = assembled.lessons[0].nodes[0].id
+
+    const revised = completeFinalReview(assembled, 'lesson-01', {
+      coverage: 70, grounding: 90, logic: 90, detail: 90, sourceCoverage: 90,
+      issues: [{ nodeId, type: 'missing_content', severity: 'high', message: '需要补充论证。' }], decision: 'revise'
     })
-    const withOutline = startOutlineReview(withSpec, {
+    expect(revised.status).toBe('node_revision_required')
+    expect(revised.lessons[0].nodes[0].status).toBe('node_revision_required')
+    expect(revised.lessons[0].finalNote.stale).toBe(true)
+  })
+
+  it('advances from a completed first lesson to the second lesson', () => {
+    const spec = saveCourseSpec(sampleWorkflow(true), { qualityThreshold: 75 })
+    const outline = startOutlineReview(spec, { lessonKey: 'lesson-01', outline: [{ title: '第一课', lineRange: [1, 5], slideRange: [1, 1], rationale: '主线' }] })
+    const planned = planNodesFromOutline(approveOutline(outline, 'lesson-01'), 'lesson-01')
+    const approved = approveAllNodes(planned, 'lesson-01')
+    const assembled = assembleFinalNote(approved, 'lesson-01')
+    const next = completeFinalReview(assembled, 'lesson-01', { coverage: 90, grounding: 90, logic: 90, detail: 90, sourceCoverage: 90, issues: [], decision: 'approve' })
+
+    expect(next.lessons[0].status).toBe('completed')
+    expect(next.lessons[1].status).toBe('outline_pending')
+    expect(next.status).toBe('outline_pending')
+    expect(next.progress).toBeLessThan(100)
+  })
+
+  it('rejects outlines that leave source lines uncovered', () => {
+    const spec = saveCourseSpec(sampleWorkflow(), { qualityThreshold: 75 })
+    expect(() => startOutlineReview(spec, {
       lessonKey: 'lesson-01',
-      outline: [
-        {
-          title: '证据规则总论',
-          lineRange: [1, 3],
-          slideRange: [1, 1],
-          rationale: '覆盖本课全部主线',
-          importance: 'high'
-        }
-      ]
-    })
-    const edited = updateOutline(withOutline, 'lesson-01', node => ({
-      ...node,
-      locked: true
-    }))
-    const approved = approveOutline(edited, 'lesson-01')
-    const planned = planNodesFromOutline(approved, 'lesson-01')
-
-    expect(planned.status).toBe('node_pending')
-    expect(planned.lessons[0].nodes.length).toBeGreaterThan(1)
-    expect(() => assembleFinalNote(planned, 'lesson-01')).toThrow(/approved/)
-
-    const generated = planned.lessons[0].nodes.reduce((state, node) => {
-      const drafted = updateNodeDraft(state, 'lesson-01', node.id, {
-        markdown: `## ${node.title}\n\n基于来源材料生成的节点正文。`,
-        reviewerReport: {
-          coverage: 90,
-          grounding: 90,
-          logic: 90,
-          detail: 90,
-          sourceCoverage: 90,
-          issues: [],
-          decision: 'approve'
-        }
-      })
-      return approveNode(drafted, 'lesson-01', node.id)
-    }, planned)
-
-    const assembled = assembleFinalNote(generated, 'lesson-01')
-    expect(assembled.status).toBe('final_review')
-    expect(assembled.lessons[0].finalNote.markdown).toContain('证据规则总论')
-    expect(() => requireTransition(assembled, 'completed')).toThrow(/final review/)
-
-    const final = completeFinalReview(assembled, 'lesson-01', {
-      coverage: 90,
-      grounding: 90,
-      logic: 90,
-      detail: 90,
-      sourceCoverage: 90,
-      issues: [],
-      decision: 'approve'
-    })
-    expect(final.status).toBe('completed')
-    expect(final.lessons[0].finalNote.qualityReport.decision).toBe('approve')
+      outline: [{ title: '不完整大纲', lineRange: [2, 4], slideRange: [1, 1], rationale: '遗漏首尾' }]
+    })).toThrow(/start from transcript line 1|uncovered/)
   })
 
-  it('keeps failed and paused states observable without losing artifacts', () => {
-    const workflow = saveCourseSpec(sampleWorkflow(), { goal: '自学' })
-    const failed = failStep(workflow, {
-      step: 'outline_generating',
-      error: 'COURSE_AI_API_KEY missing',
-      retryable: true
-    })
-
-    expect(failed.status).toBe('failed')
-    expect(failed.errors[0].message).toContain('COURSE_AI_API_KEY')
-    expect(failed.steps.find(step => step.key === 'outline_generating').status).toBe('failed')
-    expect(failed.lessons[0].transcript).toContain('第一行')
-  })
 })

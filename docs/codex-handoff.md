@@ -360,3 +360,12 @@ Suggested first checks:
 - `git status --short --branch`
 - Check the latest Preview deployment before claiming public behavior.
 - If doing auth/security work, audit Clerk page/API session verification separately; this frontend phase did not change it.
+
+## 2026-06-26 手工接管修订
+
+- Today Focus 卡片竖排的真实根因是外层 `.today-card` 始终保留 28px checkbox 列，而 Focus 卡片没有渲染 checkbox。现已通过 `has-check/no-check` class 在无 checkbox 时改为单列布局。
+- 课程前端已改为按当前阶段展示，不再同时铺开偏好、大纲、节点和最终笔记。
+- 大纲已改为结构化编辑器；浏览器硬编码 Reviewer 90 分的旁路已删除。
+- Worker 已拆分 Writer、Reviewer、Revision、Final Review 任务，带任务租约、幂等键、暂停恢复和多课次推进。
+- Final Review 的 `revise` 与 `human_review` 均为正常质量状态，不再变成技术失败。
+- 16 个相关测试套件、44 个测试通过；真实模型和 Vercel Preview 仍需在有环境变量的部署环境验收。

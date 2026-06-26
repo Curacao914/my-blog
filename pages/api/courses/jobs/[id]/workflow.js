@@ -14,6 +14,10 @@ async function getOwnerProfile(req) {
   return { ok: true, ownerId: profile.id }
 }
 
+function containsWorkerOnlyFields(body = {}) {
+  return Boolean(body.reviewerReport || body.qualityReport || body.report || body.trace || body.taskKey || body.decision)
+}
+
 function cleanError(error) {
   return error instanceof Error ? error.message : 'Invalid course workflow request'
 }
@@ -38,6 +42,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PATCH' || req.method === 'POST') {
+      if (containsWorkerOnlyFields(req.body || {})) return res.status(403).json({ ok: false, error: '审查结果只能由课程处理服务写入' })
       const result = await applyCourseWorkflowAction(owner.ownerId, jobId, req.body || {})
       return res.status(200).json({ ok: true, ...result })
     }

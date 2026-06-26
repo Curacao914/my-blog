@@ -239,7 +239,7 @@ function ItemCard({
 
   return (
     <article
-      className={`today-card ${variant}-card ${item.tone || toneFor(item.sectionKey)} ${item.status === 'done' ? 'is-done' : ''}`}
+      className={`today-card ${variant}-card ${canComplete ? 'has-check' : 'no-check'} ${item.tone || toneFor(item.sectionKey)} ${item.status === 'done' ? 'is-done' : ''}`}
       data-variant={variant}
       data-testid={`today-card-${variant}`}
     >

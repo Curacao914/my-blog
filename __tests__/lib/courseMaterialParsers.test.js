@@ -74,4 +74,16 @@ describe('course material parsers', () => {
     await expect(parseCourseMaterialFile(fileFromText('old.ppt', 'x'))).rejects.toThrow(/另存为 PPTX/)
     await expect(parseCourseMaterialFile(fileFromText('old.doc', 'x'))).rejects.toThrow(/另存为 DOCX/)
   })
+
+  it('keeps user-selected roles and combines multiple text sources by lesson', async () => {
+    const transcript = await parseCourseMaterialFile(fileFromText('第1课.txt', '教师讲授内容'), 'transcript')
+    const handout = await parseCourseMaterialFile(fileFromText('第1课讲义.md', '# 讲义补充'), 'handout')
+    const input = materialsToTextPackInput({ materials: [transcript, handout], courseName: '证据法', teacher: '张老师' })
+
+    expect(transcript.role).toBe('transcript')
+    expect(input.lessons).toHaveLength(1)
+    expect(input.lessons[0].transcript).toContain('教师讲授内容')
+    expect(input.lessons[0].materials[0].role).toBe('handout')
+  })
+
 })

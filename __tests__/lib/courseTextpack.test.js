@@ -33,6 +33,7 @@ describe('course TextPack helpers', () => {
     expect(validateTextPack(pack).stats.lessonCount).toBe(1)
     expect(pack.lessons[0].transcript).not.toContain('00:00:01,000 -->')
     expect(pack.lessons[0].sourceMap[0].time).toContain('00:00:01,000 -->')
+    expect(pack.lessons[0].segments[0]).not.toHaveProperty('text')
   })
 
   it('rejects base64 and local absolute paths', () => {

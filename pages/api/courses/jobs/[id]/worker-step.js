@@ -1,6 +1,6 @@
 import {
   applyCourseWorkflowActionForWorker,
-  getCourseJobById
+  claimCourseWorkerTask
 } from '@/lib/courseRepository'
 import { getNextCourseWorkerTask } from '@/lib/course/workerTasks'
 
@@ -28,11 +28,8 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const job = await getCourseJobById(jobId)
-      if (!job) return res.status(404).json({ ok: false, error: 'Course job not found' })
-      const workflow = job.preprocess_result?.workflow
-      const task = getNextCourseWorkerTask(workflow)
-      return res.status(200).json({ ok: true, task, workflowStatus: workflow?.status || null })
+      const result = await claimCourseWorkerTask(jobId)
+      return res.status(200).json({ ok: true, task: result.task, workflowStatus: result.workflow?.status || null })
     }
 
     if (req.method === 'POST' || req.method === 'PATCH') {

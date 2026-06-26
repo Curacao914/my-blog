@@ -287,3 +287,11 @@ Environment variable names:
 ## Current MVP Limits
 
 The implemented MVP covers one lesson at a time. Multi-lesson navigation is represented by data shape but not fully expanded in the UI. Full-course knowledge graph, statute deep-reading tables, comparison tables, case banks, course Q&A, writing workflow, and publishing integration remain architecture-only.
+
+## 2026-06-26：受控工作流修订
+
+本轮将课程整理提升为 `course-workflow.v2`。浏览器只负责本地解析、人工编辑与确认；本地处理服务负责大纲、节点写作、独立审查、局部修订和最终审查。普通客户端不能提交 Reviewer 报告、任务幂等键或模型调用 trace。
+
+工作流以课次为执行单位，Worker 始终选择第一节尚未完成且当前可执行的课。大纲必须覆盖完整转录区间；节点按字符数和行数双阈值拆分；每个草稿版本必须接受对应版本的独立审查后才能批准。Final Reviewer 的质量意见属于正常流程：`revise` 回流到具体节点，`human_review` 等待人工判断，只有网络、鉴权、响应格式或持久化错误才进入 `failed`。
+
+前端通过 `lib/course/uiState.js` 将内部状态统一翻译为“资料、偏好、大纲、正文、审查、整理、完成”七个用户阶段。同一时刻只突出当前阶段和一个主要操作；已完成课次可以回看，未到达阶段不暴露可绕过门禁的按钮。

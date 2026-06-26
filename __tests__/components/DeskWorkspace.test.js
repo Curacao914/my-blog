@@ -147,6 +147,7 @@ describe('workspace desk views', () => {
     expect(layout).toContainElement(content)
     expect(content).toContainElement(title)
     expect(content).toContainElement(meta)
+    expect(card).toHaveClass('no-check')
     expect(card.querySelector('[data-testid="today-card-actions"]')).toBeNull()
     expect(title).toHaveTextContent('置顶焦点事项')
   })

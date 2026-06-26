@@ -1,97 +1,92 @@
-# Course Workflow E2E Report
+# 课程整理工作流验收记录
 
-Last run: 2026-06-26 Asia/Shanghai.
+更新日期：2026-06-26
 
-## Input
+## 本轮结论
 
-The verification sample is synthetic and non-sensitive.
+课程模块已经从“可导入文字的调试页”改造成受程序控制的逐课整理工作台。验证使用合成、非敏感课程材料，没有调用真实模型，也没有上传原始文件。
 
-- Format: SRT text sample generated under `/private/tmp/law-tech-course-sample`
-- Course: `证据法`
-- Teacher: `张老师`
-- Transcript scale: 1 lesson, 2 subtitle cues
-- PPTX/DOCX/TXT/Markdown parser coverage: automated parser tests cover these formats with synthetic fixtures, including DOCX tables/images, UTF-8 BOM text, garbled text rejection, Markdown structure, and legacy PPT/DOC conversion guidance.
+## 输入与数据边界
 
-No raw course file is committed. The sample output was written to `/private/tmp/law-tech-course-sample-textpack.json` and checked for local absolute paths and base64 markers.
+浏览器端解析器支持：
 
-## Local File Handling
+- SRT：去除时间轴并保留行号、时间和来源映射；
+- PPTX：逐页提取文字，低文字密度课件标记为需要文字识别；
+- DOCX：提取标题、段落、列表顺序和表格文字，图片只产生提示；
+- TXT：支持 UTF-8、BOM、UTF-16，并拒绝无法可靠识别的乱码；
+- Markdown：保留标题、列表、引用、表格和代码块结构。
 
-Verified command:
+旧版 `.ppt`、`.doc` 会给出另存为新格式的提示。原始文件、图片、解压目录和本地绝对路径不会进入课程数据库。课程资料包只保存规范化文字、来源映射、页码、分段偏移和校验值；分段不重复保存正文。
 
-```bash
-npm run course:worker:build-pack -- --course-dir /private/tmp/law-tech-course-sample --output /private/tmp/law-tech-course-sample-textpack.json --job-id sample-002
+## 真实程序路径
+
+确定性端到端测试实际执行了以下状态转换：
+
+```text
+导入后的纯文字资料
+→ 保存课程偏好
+→ 生成大纲
+→ 人工批准大纲
+→ 程序拆分节点
+→ 单节点 Writer
+→ 独立 Reviewer
+→ 人工批准节点
+→ 拼装最终笔记
+→ Final Reviewer
+→ 完成
 ```
 
-Result:
+Writer 和 Reviewer 是两个独立任务。浏览器只能保存草稿、提交修改要求和执行人工确认，不能提交 Reviewer 分数或直接把任务标记为完成。
 
-- `ok: true`
-- `lessonCount: 1`
-- `deckCount: 0`
-- `tempDir: null`
-- no `/private`, `/Users`, or `base64` found in the output TextPack
+## 质量门与恢复
 
-## Workflow Path
+已验证：
 
-Automated tests cover:
+- 大纲必须从第 1 行开始并覆盖全部转录，越界或遗漏区间会被拒绝；
+- 默认按 200 行或字符阈值强制拆分大节点；
+- 当前草稿没有经过最新一轮 Reviewer 时不能批准；
+- Reviewer 返回 `revise` 时进入局部修订，不会被当作系统故障；
+- 自动修订达到上限后停止调用模型，等待人工判断；
+- 所有节点批准前不能拼装全文；
+- Final Reviewer 返回 `revise` 时按 `nodeId` 回流到具体节点，无法定位时才要求全部节点复核；
+- Final Reviewer 返回 `human_review` 时进入人工最终确认，不会标记为失败；
+- 第一课完成后，Worker 会选择下一节尚未完成的课；
+- 暂停、恢复、失败重试、任务租约和幂等键均由服务端状态控制。
 
-- Today focus/standard card layout invariants so the content column cannot collapse into a one-character width while the shell remains wide
-- TextPack validation and raw payload rejection
-- server-derived owner for import and workflow APIs
-- preflight gate before outline
-- outline approval gate before node planning
-- forced node splitting by threshold
-- Reviewer approval gate before node approval
-- assembly blocked until all nodes are approved
-- assembly now moves to final review instead of completed
-- final review approval is required before completion
-- worker task planner hands assembled lessons to a final-review task
-- node revision-required items are claimed as revision tasks instead of full ordinary write tasks
-- failed step recording
-- pause/resume/cancel state representation
-- course capability API without secret leakage
-- productized course page with local processing and course writing service states
-- product-copy checks that ordinary desk pages do not expose rough implementation vocabulary
+## 前端验收
 
-## Outline And Nodes
+课程页现在按当前状态只展示一个工作阶段：
 
-Synthetic workflow test:
-
-- Outline nodes: 1 parent node
-- Forced split threshold: 8 characters
-- Planned nodes: more than 1 child node
-- Reviewer revisions: 0 in approve-path test
-- Final markdown: assembled only after every node is approved, then completed only after final review approval
-
-## Error Recovery
-
-Covered failures:
-
-- missing course AI key results in explicit adapter error
-- workflow `fail-step` stores retryable error details
-- local processing service offline is displayed as waiting/not connected
-
-## Current Limits
-
-- Real model calls were not executed because no course AI key was used in this run.
-- Fake/deterministic provider behavior is available only through explicit local worker development mode.
-- The current UI focuses on one lesson at a time. Multi-lesson data shape exists, but full-course graph, law tables, comparison tables, case bank, course Q&A, writing, and publishing are not implemented.
-- Browser-level computed-style measurement was attempted with local Chrome, but the sandbox terminated the browser process. CSS and DOM regressions are covered by component/CSS invariant tests.
-
-Latest focused test command:
-
-```bash
-npm test -- __tests__/components/DeskWorkspace.test.js __tests__/components/TodayCardCss.test.js __tests__/components/ProductCopy.test.js __tests__/components/CourseTextPackDesk.test.js __tests__/lib/courseMaterialParsers.test.js __tests__/lib/courseTextpack.test.js __tests__/lib/courseWorkerTemp.test.js __tests__/lib/courseWorkerTasks.test.js __tests__/lib/courseWorkflowState.test.js __tests__/lib/courseAiAdapter.test.js __tests__/api/courseCapabilities.test.js __tests__/api/courseTextpack.test.js __tests__/api/courseWorkflow.test.js --runInBand
+```text
+资料 → 偏好 → 大纲 → 正文 → 审查 → 整理 → 完成
 ```
 
-Result from the current expanded suite:
+大纲使用结构化节点编辑器，不再要求用户直接修改 JSON。正文页提供节点导航、Markdown 编辑、来源查看、Reviewer 分数和问题、局部修改要求与人工确认。顶部显示总体进度、本地处理服务和课程写作服务状态。技术枚举和内部交换格式名称不会直接暴露给普通用户。
 
-- 13 suites passed
-- 34 tests passed
+Today 卡片的竖排根因也已覆盖：没有复选框的 Focus 卡片会移除最外层预留的 28px 复选框列，正文不再落入单字符宽度列。
 
-Latest state-machine/worker focused test command:
+## 自动测试
 
-```bash
-npm test -- __tests__/lib/courseWorkflowState.test.js __tests__/lib/courseWorkerTasks.test.js __tests__/lib/courseAiAdapter.test.js __tests__/components/ProductCopy.test.js __tests__/components/CourseTextPackDesk.test.js --runInBand
-```
+本轮集中测试覆盖：
 
-Result: 5 suites passed, 9 tests passed.
+- Today 外层 Grid 回归；
+- 产品化文案；
+- 课程页面当前阶段；
+- SRT、PPTX、DOCX、TXT、Markdown 解析；
+- 纯文字数据边界；
+- 浏览器不能写 Reviewer 报告；
+- 状态机门禁；
+- 多课次推进；
+- Worker Writer/Reviewer 分离；
+- 修订上限；
+- 最终审查回流；
+- 确定性端到端闭环；
+- owner 隔离、能力接口和临时目录安全。
+
+结果：16 个测试套件、44 个测试通过。
+
+## 尚未验证
+
+- 未配置 `COURSE_AI_*` 密钥，因此没有声称真实模型已经跑通；
+- 未在当前受限容器中完成 Next.js production build。此前两次构建均耗尽容器资源并导致执行环境重置，因此本轮保留全部代码和测试成果，最终 build 应在本机或 Vercel 执行；
+- 尚未实现全课程知识图谱、法条精读表、辨析表、案例库、课程问答和发布联动。
