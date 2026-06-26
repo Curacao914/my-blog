@@ -159,7 +159,7 @@ Phase deliverables:
 - imported course job and lesson rows
 - local `build-pack` fallback
 - course workflow state JSON in `course_jobs.preprocess_result.workflow`
-- workflow API for preferences, outline, node, review, assembly, pause/resume/cancel
+- workflow API for preferences, outline, node, review, assembly, final review, pause/resume/cancel
 - worker-step API for token-protected local worker polling
 - role-based course AI adapter for outline, writer, reviewer, and final review
 
@@ -181,7 +181,26 @@ Future deliverables:
 
 Deterministic preprocessing:
 
-- SRT parsing, line maps, lesson map, PPTX XML text extraction, text density, segmentation, TextPack validation.
+- SRT parsing, TXT/Markdown decoding, DOCX XML text extraction, line maps, lesson map, PPTX XML text extraction, text density, segmentation, normalized course-text validation.
+
+Supported browser-local source formats:
+
+- `.srt`: subtitle cues become normalized transcript lines with source timing.
+- `.pptx`: slide text and speaker notes become page-mapped deck text; low text density is marked as requiring OCR.
+- `.docx`: headings, paragraphs, lists, and table text are extracted. Embedded images are not uploaded; the UI warns that image text has not been recognized.
+- `.txt`: UTF-8, UTF-8 BOM, and UTF-16 BOM are decoded; empty or likely garbled files are rejected with a user-facing message.
+- `.md` / `.markdown`: Markdown structure is preserved as existing-note or supplementary material text.
+
+Legacy `.ppt` and `.doc` are not silently accepted. The UI asks the user to convert them to `.pptx` or `.docx`.
+
+User-facing terminology maps internal names as follows:
+
+- TextPack -> 课程资料
+- Job -> 处理任务
+- Step -> 处理阶段
+- Worker -> 本地处理服务
+- Artifact -> 课程内容 / 处理结果
+- AI Provider -> 课程写作服务
 
 Single-lesson AI writing:
 
@@ -209,6 +228,16 @@ Deletes the current owner TextPack job and pure-text workflow data. The route ve
 
 Reads the current owner workflow. Returns `job` and `workflow`.
 
+### `GET /api/courses/capabilities`
+
+Returns the non-sensitive runtime state needed by the course UI:
+
+- whether course writing is configured
+- non-sensitive model names for outline/writer/reviewer/revision/final review roles
+- whether local processing has enough configuration to connect
+
+The route must not return API keys, worker tokens, full prompts, or internal request payloads.
+
 ### `PATCH /api/courses/jobs/:id/workflow`
 
 Applies one user action through repository gates:
@@ -221,12 +250,13 @@ Applies one user action through repository gates:
 - `update-node-draft`
 - `approve-node`
 - `assemble`
+- `complete-final-review`
 - `pause`
 - `resume`
 - `cancel`
 - `fail-step`
 
-The server rejects illegal transitions such as generating outlines before preflight, node planning before outline approval, or assembly before every node is approved.
+The server rejects illegal transitions such as generating outlines before preflight, node planning before outline approval, assembly before every node is approved, or completion before final review approval.
 
 ### `GET /api/courses/jobs/:id/worker-step`
 
@@ -234,13 +264,13 @@ Token-protected by `COURSE_WORKER_TOKEN`. Returns the next worker task: `generat
 
 ### `POST /api/courses/jobs/:id/worker-step`
 
-Token-protected worker writeback for generated outline, planned nodes, node drafts/reviewer reports, assembly, or failure records.
+Token-protected worker writeback for generated outline, planned nodes, node drafts/reviewer reports, assembly, final review reports, or failure records.
 
 ## Current MVP Worker
 
 `npm run course:worker:build-pack -- --course-dir <dir> --output <textpack.json>` creates TextPack from local files in a controlled temp directory.
 
-`npm run course:worker:run-job -- --job-id <id> --base-url http://127.0.0.1:3000 --token <token>` polls the app for pending steps and writes results back. With model env configured, it calls an OpenAI-compatible course AI adapter. With `--deterministic`, it can run a local synthetic flow for verification; production UI does not claim deterministic output as AI success.
+`npm run course:worker:run-job -- --job-id <id> --base-url http://127.0.0.1:3000 --token <token>` polls the app for pending steps and writes results back. With model env configured, it calls an OpenAI-compatible course AI adapter. Node writing uses a writer call followed by an independent reviewer call. Nodes marked for revision are claimed as `revise-node` and use the revision role with reviewer issues and current draft context, then run through reviewer again. Final Markdown assembly is followed by a separate final-review call; only an approving final review can mark the lesson completed. With `--deterministic`, it can run a local synthetic flow for verification; production UI does not claim deterministic output as AI success.
 
 Environment variable names:
 

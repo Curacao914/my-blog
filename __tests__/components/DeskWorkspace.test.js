@@ -132,6 +132,25 @@ describe('workspace desk views', () => {
     expect(screen.getByRole('button', { name: /已完成 2/ })).toHaveAttribute('aria-expanded', 'false')
   })
 
+  it('keeps Today card title and metadata inside a stable content column', async () => {
+    mockScheduleFetch([{ ...items[0], isPinned: false, importance: 'normal', urgency: 'not_urgent', priority: 'normal' }])
+    const { container } = render(<TodayBoard />)
+
+    await waitFor(() => expect(screen.getByText('置顶焦点事项')).toBeInTheDocument())
+
+    const card = container.querySelector('[data-testid="today-card-focus"]')
+    const layout = card.querySelector('[data-testid="today-card-layout"]')
+    const content = card.querySelector('[data-testid="today-card-content"]')
+    const title = card.querySelector('[data-testid="today-card-title"]')
+    const meta = card.querySelector('[data-testid="today-card-meta"]')
+
+    expect(layout).toContainElement(content)
+    expect(content).toContainElement(title)
+    expect(content).toContainElement(meta)
+    expect(card.querySelector('[data-testid="today-card-actions"]')).toBeNull()
+    expect(title).toHaveTextContent('置顶焦点事项')
+  })
+
   it('keeps four-quadrant as a separate editable view', async () => {
     mockScheduleFetch()
     const { container } = render(<TodayBoard />)
@@ -169,7 +188,7 @@ describe('workspace desk views', () => {
     render(<ReadingBox />)
 
     await waitFor(() => expect(screen.getAllByText('待读长文章').length).toBeGreaterThan(0))
-    expect(screen.getByRole('button', { name: '草稿后续接入' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '需要真实来源' })).toBeDisabled()
   })
 
   it('opens a real note draft link after Reading creates one', async () => {

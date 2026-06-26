@@ -321,18 +321,23 @@ This frontend-only phase has implemented the confirmed Shell, Today, and Reading
 - Note draft action remains connected to `/api/notes` only for UUID-backed schedule records. Local-only items show a disabled "草稿后续接入" action.
 - Reading metadata display now filters placeholder values (`none`, `null`, `undefined`, empty strings) through `lib/domain/metadata.js`; the Reading page no longer repeats the generic `阅读` content-type tag.
 - Today cards also clean display metadata before rendering, so `"none"` time/place values do not become pills or fixed-time layout signals.
-- Single focus card layout was tightened by allowing the title flex item to keep a real width (`min-width: 0`, flexible title/actions, no forced focus min-height), avoiding the prior vertical Chinese title squeeze.
+- Today single-card vertical-title regression was fixed at the actual card branch in `components/TodayBoard.js`. The prior structure put title/meta content and optional actions in the same flexible head, while focus-specific CSS also overrode the head layout. That allowed the title/meta column to collapse toward min-content while the card shell stayed wide. The card now renders a stable `today-card-layout` with `minmax(0, 1fr) auto`, a dedicated `today-card-content`, and an optional actions column that is not rendered when empty.
+- Today layout invariants are covered by component and CSS-contract tests: focus and standard cards expose stable test ids, the content column must exist, focus head is no longer overridden into a shrinking grid, and empty actions do not reserve a column.
 - `随手记` is now a real NoteDraft workspace with list/editor, optional title, Markdown/plain text body, save status, archive, delete, and `/desk/inbox?noteId=...` selection.
 - Reading parse can now request up to three optional content-derived topic tags in the existing AI parse response; these are stored in `ai_trace.tags` and reused by Reading/Today display when present.
 - Visual direction remains warm white / pale blue-green / deep ink green / serif / large-radius / soft-shadow, with restrained static glass.
-- Focused component/API coverage exists in `__tests__/components/DeskWorkspace.test.js` and `__tests__/api/notes.test.js`.
+- Course workspace now has browser-local parsers for SRT, PPTX, DOCX, TXT, and Markdown. Legacy `.ppt` and `.doc` are rejected with conversion guidance. Raw files stay local; only normalized text/material metadata are submitted for import.
+- Course import UI now uses user-facing language such as "课程资料", "本地处理服务", and "课程写作服务"; ordinary workspace pages are guarded by a product-copy test against rough implementation wording.
+- Course capability API exists at `/api/courses/capabilities` and returns only non-sensitive configuration state/model names for course writing and local processing.
+- Focused component/API coverage exists in `__tests__/components/DeskWorkspace.test.js`, `__tests__/api/notes.test.js`, and the course tests listed in `docs/course-workflow-e2e-report.md`.
 
 Fresh checks from this phase:
 
 - `npm test -- __tests__/components/DeskWorkspace.test.js __tests__/api/notes.test.js --runInBand`: passed 9/9.
+- `npm test -- __tests__/components/DeskWorkspace.test.js __tests__/components/TodayCardCss.test.js __tests__/components/ProductCopy.test.js __tests__/components/CourseTextPackDesk.test.js __tests__/lib/courseMaterialParsers.test.js __tests__/lib/courseTextpack.test.js __tests__/lib/courseWorkerTemp.test.js __tests__/lib/courseWorkflowState.test.js __tests__/lib/courseAiAdapter.test.js __tests__/api/courseCapabilities.test.js __tests__/api/courseTextpack.test.js __tests__/api/courseWorkflow.test.js --runInBand`: passed 32/32.
 - Local API verification against `http://localhost:3014` with `ALLOW_LOCAL_DESK_FALLBACK=true`: quick note create/list/patch/get/archive passed; quick note did not appear in schedule items; Reading → NoteDraft created one real draft and a second POST returned the same note ID with `existing: true`.
 - `npm run build`: passed with existing large page-data warnings.
-- Browser responsive check was attempted but blocked by the browser tool security policy for `localhost:3015`; rely on component coverage/CSS review until a manual Preview check is done.
+- Browser computed-style measurement for the Today card was attempted locally, but the sandbox terminated Chrome before measurements could be collected. Rely on the DOM/CSS audit and component/CSS invariant tests until a manual Preview inspector check is done.
 
 ## 9. Next Window Notes
 

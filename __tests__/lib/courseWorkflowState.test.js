@@ -2,6 +2,7 @@ import {
   approveOutline,
   assembleFinalNote,
   approveNode,
+  completeFinalReview,
   createInitialWorkflow,
   failStep,
   planNodesFromOutline,
@@ -103,9 +104,22 @@ describe('course workflow state machine', () => {
       return approveNode(drafted, 'lesson-01', node.id)
     }, planned)
 
-    const final = assembleFinalNote(generated, 'lesson-01')
+    const assembled = assembleFinalNote(generated, 'lesson-01')
+    expect(assembled.status).toBe('final_review')
+    expect(assembled.lessons[0].finalNote.markdown).toContain('证据规则总论')
+    expect(() => requireTransition(assembled, 'completed')).toThrow(/final review/)
+
+    const final = completeFinalReview(assembled, 'lesson-01', {
+      coverage: 90,
+      grounding: 90,
+      logic: 90,
+      detail: 90,
+      sourceCoverage: 90,
+      issues: [],
+      decision: 'approve'
+    })
     expect(final.status).toBe('completed')
-    expect(final.lessons[0].finalNote.markdown).toContain('证据规则总论')
+    expect(final.lessons[0].finalNote.qualityReport.decision).toBe('approve')
   })
 
   it('keeps failed and paused states observable without losing artifacts', () => {

@@ -90,3 +90,19 @@ This fixture should run without model calls for deterministic stages and with mo
 ## Web Adapter Boundary
 
 Keep web-specific code out of upstream. The repository should keep its adapter under `lib/course` and `scripts/course-worker`, with any upstream snapshot placed under a clearly marked `upstream/` directory only if needed.
+
+## Browser Material Parser Registry
+
+The web adapter now benefits from a registry-style parser boundary. Upstream could expose deterministic parsers as independent modules with stable outputs for:
+
+- SRT transcript lines
+- PPTX slide text and notes
+- DOCX text blocks and image warnings
+- TXT encoding checks
+- Markdown structure-preserving text
+
+Each parser should return normalized text, source maps, warnings, and a material role. Legacy `.ppt` and `.doc` should keep the current safe behavior: ask the user to convert manually instead of pretending conversion succeeded.
+
+## Product Vocabulary Layer
+
+Keep internal names such as TextPack, Job, Step, Worker, and Artifact in machine-readable manifests, but provide a small vocabulary map for user interfaces. This prevents web screens from exposing implementation terms while preserving precise debugging data for logs and diagnostics.

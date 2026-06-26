@@ -21,6 +21,7 @@ function requireCourseModelConfig(role) {
     outline: 'COURSE_OUTLINE_MODEL',
     writer: 'COURSE_WRITER_MODEL',
     reviewer: 'COURSE_REVIEWER_MODEL',
+    revision: 'COURSE_REVISION_MODEL',
     finalReview: 'COURSE_FINAL_REVIEW_MODEL'
   }
   const apiKey = process.env.COURSE_AI_API_KEY || process.env.SCHEDULE_AI_API_KEY || process.env.OPENAI_API_KEY
@@ -136,6 +137,23 @@ function deterministicNode(task) {
   }
 }
 
+function deterministicFinalReview(task) {
+  const markdown = String(task.lesson?.finalNote?.markdown || '').trim()
+  return {
+    type: 'complete-final-review',
+    lessonKey: task.lessonKey,
+    qualityReport: {
+      coverage: markdown ? 90 : 20,
+      grounding: markdown ? 90 : 20,
+      logic: markdown ? 88 : 20,
+      detail: markdown ? 86 : 20,
+      sourceCoverage: markdown ? 88 : 20,
+      issues: markdown ? [] : ['最终笔记为空'],
+      decision: markdown ? 'approve' : 'revise'
+    }
+  }
+}
+
 async function executeTask(task, options) {
   if (task.type === 'idle') return null
   if (task.type === 'plan-nodes') {
@@ -146,7 +164,8 @@ async function executeTask(task, options) {
   }
   if (options.deterministic) {
     if (task.type === 'generate-outline') return deterministicOutline(task)
-    if (task.type === 'write-node') return deterministicNode(task)
+    if (task.type === 'write-node' || task.type === 'revise-node') return deterministicNode(task)
+    if (task.type === 'final-review') return deterministicFinalReview(task)
   }
 
   if (task.type === 'generate-outline') {
@@ -182,35 +201,84 @@ async function executeTask(task, options) {
     }
   }
 
-  if (task.type === 'write-node') {
-    const prompt = buildPrompt({
-      role: 'writer',
+  if (task.type === 'write-node' || task.type === 'revise-node') {
+    const writerRole = task.type === 'revise-node' ? 'revision' : 'writer'
+    const writerPrompt = buildPrompt({
+      role: writerRole,
+      promptVersion: task.courseSpec?.promptVersion,
+      courseSpec: task.courseSpec,
+      lessonBlueprint: task.lessonBlueprint,
+      writerBrief: {
+        ...(task.node.writerBrief || {}),
+        revisionRequests: task.node.revisionRequests || [],
+        reviewerIssues: task.node.reviewerReports?.at?.(-1)?.value?.issues || []
+      },
+      sourceText: task.node.sourceText,
+      pptText: task.type === 'revise-node'
+        ? [`## CurrentDraft`, task.node.draft || '', `## PptSource`, task.node.pptText || ''].join('\n\n')
+        : task.node.pptText,
+      schema: {
+        markdown: 'string'
+      }
+    })
+    const writerResult = await callCourseModel({ role: writerRole, prompt: writerPrompt })
+    const markdown = writerResult.parsed.markdown
+    if (!String(markdown || '').trim()) throw new Error('Writer returned empty markdown')
+    const reviewerPrompt = buildPrompt({
+      role: 'reviewer',
       promptVersion: task.courseSpec?.promptVersion,
       courseSpec: task.courseSpec,
       lessonBlueprint: task.lessonBlueprint,
       writerBrief: task.node.writerBrief,
       sourceText: task.node.sourceText,
-      pptText: task.node.pptText,
+      pptText: [`## Draft`, markdown].join('\n\n'),
       schema: {
-        markdown: 'string',
-        reviewerReport: {
-          coverage: 0,
-          grounding: 0,
-          logic: 0,
-          detail: 0,
-          sourceCoverage: 0,
-          issues: [],
-          decision: 'approve|revise|human_review'
-        }
+        coverage: 0,
+        grounding: 0,
+        logic: 0,
+        detail: 0,
+        sourceCoverage: 0,
+        issues: [],
+        decision: 'approve|revise|human_review'
       }
     })
-    const result = await callCourseModel({ role: 'writer', prompt })
+    const reviewerResult = await callCourseModel({ role: 'reviewer', prompt: reviewerPrompt })
     return {
       type: 'update-node-draft',
       lessonKey: task.lessonKey,
       nodeId: task.node.id,
-      markdown: result.parsed.markdown,
-      reviewerReport: result.parsed.reviewerReport
+      markdown,
+      reviewerReport: reviewerResult.parsed
+    }
+  }
+
+  if (task.type === 'final-review') {
+    const prompt = buildPrompt({
+      role: 'finalReview',
+      promptVersion: task.courseSpec?.promptVersion,
+      courseSpec: task.courseSpec,
+      lessonBlueprint: task.lesson?.blueprint,
+      writerBrief: {
+        lessonTitle: task.lesson?.title,
+        nodeCount: task.lesson?.nodes?.length || 0
+      },
+      sourceText: (task.lesson?.nodes || []).map(node => node.sourceText || '').join('\n\n'),
+      pptText: task.lesson?.finalNote?.markdown || '',
+      schema: {
+        coverage: 0,
+        grounding: 0,
+        logic: 0,
+        detail: 0,
+        sourceCoverage: 0,
+        issues: [],
+        decision: 'approve|revise|human_review'
+      }
+    })
+    const result = await callCourseModel({ role: 'finalReview', prompt })
+    return {
+      type: 'complete-final-review',
+      lessonKey: task.lessonKey,
+      qualityReport: result.parsed
     }
   }
 

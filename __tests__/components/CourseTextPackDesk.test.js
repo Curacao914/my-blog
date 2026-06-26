@@ -49,6 +49,16 @@ describe('CourseTextPackDesk', () => {
           })
         })
       }
+      if (String(url).includes('/api/courses/capabilities')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            ok: true,
+            courseWriting: { configured: false, models: {} },
+            localProcessing: { configured: false, status: 'unknown' }
+          })
+        })
+      }
       if (String(url).includes('/api/courses/jobs/job-1/workflow')) {
         return Promise.resolve({
           ok: true,
@@ -70,7 +80,8 @@ describe('CourseTextPackDesk', () => {
     screen.getByRole('button', { name: '继续处理' }).click()
 
     await waitFor(() => expect(screen.getByText('课程偏好')).toBeInTheDocument())
-    expect(screen.getByText('等待本地 Worker')).toBeInTheDocument()
+    expect(screen.getAllByText('未连接').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('课程写作服务').length).toBeGreaterThan(0)
     expect(screen.getByText('大纲编辑')).toBeInTheDocument()
     expect(screen.getByText('节点工作台')).toBeInTheDocument()
     expect(screen.getByText('最终 Markdown')).toBeInTheDocument()

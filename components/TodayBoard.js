@@ -219,11 +219,29 @@ function ItemCard({
     cleanDisplayText(item.section)
   ].filter(Boolean)
   const tags = tagsFromItem(item, { limit: 3 })
+  const badges = [
+    item.isPinned ? '置顶' : '',
+    item.importance === 'important' ? '重要' : '',
+    item.urgency === 'urgent' ? '紧急' : ''
+  ].filter(Boolean)
+  const actionButton = variant !== 'focus'
+    ? isHistory
+      ? {
+          label: '恢复',
+          onClick: () => updateItem(item.id, { status: 'active' })
+        }
+      : {
+          label: '编辑',
+          onClick: () => setEditingId(editingId === item.id ? '' : item.id)
+        }
+    : null
+  const hasActions = badges.length > 0 || Boolean(actionButton)
 
   return (
     <article
       className={`today-card ${variant}-card ${item.tone || toneFor(item.sectionKey)} ${item.status === 'done' ? 'is-done' : ''}`}
       data-variant={variant}
+      data-testid={`today-card-${variant}`}
     >
       {canComplete ? (
         <label className="today-check" aria-label={item.status === 'done' ? '标记为未完成' : '标记为完成'}>
@@ -235,104 +253,105 @@ function ItemCard({
           <span />
         </label>
       ) : null}
-      <div className="today-card-body">
-        <div className="today-card-head">
-          <button
-            className="card-title-button"
-            type="button"
-            onClick={() => setExpandedId(expandedId === item.id ? '' : item.id)}
-          >
-            {item.title}
-          </button>
-          <div className="card-actions">
-            {item.isPinned ? <b>置顶</b> : null}
-            {item.importance === 'important' ? <b>重要</b> : null}
-            {item.urgency === 'urgent' ? <b>紧急</b> : null}
-            {variant !== 'focus' ? (
-              isHistory ? (
-                <button type="button" onClick={() => updateItem(item.id, { status: 'active' })}>
-                  恢复
+      <div className="today-card-body" data-testid="today-card-body">
+        <div className="today-card-layout" data-testid="today-card-layout">
+          <div className="today-card-content" data-testid="today-card-content">
+            <div className="today-card-head">
+              <button
+                className="card-title-button"
+                data-testid="today-card-title"
+                type="button"
+                onClick={() => setExpandedId(expandedId === item.id ? '' : item.id)}
+              >
+                {item.title}
+              </button>
+            </div>
+            {meta.length || tags.length ? (
+              <div className="today-meta" data-testid="today-card-meta">
+                {meta.map((value) => (
+                  <span key={`${item.id}-${value}`}>{value}</span>
+                ))}
+                {tags.map((tag) => (
+                  <span key={`${item.id}-tag-${tag}`}>{tag}</span>
+                ))}
+              </div>
+            ) : null}
+            {item.summary && !isCompact ? <p className="card-summary">{item.summary}</p> : null}
+            {showDetails && item.children.length ? (
+              <div className="mini-list">
+                {item.children.map((child) => (
+                  <label key={child.id}>
+                    <input type="checkbox" checked={child.done} onChange={() => toggleChild(item.id, child.id)} />
+                    <span>{child.title}</span>
+                  </label>
+                ))}
+              </div>
+            ) : null}
+            {item.links.length && !isCompact ? (
+              <div className="link-chips">
+                {item.links.slice(0, variant === 'focus' ? 3 : item.links.length).map((link) => (
+                  <a key={`${variant}-${item.id}-${link.url}`} href={link.url} target="_blank" rel="noreferrer">
+                    {link.title || link.url}
+                  </a>
+                ))}
+              </div>
+            ) : null}
+            {isEditing ? (
+              <div className="item-editor">
+                <input value={item.title} onChange={(event) => updateItem(item.id, { title: event.target.value })} />
+                <div className="editor-grid">
+                  <input value={item.section} onChange={(event) => updateItem(item.id, { section: event.target.value })} placeholder="类别" />
+                  <input value={item.date} onChange={(event) => updateItem(item.id, { date: event.target.value })} placeholder="YYYY-MM-DD / reading / none" />
+                  <input value={item.time} onChange={(event) => updateItem(item.id, { time: event.target.value })} placeholder="时间" />
+                  <input value={item.place} onChange={(event) => updateItem(item.id, { place: event.target.value })} placeholder="地点" />
+                  <select value={item.contentType} onChange={(event) => updateItem(item.id, { contentType: event.target.value })}>
+                    <option value="action">事项</option>
+                    <option value="reading">阅读</option>
+                  </select>
+                  <select value={item.priority} onChange={(event) => updateItem(item.id, { priority: event.target.value })}>
+                    <option value="high">重要</option>
+                    <option value="normal">普通</option>
+                    <option value="low">轻量</option>
+                  </select>
+                  <select value={item.importance} onChange={(event) => updateItem(item.id, { importance: event.target.value, importanceSource: 'user' })}>
+                    <option value="important">重要</option>
+                    <option value="normal">普通</option>
+                  </select>
+                  <select value={item.urgency} onChange={(event) => updateItem(item.id, { urgency: event.target.value, urgencySource: 'user' })}>
+                    <option value="urgent">紧急</option>
+                    <option value="not_urgent">不紧急</option>
+                  </select>
+                  <select value={item.isPinned ? 'yes' : 'no'} onChange={(event) => updateItem(item.id, { isPinned: event.target.value === 'yes' })}>
+                    <option value="no">不置顶</option>
+                    <option value="yes">置顶</option>
+                  </select>
+                  <select value={item.status} onChange={(event) => updateItem(item.id, { status: event.target.value })}>
+                    <option value="active">进行中</option>
+                    <option value="done">完成</option>
+                    <option value="cancelled">取消</option>
+                  </select>
+                </div>
+                <textarea value={item.summary} onChange={(event) => updateItem(item.id, { summary: event.target.value })} placeholder="摘要" />
+                <textarea value={item.note} onChange={(event) => updateItem(item.id, { note: event.target.value })} placeholder="备注" />
+                <button type="button" onClick={() => removeItem(item.id)}>
+                  删除
                 </button>
-              ) : (
-                <button type="button" onClick={() => setEditingId(editingId === item.id ? '' : item.id)}>
-                  编辑
-                </button>
-              )
+              </div>
             ) : null}
           </div>
-        </div>
-        {meta.length || tags.length ? (
-          <div className="today-meta">
-            {meta.map((value) => (
-              <span key={`${item.id}-${value}`}>{value}</span>
-            ))}
-            {tags.map((tag) => (
-              <span key={`${item.id}-tag-${tag}`}>{tag}</span>
-            ))}
-          </div>
-        ) : null}
-        {item.summary && !isCompact ? <p className="card-summary">{item.summary}</p> : null}
-        {showDetails && item.children.length ? (
-          <div className="mini-list">
-            {item.children.map((child) => (
-              <label key={child.id}>
-                <input type="checkbox" checked={child.done} onChange={() => toggleChild(item.id, child.id)} />
-                <span>{child.title}</span>
-              </label>
-            ))}
-          </div>
-        ) : null}
-        {item.links.length && !isCompact ? (
-          <div className="link-chips">
-            {item.links.slice(0, variant === 'focus' ? 3 : item.links.length).map((link) => (
-              <a key={`${variant}-${item.id}-${link.url}`} href={link.url} target="_blank" rel="noreferrer">
-                {link.title || link.url}
-              </a>
-            ))}
-          </div>
-        ) : null}
-        {isEditing ? (
-          <div className="item-editor">
-            <input value={item.title} onChange={(event) => updateItem(item.id, { title: event.target.value })} />
-            <div className="editor-grid">
-              <input value={item.section} onChange={(event) => updateItem(item.id, { section: event.target.value })} placeholder="类别" />
-              <input value={item.date} onChange={(event) => updateItem(item.id, { date: event.target.value })} placeholder="YYYY-MM-DD / reading / none" />
-              <input value={item.time} onChange={(event) => updateItem(item.id, { time: event.target.value })} placeholder="时间" />
-              <input value={item.place} onChange={(event) => updateItem(item.id, { place: event.target.value })} placeholder="地点" />
-              <select value={item.contentType} onChange={(event) => updateItem(item.id, { contentType: event.target.value })}>
-                <option value="action">事项</option>
-                <option value="reading">阅读</option>
-              </select>
-              <select value={item.priority} onChange={(event) => updateItem(item.id, { priority: event.target.value })}>
-                <option value="high">重要</option>
-                <option value="normal">普通</option>
-                <option value="low">轻量</option>
-              </select>
-              <select value={item.importance} onChange={(event) => updateItem(item.id, { importance: event.target.value, importanceSource: 'user' })}>
-                <option value="important">重要</option>
-                <option value="normal">普通</option>
-              </select>
-              <select value={item.urgency} onChange={(event) => updateItem(item.id, { urgency: event.target.value, urgencySource: 'user' })}>
-                <option value="urgent">紧急</option>
-                <option value="not_urgent">不紧急</option>
-              </select>
-              <select value={item.isPinned ? 'yes' : 'no'} onChange={(event) => updateItem(item.id, { isPinned: event.target.value === 'yes' })}>
-                <option value="no">不置顶</option>
-                <option value="yes">置顶</option>
-              </select>
-              <select value={item.status} onChange={(event) => updateItem(item.id, { status: event.target.value })}>
-                <option value="active">进行中</option>
-                <option value="done">完成</option>
-                <option value="cancelled">取消</option>
-              </select>
+          {hasActions ? (
+            <div className="card-actions" data-testid="today-card-actions">
+              {badges.map((badge) => (
+                <b key={`${item.id}-${badge}`}>{badge}</b>
+              ))}
+              {actionButton ? (
+                <button type="button" onClick={actionButton.onClick}>
+                  {actionButton.label}
+                </button>
+              ) : null}
             </div>
-            <textarea value={item.summary} onChange={(event) => updateItem(item.id, { summary: event.target.value })} placeholder="摘要" />
-            <textarea value={item.note} onChange={(event) => updateItem(item.id, { note: event.target.value })} placeholder="备注" />
-            <button type="button" onClick={() => removeItem(item.id)}>
-              删除
-            </button>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </article>
   )

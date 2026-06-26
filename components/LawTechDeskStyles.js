@@ -779,50 +779,61 @@ textarea {
 
 .today-card-body {
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.today-card-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.today-card-content {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 .today-card-head {
-  display: flex;
+  display: block;
   min-width: 0;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  width: 100%;
+  max-width: 100%;
 }
 
 .card-actions {
   display: flex;
-  flex: 0 1 auto;
-  min-width: 0;
+  min-width: max-content;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
   justify-content: flex-end;
-  max-width: 46%;
-}
-
-.focus-card .today-card-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: stretch;
 }
 
 .focus-card .card-actions {
-  width: 100%;
-  max-width: 100%;
+  min-width: 0;
   justify-content: flex-start;
 }
 
 .focus-card .card-title-button {
   display: block;
-  inline-size: 100%;
-  max-inline-size: 100%;
-  flex-basis: auto;
-  overflow-wrap: break-word;
+  width: 100%;
+  max-width: 100%;
+  inline-size: auto;
+  max-inline-size: none;
+  overflow-wrap: anywhere;
   word-break: normal;
 }
 
 .card-title-button {
-  flex: 1 1 14rem;
+  display: block;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   margin: 0;
   border: 0;
@@ -876,6 +887,9 @@ textarea {
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 10px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .today-meta span,
@@ -1683,6 +1697,38 @@ textarea {
   background: rgba(255, 248, 230, 0.58);
 }
 
+.course-material-preview {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.course-material-preview article {
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgba(78, 114, 99, 0.13);
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.course-material-preview strong,
+.course-material-preview span,
+.course-material-preview small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.course-material-preview strong {
+  color: var(--leaf);
+}
+
+.course-material-preview span,
+.course-material-preview small {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
 .worker-status {
   margin-top: 14px;
   background: rgba(232, 241, 236, 0.54);
@@ -2036,11 +2082,11 @@ textarea {
 
   .card-actions {
     max-width: 100%;
+    min-width: 0;
   }
 
   .today-card-head,
   .reading-panel-head {
-    flex-direction: column;
     align-items: stretch;
   }
 

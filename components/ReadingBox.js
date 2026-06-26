@@ -225,7 +225,7 @@ export function ReadingBox() {
 
                 <div className="reading-actions">
                   <button type="button" onClick={() => saveNote(activeItem)} disabled={isSaving || !isUuid(activeItem.id)}>
-                    {isUuid(activeItem.id) ? '存为笔记草稿' : '草稿后续接入'}
+                    {isUuid(activeItem.id) ? '存为笔记草稿' : '需要真实来源'}
                   </button>
                   <button type="button" onClick={() => copyMarkdown(activeItem)}>
                     复制 Markdown
