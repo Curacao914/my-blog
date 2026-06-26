@@ -1,29 +1,27 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { cleanDisplayText, readableSource, tagsFromItem } from '@/lib/domain/metadata'
 
 function isReadingItem(item) {
   return item.contentType === 'reading' || item.aiTrace?.contentType === 'reading' || item.section === '阅读' || item.sectionKey === 'reading' || item.date === 'reading'
 }
 
 function dateText(item) {
-  if (item.date === 'reading') return '待读'
-  if (item.date === 'none') return '未定'
-  return [item.date, item.time].filter(Boolean).join(' ')
+  if (item.date === 'reading' || item.date === 'none') return ''
+  return [cleanDisplayText(item.date), cleanDisplayText(item.time)].filter(Boolean).join(' ')
 }
 
 function sourceText(item) {
-  const source = item.source || item.aiTrace?.source || item.aiTrace?.channel || ''
-  if (!source) return '手动收录'
-  if (source === 'wechat') return '微信'
-  if (source === 'web') return '网页'
-  return source
+  return readableSource(item.source || item.aiTrace?.source || item.aiTrace?.channel) || '手动收录'
 }
 
 function tagsFor(item) {
-  const tags = item.tags || item.aiTrace?.tags || item.aiTrace?.labels || []
-  if (Array.isArray(tags)) return tags.filter(Boolean).slice(0, 4)
-  return []
+  return tagsFromItem(item, { limit: 3, omitGenericReading: true })
+}
+
+function listMeta(item, statusText) {
+  return [dateText(item), sourceText(item), statusText].filter(Boolean)
 }
 
 function isUuid(value = '') {
@@ -47,6 +45,7 @@ export function ReadingBox() {
   const [activeId, setActiveId] = useState('')
   const [drafts, setDrafts] = useState({})
   const [status, setStatus] = useState('')
+  const [noteLinks, setNoteLinks] = useState({})
   const [isSaving, setIsSaving] = useState(false)
   const [showListOnMobile, setShowListOnMobile] = useState(true)
   const [showReadItems, setShowReadItems] = useState(false)
@@ -97,8 +96,10 @@ export function ReadingBox() {
       const data = await response.json()
       setItems(data.items || nextItems)
       setStatus(nextStatus)
+      return true
     } catch {
       setStatus('保存失败')
+      return false
     } finally {
       setIsSaving(false)
     }
@@ -110,7 +111,8 @@ export function ReadingBox() {
 
   async function saveNote(item) {
     const nextItems = patchItem(item.id, { note: drafts[item.id] || '' })
-    await persist(nextItems)
+    const saved = await persist(nextItems)
+    if (!saved) return
     try {
       const response = await fetch('/api/notes', {
         method: 'POST',
@@ -118,9 +120,15 @@ export function ReadingBox() {
         body: JSON.stringify({ scheduleItemId: item.id, note: drafts[item.id] || '' })
       })
       if (!response.ok) throw new Error('note draft failed')
-      setStatus('已存为笔记草稿')
+      const data = await response.json()
+      if (data.note?.id) {
+        setNoteLinks((current) => ({ ...current, [item.id]: data.note.id }))
+        setStatus(data.existing ? '已存在笔记草稿' : '已生成笔记')
+      } else {
+        setStatus('笔记草稿已保存')
+      }
     } catch {
-      setStatus('卡片已保存，笔记表未就绪')
+      setStatus('笔记草稿保存失败')
     }
   }
 
@@ -152,9 +160,9 @@ export function ReadingBox() {
                   aria-pressed={activeItem?.id === item.id}
                 >
                   <span className="reading-list-meta">
-                    <span>{dateText(item)}</span>
-                    <span>{sourceText(item)}</span>
-                    <span>待读</span>
+                    {listMeta(item, '待读').map((value) => (
+                      <span key={`${item.id}-${value}`}>{value}</span>
+                    ))}
                   </span>
                   <strong>{item.title}</strong>
                   {item.summary ? <small>{item.summary}</small> : null}
@@ -176,7 +184,7 @@ export function ReadingBox() {
                 </button>
                 <div className="reading-panel-head">
                   <div>
-                    <span className="eyebrow">{[dateText(activeItem), sourceText(activeItem), '待读'].join(' · ')}</span>
+                    <span className="eyebrow">{listMeta(activeItem, '待读').join(' · ')}</span>
                     <h2>{activeItem.title}</h2>
                   </div>
                   <button type="button" onClick={() => markDone(activeItem)} disabled={isSaving}>
@@ -222,6 +230,11 @@ export function ReadingBox() {
                   <button type="button" onClick={() => copyMarkdown(activeItem)}>
                     复制 Markdown
                   </button>
+                  {noteLinks[activeItem.id] ? (
+                    <a className="reading-note-link" href={`/desk/inbox?noteId=${noteLinks[activeItem.id]}`}>
+                      打开笔记
+                    </a>
+                  ) : null}
                   {status ? <span>{status}</span> : null}
                 </div>
               </article>
@@ -249,8 +262,9 @@ export function ReadingBox() {
                 <article className="reading-history-item" key={item.id}>
                   <div>
                     <span className="reading-list-meta">
-                      <span>{dateText(item)}</span>
-                      <span>{sourceText(item)}</span>
+                      {listMeta(item, '已读').map((value) => (
+                        <span key={`${item.id}-${value}`}>{value}</span>
+                      ))}
                     </span>
                     <strong>{item.title}</strong>
                     {tagsFor(item).length ? (

@@ -9,15 +9,16 @@ This handoff is for continuing `Curacao914/my-blog` on branch `codex/homepage-ph
 - Repository: `https://github.com/Curacao914/my-blog.git`.
 - Upstream: `https://github.com/tangly1024/NotionNext.git`.
 - Branch at audit time: `codex/homepage-phase1`, tracking `origin/codex/homepage-phase1`.
-- Handoff baseline for this frontend phase: `39f8b0af0006ea77f9242bb34a881047ebd72a92`.
-- This phase modified only frontend workspace files, a focused component test, and status docs.
-- No backend, API, Supabase schema, Clerk, middleware, WeChat/OpenClaw, cron/reminder, production, or `main` changes were made.
+- Handoff baseline for the notes/reading phase: `54b0e7a6 Refine desk today and reading layouts`.
+- This phase modified workspace frontend files, the existing notes API, schedule parse/domain normalization for reading tags, focused tests, and status docs.
+- No Supabase table rewrite, Clerk middleware, WeChat/OpenClaw, cron/reminder, production, public blog routing, or `main` changes were made.
 
 Recent relevant commits:
 
 | Commit | Purpose |
 | --- | --- |
 | `39f8b0af` | Documented the handoff baseline for this frontend phase. |
+| `54b0e7a6` | Refined desk Today and Reading layouts with collapsed history sections. |
 | `52ed7d47` | Removed Today frontend sample/fallback writes and added a small status notice. |
 | `869d6411` | Broadened OpenClaw/WeChat relay channel matching. |
 | `b74fb720` | Removed Clerk from Edge middleware after Vercel middleware failures. |
@@ -70,6 +71,35 @@ Notes:
 - `/api/schedule/parse` still has a server fallback `fallbackItemsFromCommand` for some recognized action/reading inputs if the model returns no items. This is not the removed frontend demo fallback.
 - The parse prompt asks for `contentType`, `importance`, `urgency`, `isPinned`, source fields, status, links, children, summary, note, and optional reminder.
 - `toDbScheduleItem` stores newer semantic fields in `ai_trace` and reads physical columns when available, allowing partial migration compatibility.
+- Reading parse can now carry up to three optional topic tags into `ai_trace.tags`. Tags are cleaned before storage/display and empty placeholders such as `none`, `null`, and `undefined` are ignored.
+
+### Notes / NoteDraft Chain
+
+Current code path:
+
+```text
+/desk/inbox
+→ components/NotesDesk.js
+→ /api/notes
+→ Supabase notes
+
+/desk/reading
+→ components/ReadingBox.js
+→ POST /api/notes with scheduleItemId
+→ verify schedule_items owner/source
+→ find existing notes.metadata.sourceReadingId or legacy scheduleItemId
+→ create NoteDraft only when missing
+→ /desk/inbox?noteId=...
+```
+
+Notes:
+
+- `pages/desk/inbox/index.js` no longer reuses `TodayBoard`; it renders a real notes draft list/editor.
+- The existing `notes` table is used without a new migration. Minimum NoteDraft semantics are carried by `title`, `body_markdown`, `note_type`, `status`, and `metadata` keys such as `originType`, `sourceReadingId`, `sourceUrl`, `tags`, and `excerpt`.
+- `/api/notes` now supports GET list/single, POST quick note, POST reading-to-draft, PATCH title/body/status/tags, and DELETE.
+- Owner isolation is enforced by deriving the profile from `getScheduleOwnerUserId(req)` and filtering all note reads/writes by `owner_id`. Client-supplied owner values are ignored.
+- Reading-to-draft is idempotent by `owner_id + metadata.sourceReadingId`, with legacy fallback to `metadata.scheduleItemId`. Existing drafts are returned without overwriting user-edited body content.
+- Non-UUID/local-only reading items remain disabled in the Reading UI rather than pretending to create a persistent draft.
 
 ### WeChat Chain
 
@@ -157,19 +187,19 @@ Local audit of `.env.local` found these configured locally: Supabase, database U
 | AI parsing | Code exists; previously exercised | `/api/schedule/parse` uses schedule model env and normalization. No fresh model call in this handoff. |
 | Ignored/not_actionable | Code exists | `/api/schedule/parse` and capture return ignored for no actionable items. Fresh test not run here. |
 | Duplicate messageId idempotency | Code exists; previously tested | `captureKeyFor` and `findExistingCapture` implement duplicate handling. Fresh test not run here. |
-| Supabase persistence | Code exists; previously tested | Schedule/read/note/reminder server code uses Supabase REST. Fresh DB write not run here. |
+| Supabase persistence | Local integration verified for notes; schedule code exists | Fresh local API requests created, read, patched, and archived a real note. Schedule/read/reminder server code also uses Supabase REST. |
 | Edit/complete/delete schedule items | Code exists | `TodayBoard` mutates local state and PUTs `/api/schedule/items`; delete uses `deletedIds`. Fresh UI test not run. |
 | Content classification | Code exists | `contentType`, section, `sectionKey`, importance, urgency, and pinning normalize through parse/domain. |
 | Workspace shell | Build verified + component covered | `DeskShell` keeps full left navigation on desktop, adds mobile folded nav, and uses a lighter page frame. |
 | Focus area | Build verified + component covered | `TodayBoard` computes up to two active focus items; completed items are excluded from focus. |
 | Today default layout | Build verified + component covered | Active main/flexible stacks are independent; completed/history items move to a collapsed cross-page section. |
 | Four-quadrant view | Build verified + component covered | `TodayBoard` keeps `matrix` as an independent view with compact editable cards. |
-| Reading box | Build verified + component covered | `ReadingBox` now uses active reading list + detail, with read items in a collapsed compact history section. Fresh note write not run. |
+| Reading box | Build verified + component/API covered | `ReadingBox` uses active reading list + detail, read items collapse into compact history, and Reading → NoteDraft returns a real inbox link after POST. |
 | Clerk page permissions | Not proven strict | Anonymous Preview `/desk/today` returned 200. Current code checks cookies only when Clerk env exists. |
 | API permissions for schedule/notes | Not proven strict | Anonymous Preview `/api/schedule/items` and `/api/notes` returned 200. |
 | Capture API token permission | Code exists; route reachable | `/api/schedule/capture` checks bearer token for POST. Anonymous GET returns 405. |
 | Reminder/Cron | Route exists; unauthorized verified | `/api/reminders/run` returned 401 without token. No email send test run here. |
-| NoteDraft | Code exists; not freshly verified | `/api/notes` and `ReadingBox.saveNote` exist. No fresh POST test. |
+| NoteDraft | Local integration verified + unit/component tested | `/api/notes` supports quick notes and reading drafts. Fresh local API verification created/patched/archived a quick note and created/found an idempotent reading draft. |
 | Publishing/content access system | Partial code/docs | Content snapshot docs and content pages exist; full DB-backed publish/access workflow unfinished. |
 | Blog fusion | Partial | New public pages coexist with NotionNext routes. Full gradual Notion independence unfinished. |
 | Course workflow | Code and docs exist; not complete | Course job APIs and worker scripts exist. Full upload-to-final-note browser workflow not freshly verified. |
@@ -185,7 +215,9 @@ Local audit of `.env.local` found these configured locally: Supabase, database U
 - Older reading logic used link presence to classify reading. Current `ReadingBox` and domain logic use `contentType`, reading section/date markers, and `aiTrace`; verify code before making claims.
 - Localhost, Preview, production, and real WeChat tests must be reported separately.
 - Do not infer that a feature never existed because the current HEAD lacks it. Check Git history, old branches, and the independent `law-tech` repo when relevant.
-- Local dev browser checks in this phase needed temporary local Clerk env clearing to avoid the existing desk redirect; this did not change code. The dev server also printed Watchpack `EMFILE` watcher warnings, but production build passed.
+- Local dev API checks used `ALLOW_LOCAL_DESK_FALLBACK=true` to exercise the existing owner fallback. This did not change code.
+- Local browser responsive checks were blocked by the browser tool security policy for `localhost:3015`; do not claim fresh visual browser evidence from this run.
+- The dev server printed Watchpack `EMFILE` watcher warnings, but production build passed.
 
 ## 7. Current Product Plan
 
@@ -243,15 +275,20 @@ This frontend-only phase has implemented the confirmed Shell, Today, and Reading
 - Four-quadrant remains an independent view and uses compact editable cards.
 - Reading uses active reading list plus detail panel; read items are in a collapsed compact `已读` history section with restore action.
 - Note draft action remains connected to `/api/notes` only for UUID-backed schedule records. Local-only items show a disabled "草稿后续接入" action.
+- Reading metadata display now filters placeholder values (`none`, `null`, `undefined`, empty strings) through `lib/domain/metadata.js`; the Reading page no longer repeats the generic `阅读` content-type tag.
+- Today cards also clean display metadata before rendering, so `"none"` time/place values do not become pills or fixed-time layout signals.
+- Single focus card layout was tightened by allowing the title flex item to keep a real width (`min-width: 0`, flexible title/actions, no forced focus min-height), avoiding the prior vertical Chinese title squeeze.
+- `随手记` is now a real NoteDraft workspace with list/editor, optional title, Markdown/plain text body, save status, archive, delete, and `/desk/inbox?noteId=...` selection.
+- Reading parse can now request up to three optional content-derived topic tags in the existing AI parse response; these are stored in `ai_trace.tags` and reused by Reading/Today display when present.
 - Visual direction remains warm white / pale blue-green / deep ink green / serif / large-radius / soft-shadow, with restrained static glass.
-- Focused component coverage was added in `__tests__/components/DeskWorkspace.test.js`.
+- Focused component/API coverage exists in `__tests__/components/DeskWorkspace.test.js` and `__tests__/api/notes.test.js`.
 
 Fresh checks from this phase:
 
-- `git diff --check`: passed.
-- `npm test -- __tests__/components/DeskWorkspace.test.js --runInBand`: passed 4/4.
-- `npm run build`: passed.
-- Full `npm test -- --runInBand`: failed in pre-existing unrelated suites (`validation`, `LazyImage` theme alias, OpenClaw relay test environment response). The new workspace test passed.
+- `npm test -- __tests__/components/DeskWorkspace.test.js __tests__/api/notes.test.js --runInBand`: passed 9/9.
+- Local API verification against `http://localhost:3014` with `ALLOW_LOCAL_DESK_FALLBACK=true`: quick note create/list/patch/get/archive passed; quick note did not appear in schedule items; Reading → NoteDraft created one real draft and a second POST returned the same note ID with `existing: true`.
+- `npm run build`: passed with existing large page-data warnings.
+- Browser responsive check was attempted but blocked by the browser tool security policy for `localhost:3015`; rely on component coverage/CSS review until a manual Preview check is done.
 
 ## 9. Next Window Notes
 

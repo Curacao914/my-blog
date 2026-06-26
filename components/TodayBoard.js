@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { selectRelevantItems } from '@/lib/domain/schedule-context'
+import { cleanDisplayText, tagsFromItem } from '@/lib/domain/metadata'
 
 const storageKey = 'law-tech.schedule.v2'
 const commandPlaceholder = '写下今天要处理的事、阅读材料或提醒。'
@@ -84,7 +85,7 @@ function isReadingItem(item) {
 }
 
 function normalizeItem(item) {
-  const section = item.section || item.kind || '其他'
+  const section = cleanDisplayText(item.section || item.kind) || '其他'
   const sectionKey = item.sectionKey || sectionKeyFrom(section)
   const contentType = inferContentType(item, section, sectionKey)
   return {
@@ -95,8 +96,8 @@ function normalizeItem(item) {
     contentType,
     tone: item.tone || toneFor(sectionKey),
     date: item.date || 'today',
-    time: item.time || '',
-    place: item.place || '',
+    time: cleanDisplayText(item.time),
+    place: cleanDisplayText(item.place),
     priority: item.priority || 'normal',
     importance: item.importance || item.aiTrace?.importance || (item.priority === 'high' ? 'important' : 'normal'),
     urgency: item.urgency || item.aiTrace?.urgency || (dateKind(item.date) === 'today' || dateKind(item.date) === 'overdue' ? 'urgent' : 'not_urgent'),
@@ -109,8 +110,10 @@ function normalizeItem(item) {
     children: Array.isArray(item.children)
       ? item.children.map((child) => ({ id: child.id || makeId('child'), title: child.title || '', done: Boolean(child.done) }))
       : [],
-    summary: item.summary || '',
-    note: item.note || ''
+    summary: cleanDisplayText(item.summary),
+    note: item.note || '',
+    tags: tagsFromItem(item, { limit: 3 }),
+    aiTrace: item.aiTrace || item.ai_trace || {}
   }
 }
 
@@ -189,7 +192,7 @@ function groupItems(items = []) {
 }
 
 function itemHasFixedTime(item) {
-  return Boolean(item.time) || ['today', 'overdue', 'upcoming'].includes(dateKind(item.date))
+  return Boolean(cleanDisplayText(item.time)) || ['today', 'overdue', 'upcoming'].includes(dateKind(item.date))
 }
 
 function ItemCard({
@@ -209,6 +212,13 @@ function ItemCard({
   const isCompact = variant === 'compact'
   const canComplete = variant !== 'focus' && variant !== 'compact'
   const isHistory = variant === 'compact' && item.status === 'done'
+  const meta = [
+    dateLabel(item.date),
+    cleanDisplayText(item.time),
+    cleanDisplayText(item.place),
+    cleanDisplayText(item.section)
+  ].filter(Boolean)
+  const tags = tagsFromItem(item, { limit: 3 })
 
   return (
     <article
@@ -251,12 +261,16 @@ function ItemCard({
             ) : null}
           </div>
         </div>
-        <div className="today-meta">
-          <span>{dateLabel(item.date)}</span>
-          {item.time ? <span>{item.time}</span> : null}
-          {item.place ? <span>{item.place}</span> : null}
-          <span>{item.section}</span>
-        </div>
+        {meta.length || tags.length ? (
+          <div className="today-meta">
+            {meta.map((value) => (
+              <span key={`${item.id}-${value}`}>{value}</span>
+            ))}
+            {tags.map((tag) => (
+              <span key={`${item.id}-tag-${tag}`}>{tag}</span>
+            ))}
+          </div>
+        ) : null}
         {item.summary && !isCompact ? <p className="card-summary">{item.summary}</p> : null}
         {showDetails && item.children.length ? (
           <div className="mini-list">

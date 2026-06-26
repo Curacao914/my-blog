@@ -528,7 +528,7 @@ textarea {
 }
 
 .focus-card {
-  min-height: 128px;
+  min-height: 0;
   padding: 18px;
   grid-template-columns: minmax(0, 1fr);
   border-color: rgba(255, 255, 255, 0.78);
@@ -783,6 +783,7 @@ textarea {
 
 .today-card-head {
   display: flex;
+  min-width: 0;
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
@@ -790,7 +791,8 @@ textarea {
 
 .card-actions {
   display: flex;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
@@ -798,7 +800,17 @@ textarea {
   max-width: 46%;
 }
 
+.focus-card .today-card-head {
+  flex-wrap: wrap;
+}
+
+.focus-card .card-actions {
+  max-width: 100%;
+}
+
 .card-title-button {
+  flex: 1 1 14rem;
+  min-width: 0;
   margin: 0;
   border: 0;
   padding: 0;
@@ -1101,19 +1113,22 @@ textarea {
 
 .reading-panel-head button,
 .reading-actions button,
-.reading-back {
+.reading-back,
+.reading-note-link {
   border: 0;
   border-radius: 999px;
   padding: 10px 14px;
   color: #fff8e6;
   background: var(--leaf);
   cursor: pointer;
+  text-decoration: none;
   transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
 }
 
 .reading-panel-head button:hover,
 .reading-actions button:hover,
-.reading-back:hover {
+.reading-back:hover,
+.reading-note-link:hover {
   transform: translateY(-2px);
   box-shadow: 0 14px 28px rgba(24, 63, 50, 0.18);
 }
@@ -1210,6 +1225,11 @@ textarea {
   background: rgba(255, 255, 255, 0.72);
 }
 
+.reading-note-link {
+  color: var(--ink);
+  background: rgba(244, 228, 184, 0.72);
+}
+
 .reading-actions span {
   color: var(--muted);
   font-size: 13px;
@@ -1245,6 +1265,191 @@ textarea {
   color: var(--muted);
   background: rgba(255, 255, 255, 0.72);
   cursor: pointer;
+}
+
+.notes-desk {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.82fr) minmax(0, 1.42fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.notes-list,
+.notes-editor {
+  min-width: 0;
+  border: 1px solid rgba(24, 63, 50, 0.1);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: 0 14px 36px rgba(24, 63, 50, 0.07);
+}
+
+.notes-list {
+  display: grid;
+  gap: 10px;
+  max-height: calc(100vh - 220px);
+  overflow: auto;
+  padding: 14px;
+}
+
+.notes-list-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notes-list-head h2 {
+  margin: 4px 0 0;
+  font-size: 24px;
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+.notes-list-head button,
+.notes-actions button,
+.notes-editor-empty button,
+.notes-back {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 14px;
+  color: #fff8e6;
+  background: var(--leaf);
+  cursor: pointer;
+  transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease), background 0.35s var(--ease);
+}
+
+.notes-list-head button:hover,
+.notes-actions button:hover,
+.notes-editor-empty button:hover,
+.notes-back:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(24, 63, 50, 0.16);
+}
+
+.notes-list > button {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  border: 1px solid rgba(24, 63, 50, 0.1);
+  border-radius: 20px;
+  padding: 13px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.56);
+  text-align: left;
+  cursor: pointer;
+}
+
+.notes-list > button[aria-pressed='true'] {
+  border-color: rgba(24, 63, 50, 0.28);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 14px 28px rgba(24, 63, 50, 0.08);
+}
+
+.notes-list strong {
+  font-size: 15px;
+  line-height: 1.42;
+  font-weight: 560;
+  overflow-wrap: anywhere;
+}
+
+.notes-list small,
+.notes-list span,
+.notes-empty,
+.notes-actions span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.58;
+}
+
+.notes-list small {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.notes-empty {
+  margin: 0;
+  border: 1px dashed rgba(24, 63, 50, 0.16);
+  border-radius: 20px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.notes-editor {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 88% 6%, rgba(226, 237, 241, 0.62), transparent 34%),
+    rgba(255, 255, 255, 0.64);
+}
+
+.notes-title-input,
+.notes-body-input {
+  width: 100%;
+  border: 1px solid rgba(24, 63, 50, 0.12);
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.7);
+  outline: none;
+}
+
+.notes-title-input {
+  border-radius: 22px;
+  padding: 14px 16px;
+  font-size: 22px;
+  line-height: 1.28;
+  font-family: inherit;
+}
+
+.notes-body-input {
+  min-height: min(58vh, 560px);
+  border-radius: 24px;
+  padding: 16px;
+  resize: vertical;
+  font-size: 15px;
+  line-height: 1.78;
+}
+
+.notes-title-input:focus,
+.notes-body-input:focus {
+  border-color: rgba(24, 63, 50, 0.34);
+  box-shadow: 0 0 0 5px rgba(24, 63, 50, 0.08);
+}
+
+.notes-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.notes-actions button:nth-child(n + 2) {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.notes-actions button:disabled {
+  cursor: not-allowed;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: none;
+}
+
+.notes-back {
+  display: none;
+  width: fit-content;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.notes-editor-empty {
+  display: grid;
+  min-height: 320px;
+  place-items: center;
+  border: 1px dashed rgba(24, 63, 50, 0.16);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.42);
 }
 
 .editor-grid {
@@ -1375,6 +1580,7 @@ textarea {
   .focus-strip,
   .matrix-board,
   .reading-workspace,
+  .notes-desk,
   .command-bar,
   .editor-grid {
     grid-template-columns: 1fr;
@@ -1409,11 +1615,23 @@ textarea {
     padding-right: 0;
   }
 
+  .notes-list {
+    max-height: none;
+  }
+
   .reading-box.show-detail .reading-list {
     display: none;
   }
 
   .reading-box:not(.show-detail) .reading-panel {
+    display: none;
+  }
+
+  .notes-desk.show-editor .notes-list {
+    display: none;
+  }
+
+  .notes-desk:not(.show-editor) .notes-editor {
     display: none;
   }
 
@@ -1425,6 +1643,11 @@ textarea {
     display: inline-flex;
     justify-content: center;
     width: fit-content;
+  }
+
+  .notes-back {
+    display: inline-flex;
+    justify-content: center;
   }
 }
 
@@ -1464,13 +1687,23 @@ textarea {
   .item-editor button,
   .reading-panel-head button,
   .reading-actions button,
-  .reading-back {
+  .reading-back,
+  .reading-note-link,
+  .notes-list-head button,
+  .notes-actions button,
+  .notes-back {
     padding: 9px 11px;
   }
 
   .reading-panel {
     padding: 18px;
     border-radius: 26px;
+  }
+
+  .notes-editor,
+  .notes-list {
+    border-radius: 24px;
+    padding: 14px;
   }
 }
 

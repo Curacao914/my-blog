@@ -1,6 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { TodayBoard } from '@/components/TodayBoard'
 import { ReadingBox } from '@/components/ReadingBox'
+import { NotesDesk } from '@/components/NotesDesk'
+
+jest.mock('next/router', () => ({
+  useRouter: () => ({
+    isReady: true,
+    query: {}
+  })
+}))
 
 const longUrl = 'https://example.com/articles/a-very-long-reading-link-that-should-wrap-without-breaking-the-workspace-layout'
 
@@ -76,7 +84,9 @@ const items = [
     source: 'wechat',
     summary: '阅读摘要预览，需要在列表和详情中保持可读。',
     links: [{ title: '原文', url: longUrl }],
-    aiTrace: { tags: ['民法', '文章'] }
+    time: 'none',
+    place: 'none',
+    aiTrace: { tags: ['民法', 'none', '阅读', 'null', 'undefined', '文章'] }
   },
   {
     id: '66666666-6666-4666-8666-666666666666',
@@ -142,6 +152,9 @@ describe('workspace desk views', () => {
 
     expect(screen.getByText('微信')).toBeInTheDocument()
     expect(screen.getAllByText('民法').length).toBeGreaterThan(0)
+    expect(screen.queryByText('none')).not.toBeInTheDocument()
+    expect(screen.queryByText('null')).not.toBeInTheDocument()
+    expect(screen.queryByText('undefined')).not.toBeInTheDocument()
     expect(screen.getByText('原文')).toHaveAttribute('href', longUrl)
     expect(screen.getByRole('button', { name: '存为笔记草稿' })).toBeEnabled()
     expect(screen.getByRole('button', { name: /已读 1/ })).toHaveAttribute('aria-expanded', 'false')
@@ -157,5 +170,69 @@ describe('workspace desk views', () => {
 
     await waitFor(() => expect(screen.getAllByText('待读长文章').length).toBeGreaterThan(0))
     expect(screen.getByRole('button', { name: '草稿后续接入' })).toBeDisabled()
+  })
+
+  it('opens a real note draft link after Reading creates one', async () => {
+    fetch.mockImplementation((url, options = {}) => {
+      if (String(url).includes('/api/schedule/items') && options.method === 'PUT') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ items }) })
+      }
+      if (String(url).includes('/api/schedule/items')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ items }) })
+      }
+      if (String(url).includes('/api/notes')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ note: { id: '77777777-7777-4777-8777-777777777777' }, existing: false })
+        })
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+    })
+    render(<ReadingBox />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: '存为笔记草稿' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: '存为笔记草稿' }))
+
+    await waitFor(() => expect(screen.getByText('已生成笔记')).toBeInTheDocument())
+    expect(screen.getByText('打开笔记')).toHaveAttribute('href', '/desk/inbox?noteId=77777777-7777-4777-8777-777777777777')
+  })
+
+  it('renders the inbox as persisted notes instead of the Today board', async () => {
+    fetch.mockImplementation((url, options = {}) => {
+      if (String(url).includes('/api/notes') && options.method === 'POST') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            note: {
+              id: '88888888-8888-4888-8888-888888888888',
+              title: '新的想法',
+              body_markdown: '新的想法\n\n继续写。',
+              note_type: 'quick_note',
+              status: 'draft',
+              metadata: { excerpt: '新的想法 继续写。' },
+              updated_at: '2026-06-26T08:00:00.000Z'
+            }
+          })
+        })
+      }
+      if (String(url).includes('/api/notes')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ notes: [] }) })
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+    })
+    render(<NotesDesk />)
+
+    await waitFor(() => expect(screen.getByText('还没有草稿')).toBeInTheDocument())
+    expect(screen.queryByPlaceholderText('写下今天要处理的事、阅读材料或提醒。')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('新建'))
+    fireEvent.change(screen.getByPlaceholderText('标题可选'), { target: { value: '新的想法' } })
+    fireEvent.change(screen.getByPlaceholderText('写下一句话想法、课堂片段、写作灵感或阅读草稿。'), {
+      target: { value: '新的想法\n\n继续写。' }
+    })
+    fireEvent.click(screen.getByText('保存'))
+
+    await waitFor(() => expect(screen.getByText('已保存')).toBeInTheDocument())
+    expect(screen.getAllByText('新的想法').length).toBeGreaterThan(0)
   })
 })

@@ -1,3 +1,5 @@
+import { cleanDisplayTags, cleanDisplayText } from '@/lib/domain/metadata'
+
 export const runtime = 'nodejs'
 
 const schemaInstruction = `
@@ -24,6 +26,7 @@ Return JSON only:
       "urgencySource": "ai | user | rule",
       "status": "active | done | cancelled",
       "links": [{ "title": "string", "url": "string" }],
+      "tags": ["up to 3 short topic tags for reading items; omit or [] when unsure"],
       "children": [{ "title": "string", "done": false }],
       "summary": "string",
       "note": "string",
@@ -78,7 +81,7 @@ function normalizeDateValue(date, referenceDate) {
 }
 
 function normalizeTimeValue(time) {
-  const value = String(time || '').trim()
+  const value = cleanDisplayText(time)
   if (!value) return ''
   const match = value.match(/^([01]?\d|2[0-3])[:：]([0-5]\d)$/)
   if (match) return `${match[1].padStart(2, '0')}:${match[2]}`
@@ -219,17 +222,18 @@ function buildSystemPrompt({ referenceDate }) {
     '8. 但活动通知、会议通知、论坛安排、请示批复、课程作业、学工任务，即使很长或带链接，也应 contentType=action。标签可以是学工/课程/行政等。',
     '9. 如果 URL context 提供了标题或描述，阅读项 title 必须优先使用真实标题，summary 用一小段中文概括，通常 2-4 句，说明文章主题、关键信息和为什么值得读；不要只写“微信文章”。',
     '10. 对无法获取标题的 mp.weixin.qq.com 链接，title 才用“微信文章”；summary 用一句很短的待读理由或内容线索，不要编造正文细节。',
-    '11. 一条输入包含多件事时，拆成多个 items；每个 item 都要能独立显示。',
-    '12. 分类不固定，可用学习、学工、阅读、日常、写作、行政、健康等自然短标签；不要生硬使用“智能/AI”。',
-    '13. importance 表示重要性，urgency 表示紧急性。时间临近可以使 urgency=urgent，但不能自动等于 important；用户明确说重要/必须优先时 importance=important。',
-    '14. 如果用户要求完成、取消、延期、修改已有事项，mode=replace，并返回相关事项修改后的完整版本；如果只是新增，mode=append，只返回新增项。',
-    '15. 修改已有事项时，必须保留该事项原来的 id；新建事项不要编造 id。',
-    '16. 用户说“读完了/完成了/取消/删掉/改到/延期/提前/换到/提醒我”并且 Current relevant items 里有对应事项时，一律修改该事项，不要新建同名事项。',
-    '17. 用户说“读完了/完成了”时 status=done；说“取消/不用了/删掉”时 status=cancelled；只改时间时保留原 title、section、links、summary、note、contentType。',
-    '18. 用户明确说“提醒我/提前提醒/到时提醒/某时提醒”时，填写 reminder；提前半小时输出 leadMinutes=30，提前一天输出 1440；指定提醒时刻则输出具体 remindAt。',
-    '19. 如果用户没有提提醒，不要为了普通新增事项编造 reminder；服务端会按默认策略处理。',
-    '20. 对纯寒暄、系统失败文案、没有保存意图也没有可行动内容的输入，返回 items: []。',
-    '21. 保留用户原意，不要在回复里扩写、开玩笑或自作主张添加不存在的安排。',
+    '11. 阅读项 tags 最多 3 个，应来自真实标题、URL context、摘要或正文线索；不确定就返回 []。禁止把 none、null、undefined、阅读、待读、已读当作标签。',
+    '12. 一条输入包含多件事时，拆成多个 items；每个 item 都要能独立显示。',
+    '13. 分类不固定，可用学习、学工、阅读、日常、写作、行政、健康等自然短标签；不要生硬使用“智能/AI”。',
+    '14. importance 表示重要性，urgency 表示紧急性。时间临近可以使 urgency=urgent，但不能自动等于 important；用户明确说重要/必须优先时 importance=important。',
+    '15. 如果用户要求完成、取消、延期、修改已有事项，mode=replace，并返回相关事项修改后的完整版本；如果只是新增，mode=append，只返回新增项。',
+    '16. 修改已有事项时，必须保留该事项原来的 id；新建事项不要编造 id。',
+    '17. 用户说“读完了/完成了/取消/删掉/改到/延期/提前/换到/提醒我”并且 Current relevant items 里有对应事项时，一律修改该事项，不要新建同名事项。',
+    '18. 用户说“读完了/完成了”时 status=done；说“取消/不用了/删掉”时 status=cancelled；只改时间时保留原 title、section、links、summary、note、contentType。',
+    '19. 用户明确说“提醒我/提前提醒/到时提醒/某时提醒”时，填写 reminder；提前半小时输出 leadMinutes=30，提前一天输出 1440；指定提醒时刻则输出具体 remindAt。',
+    '20. 如果用户没有提提醒，不要为了普通新增事项编造 reminder；服务端会按默认策略处理。',
+    '21. 对纯寒暄、系统失败文案、没有保存意图也没有可行动内容的输入，返回 items: []。',
+    '22. 保留用户原意，不要在回复里扩写、开玩笑或自作主张添加不存在的安排。',
     '',
     schemaInstruction
   ].join('\n')
@@ -260,7 +264,7 @@ function normalizeItems(items = [], { referenceDate, linkMetadata = [] }) {
     tone: TONES.has(item.tone) ? item.tone : '',
     date: normalizeDateValue(item.date, referenceDate),
     time: normalizeTimeValue(item.time),
-    place: item.place || '',
+    place: cleanDisplayText(item.place),
     priority: PRIORITIES.has(item.priority) ? item.priority : 'normal',
     importance: IMPORTANCE.has(item.importance) ? item.importance : (item.priority === 'high' ? 'important' : 'normal'),
     urgency: URGENCY.has(item.urgency) ? item.urgency : 'not_urgent',
@@ -274,8 +278,9 @@ function normalizeItems(items = [], { referenceDate, linkMetadata = [] }) {
         .map((link) => ({ title: link.title || '链接', url: normalizeUrl(link.url) }))
         .filter((link) => link.url)
       : [],
+    tags: cleanDisplayTags(item.tags, { limit: 3, omitGenericReading: normalizeContentType(item) === 'reading' }),
     children: Array.isArray(item.children) ? item.children : [],
-    summary: item.summary || '',
+    summary: cleanDisplayText(item.summary),
     note: item.note || '',
     reminder: normalizeReminder(item.reminder, referenceDate)
   }, linkMetadata))
