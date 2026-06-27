@@ -152,7 +152,7 @@ Work should proceed in this order unless the user changes priorities:
 
 1. Run targeted Jest, production build, and Preview verification for the publishing core and independent course-note reader.
 2. Verify Vercel Git integration so pushes to `codex/homepage-phase1` create the expected Preview instead of redeploying an older commit.
-3. Broader Notion-source normalization and unified homepage/search/RSS exposure.
+3. Verify unified homepage/search/RSS/sitemap exposure on Preview.
 4. Optional one-way Notion mirror, while Supabase remains the source of truth.
 5. Production Clerk variables and an explicitly approved merge to `main`.
 6. Daily 09:00 Asia/Shanghai workspace digest email.
@@ -211,3 +211,14 @@ The deployed `content_items_source_check` accepts `course-worker`, not `course-w
 - Notion posts without an explicit collection belong to the `文章` collection rather than an implementation-facing `独立内容` bucket.
 - Publishing taxonomy is category-aware: collection suggestions are scoped by category, while category, collection and tag fields remain writable.
 - Content-management reads must avoid per-item relation fetches. Fetch the item set first, then bulk-load versions, access, display and assets for those item IDs.
+
+## Phase Update: Unified Public Content Discovery
+
+- Public discovery surfaces must use the same merged index rather than independently rebuilding Notion, snapshot, and database lists.
+- Merge precedence remains Notion metadata → live JSON → Supabase for matching slugs, so new database content wins without hiding unrelated legacy content.
+- Homepage recent content respects `display.showInRecent`; pinned items sort first.
+- RSS includes only `access.mode = public` items with `allowRss = true`.
+- Sitemap inclusion requires public access, `allowSitemap = true`, and indexing not explicitly disabled.
+- Password-protected content may remain discoverable by metadata but must not enter RSS or sitemap.
+- Publishing or withdrawal must revalidate the homepage, `/content`, `/search`, and the affected new-content detail route.
+- Legacy Notion article routes remain canonical until an explicit migration decision is made.

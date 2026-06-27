@@ -9,6 +9,7 @@ import '@/styles/notion.css' // 在原版之后覆盖阅读样式
 import useAdjustStyle from '@/hooks/useAdjustStyle'
 import { GlobalContextProvider } from '@/lib/global'
 import { getBaseLayoutByTheme } from '@/themes/theme'
+import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useCallback, useMemo } from 'react'
 import { getQueryParam } from '../lib/utils'
@@ -79,11 +80,20 @@ const MyApp = ({ Component, pageProps }) => {
     route.pathname.startsWith('/sign-in') ||
     route.pathname.startsWith('/sign-up')
 
-  return isAuthRoute ? (
+  const routedContent = isAuthRoute ? (
     clerkContent
   ) : (
     <CourseTaskProvider>{clerkContent}</CourseTaskProvider>
   )
+
+  return <>
+    <Head>
+      <link rel='alternate' type='application/rss+xml' title='Curacao · RSS' href='/rss/feed.xml' />
+      <link rel='alternate' type='application/atom+xml' title='Curacao · Atom' href='/rss/atom.xml' />
+      <link rel='alternate' type='application/feed+json' title='Curacao · JSON Feed' href='/rss/feed.json' />
+    </Head>
+    {routedContent}
+  </>
 }
 
 export default MyApp

@@ -2,6 +2,7 @@ import { requireAdminRequest } from '@/lib/auth/serverAdmin'
 import { getLiveContentIndex } from '@/lib/contentSnapshots'
 import { normalizeNotionContentIndex } from '@/lib/content/notionIndex'
 import { collectContentTaxonomy } from '@/lib/content/taxonomy'
+import { revalidatePublicContentSurfaces } from '@/lib/content/revalidation'
 import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
 import {
   listManagedContent,
@@ -49,12 +50,7 @@ export default async function handler(req, res) {
       const action = String(req.body?.action || '')
       if (action !== 'withdraw') throw new Error('Unsupported content action')
       const item = await withdrawManagedContent(String(req.body?.itemId || ''))
-      try {
-        await res.revalidate('/content')
-        if (item.slug) await res.revalidate(`/content/${item.slug}`)
-      } catch (error) {
-        console.warn('[content manage] revalidate failed', error)
-      }
+      await revalidatePublicContentSurfaces(res, item.slug, 'content manage')
       return res.status(200).json({ ok: true, item })
     }
 

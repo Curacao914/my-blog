@@ -6,11 +6,13 @@ describe('public content experience', () => {
   const detail = fs.readFileSync(path.join(process.cwd(), 'pages/content/[...slug].js'), 'utf8')
   const markdown = fs.readFileSync(path.join(process.cwd(), 'components/content/MarkdownDocument.js'), 'utf8')
   const styles = fs.readFileSync(path.join(process.cwd(), 'components/LawTechDeskStyles.js'), 'utf8')
+  const publicIndex = fs.readFileSync(path.join(process.cwd(), 'lib/content/publicIndex.js'), 'utf8')
 
   it('federates Notion metadata into the new content library without replacing new content', () => {
-    expect(index).toContain('fetchGlobalAllData')
-    expect(index).toContain('normalizeNotionContentIndex')
-    expect(index).toContain('mergeContentIndexes')
+    expect(index).toContain('loadPublicContentIndex')
+    expect(publicIndex).toContain('fetchGlobalAllData')
+    expect(publicIndex).toContain('normalizeNotionContentIndex')
+    expect(publicIndex).toContain('mergeContentIndexes')
     expect(index).toContain('item.href || `/content/${item.slug}`')
   })
 

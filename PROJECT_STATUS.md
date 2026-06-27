@@ -315,3 +315,20 @@ Implemented scope:
 - removal of active TOC `scrollIntoView`, which previously caused snap-back to the top;
 - category-aware editable collection choices, dense inline tag chips and optional cover URL in publishing;
 - bulk Supabase relation reads, Notion taxonomy caching and optimistic publishing refresh to reduce waiting.
+
+## Current Phase: Unified Public Content Discovery
+
+Status: code prepared in the current handoff workspace. `git diff --check`, changed-file JavaScript/JSX transpile parsing, public-content selection smoke tests, and revalidation-path smoke tests pass. Dependency-backed Jest, production build, and Preview verification remain required.
+
+Implemented scope:
+
+- one reusable public-content index merges published Notion metadata, live JSON snapshots, and Supabase content rows with database precedence by slug;
+- the public homepage now presents recent opted-in content, category counts, reusable content cards, and a stable library map;
+- `/search` searches the unified index across title, summary, category, collection, course metadata, and tags;
+- legacy `/search/[keyword]` links redirect into the unified search page;
+- RSS 2.0, Atom, and JSON Feed routes expose only public content with `allowRss = true`;
+- the sitemap includes new public content only when `allowSitemap = true` and indexing is allowed, while existing Notion routes remain intact;
+- publishing and withdrawal revalidate `/`, `/content`, `/search`, and the affected content detail route together;
+- shared public cards preserve a real cover when available and generate a deterministic cover otherwise.
+
+The next phase after verification is optional one-way Notion mirroring or broader homepage/content polish based on observed Preview behavior. Supabase remains the source of truth for new workbench publications.

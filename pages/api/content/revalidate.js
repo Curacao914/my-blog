@@ -9,8 +9,15 @@ function cleanPath(value) {
 function relatedPaths(pathname) {
   const segments = pathname.split('/').filter(Boolean)
   const locale = /^[a-z]{2}(?:-[A-Z]{2})?$/.test(segments[0] || '') ? `/${segments[0]}` : ''
-  const paths = new Set([pathname, locale || '/', `${locale}/archive` || '/archive', `${locale}/sitemap.xml` || '/sitemap.xml'])
-  if (segments.includes('article') || segments.includes('category') || segments.includes('tag')) paths.add(locale || '/')
+  const root = locale || '/'
+  const paths = new Set([
+    pathname,
+    root,
+    `${locale}/archive` || '/archive',
+    `${locale}/content` || '/content',
+    `${locale}/search` || '/search'
+  ])
+  if (segments.includes('article') || segments.includes('category') || segments.includes('tag')) paths.add(root)
   return [...paths].filter(Boolean)
 }
 

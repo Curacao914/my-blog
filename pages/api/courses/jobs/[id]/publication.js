@@ -5,21 +5,13 @@ import {
   withdrawManagedContent
 } from '@/lib/contentManagement'
 import { buildCoursePublicationModel } from '@/lib/contentPublishingModel'
+import { revalidatePublicContentSurfaces } from '@/lib/content/revalidation'
 import {
   applyCourseWorkflowAction,
   getTextPackCourseJobForOwner,
   workflowFromJob
 } from '@/lib/courseRepository'
 import { ensureProfile } from '@/lib/server/supabase'
-
-async function revalidateContent(res, slug = '') {
-  try {
-    await res.revalidate('/content')
-    if (slug) await res.revalidate(`/content/${slug}`)
-  } catch (error) {
-    console.warn('[course publication] revalidate failed', error)
-  }
-}
 
 export default async function handler(req, res) {
   const auth = await requireAdminRequest(req)
@@ -99,7 +91,7 @@ export default async function handler(req, res) {
       }
     })
 
-    await revalidateContent(res, publication.slug)
+    await revalidatePublicContentSurfaces(res, publication.slug, 'course publication')
     return res.status(200).json({
       ok: true,
       publication,

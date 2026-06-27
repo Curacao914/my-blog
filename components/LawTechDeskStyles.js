@@ -3875,6 +3875,9 @@ button, a, input, textarea, select, summary {
 }
 
 .public-nav > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border-radius: 12px;
   padding: 9px 13px;
   color: var(--muted);
@@ -4675,7 +4678,8 @@ button, a, input, textarea, select, summary {
 @media (max-width: 680px) {
   .public-shell { width:min(100% - 18px, 680px); padding-top:9px; }
   .public-header { top:9px; min-height:56px; border-radius:17px; }
-  .public-nav > a:not(.public-desk-link) { display:none; }
+  .public-nav > a:not(.public-desk-link):not(.public-search-link) { display:none; }
+  .public-nav .public-search-link { width:38px; height:38px; justify-content:center; padding:0; font-size:0; }
   .public-brand small { display:none; }
   .public-hero-copy h1, .public-page-hero h1 { font-size:clamp(42px,13vw,62px); }
   .public-portrait-card { min-height:390px; }

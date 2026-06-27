@@ -11,7 +11,13 @@ export function PublicHeader({ active = '' }) {
       </Link>
       <nav className='public-nav' aria-label='公开导航'>
         {publicNav.filter(item => item.href !== '/desk').map(item => (
-          <Link key={item.href} href={item.href} aria-current={active && item.href.includes(active) ? 'page' : undefined}>
+          <Link
+            className={item.key === 'search' ? 'public-search-link' : undefined}
+            key={item.href}
+            href={item.href}
+            aria-current={active === item.key || (active && item.href.includes(active)) ? 'page' : undefined}
+          >
+            {item.key === 'search' ? <LawTechIcon name='search' size={14} /> : null}
             {item.label}
           </Link>
         ))}

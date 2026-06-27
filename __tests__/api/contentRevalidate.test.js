@@ -42,6 +42,7 @@ describe('/api/content/revalidate', () => {
     expect(res.revalidate).toHaveBeenCalledWith('/zh-CN/article/test')
     expect(res.revalidate).toHaveBeenCalledWith('/zh-CN')
     expect(res.revalidate).toHaveBeenCalledWith('/zh-CN/archive')
-    expect(res.revalidate).toHaveBeenCalledWith('/zh-CN/sitemap.xml')
+    expect(res.revalidate).toHaveBeenCalledWith('/zh-CN/content')
+    expect(res.revalidate).toHaveBeenCalledWith('/zh-CN/search')
   })
 })

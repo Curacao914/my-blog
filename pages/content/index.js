@@ -1,25 +1,17 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useRouter } from 'next/router'
+import { useEffect, useMemo, useState } from 'react'
 
 import { DynamicSignature } from '@/components/law-tech/DynamicSignature'
 import { PublicHeader } from '@/components/law-tech/PublicHeader'
 import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
 import {
   getContentFacets,
-  getContentStats,
-  getPublicLiveContentIndex
+  getContentStats
 } from '@/lib/contentSnapshots'
-import {
-  groupContentByCollection,
-  mergeContentIndexes
-} from '@/lib/contentHierarchy'
-import { normalizeNotionContentIndex } from '@/lib/content/notionIndex'
-import {
-  listPublishedContentMetadata,
-  toSnapshotLikeContent
-} from '@/lib/contentRepository'
-import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
+import { groupContentByCollection } from '@/lib/contentHierarchy'
+import { loadPublicContentIndex } from '@/lib/content/publicIndex'
 
 const typeLabels = {
   article: '文章',
@@ -117,12 +109,21 @@ function updateOpenSet(setter, key, open) {
 }
 
 const ContentPage = ({ snapshots, facets, stats }) => {
+  const router = useRouter()
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('全部')
   const [type, setType] = useState('全部')
   const [tag, setTag] = useState('')
   const [openCategories, setOpenCategories] = useState(() => new Set())
   const [openCollections, setOpenCollections] = useState(() => new Set())
+
+  useEffect(() => {
+    if (!router.isReady) return
+    const requestedCategory = String(router.query.category || '')
+    const requestedQuery = String(router.query.q || '')
+    if (requestedCategory) setCategory(requestedCategory)
+    if (requestedQuery) setQuery(requestedQuery)
+  }, [router.isReady, router.query.category, router.query.q])
 
   const categoryCounts = useMemo(() => snapshots.reduce((counts, item) => {
     const key = itemCategory(item)
@@ -441,29 +442,9 @@ const ContentPage = ({ snapshots, facets, stats }) => {
 ContentPage.layout = 'bare'
 
 export async function getStaticProps() {
-  let snapshots = getPublicLiveContentIndex()
-  let source = 'live-json'
-
-  try {
-    const notionData = await fetchGlobalAllData({ from: 'content-index' })
-    const notionSnapshots = normalizeNotionContentIndex(notionData?.allPages || [])
-    snapshots = mergeContentIndexes(notionSnapshots, snapshots)
-    if (notionSnapshots.length) source = 'notion+live-json'
-  } catch (error) {
-    console.warn('[content] Notion index read failed; keeping snapshot sources', error)
-  }
-
-  try {
-    const rows = await listPublishedContentMetadata()
-    const databaseSnapshots = rows
-      .map(row => toSnapshotLikeContent(row))
-      .filter(item => item.access?.mode !== 'private')
-
-    snapshots = mergeContentIndexes(snapshots, databaseSnapshots)
-    if (databaseSnapshots.length > 0) source = `${source}+database`
-  } catch (error) {
-    console.warn('[content] database read failed; keeping Notion and live JSON', error)
-  }
+  const { items: snapshots, source } = await loadPublicContentIndex({
+    from: 'content-index'
+  })
 
   return {
     props: {
@@ -472,7 +453,7 @@ export async function getStaticProps() {
       stats: getContentStats(snapshots),
       source
     },
-    revalidate: 3600
+    revalidate: 1800
   }
 }
 
