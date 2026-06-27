@@ -24,6 +24,13 @@ describe('public content experience', () => {
     expect(styles).toContain('overflow-x: clip')
   })
 
+  it('computes filter state before category groups during server rendering', () => {
+    const filterState = index.indexOf('const filtersActive =')
+    const categoryGroups = index.indexOf('const categoryGroups =')
+    expect(filterState).toBeGreaterThan(-1)
+    expect(categoryGroups).toBeGreaterThan(filterState)
+  })
+
   it('gives every card a real or generated glass cover', () => {
     expect(index).toContain('content-card-cover')
     expect(index).toContain('is-generated')

@@ -151,6 +151,7 @@ const ContentPage = ({ snapshots, facets, stats }) => {
     })
   }, [snapshots, query, category, type, tag])
 
+  const filtersActive = Boolean(query || category !== '全部' || type !== '全部' || tag)
   const collections = useMemo(() => groupContentByCollection(filtered), [filtered])
   const categoryGroups = useMemo(
     () => groupCollectionsByCategory(collections, !filtersActive),
@@ -158,7 +159,6 @@ const ContentPage = ({ snapshots, facets, stats }) => {
   )
   const categories = useMemo(() => [...facets.categories].sort(compareCategories), [facets.categories])
   const types = useMemo(() => [...new Set(snapshots.map(item => item.type).filter(Boolean))], [snapshots])
-  const filtersActive = Boolean(query || category !== '全部' || type !== '全部' || tag)
 
   function clearFilters() {
     setQuery('')
