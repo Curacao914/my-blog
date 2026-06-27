@@ -201,3 +201,13 @@ The deployed `content_items_source_check` accepts `course-worker`, not `course-w
 - Publishing taxonomy fields are editable comboboxes: existing categories and collections can be selected, while new values remain writable. Tags use compact removable chips and reusable suggestions.
 - The public `/content` index federates three sources: published Notion post metadata, live JSON snapshots, and Supabase content rows. Existing Notion posts keep their current routes; a matching newer snapshot or database slug may override the card without breaking unrelated legacy routes.
 - The animated Curacao signature is a reusable visual component. Use it sparingly in suitable sidebar footers; do not present it as a pet widget in the new product UI.
+
+## Phase Update: Hierarchical Content Library and Scroll Reliability
+
+- `/content` starts from the four product categories (`遇事不决`, `法与算法`, `法律之上`, `秘密花园`) and progressively discloses collections and content cards. Do not flatten all cards onto the first screen.
+- Public and private reading navigation must bind to the actual scroll container. The workbench scrolls inside `.desk-page-content`, while public pages normally use `window`.
+- Never call `scrollIntoView` on an active table-of-contents item when that item lives in a sticky sidebar; adjust only the sidebar nav's own `scrollTop`.
+- Public content cards use a persisted cover when available and a deterministic generated cover otherwise. Supabase cover URLs are stored as `content_assets` rows with `alt = cover`.
+- Notion posts without an explicit collection belong to the `文章` collection rather than an implementation-facing `独立内容` bucket.
+- Publishing taxonomy is category-aware: collection suggestions are scoped by category, while category, collection and tag fields remain writable.
+- Content-management reads must avoid per-item relation fetches. Fetch the item set first, then bulk-load versions, access, display and assets for those item IDs.

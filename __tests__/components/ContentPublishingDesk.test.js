@@ -22,11 +22,13 @@ describe('course publishing UI', () => {
     expect(desk).toContain('MarkdownDocument')
   })
 
-  it('supports editable taxonomy choices and compact reusable tags', () => {
-    expect(desk).toContain('<datalist id={id}>')
-    expect(desk).toContain("function TagEditor")
-    expect(desk).toContain("contentData.taxonomy")
+  it('supports reliable editable taxonomy choices, compact tags, and covers', () => {
+    expect(desk).toContain('publishing-choice-menu')
+    expect(desk).toContain('collectionsByCategory')
+    expect(desk).toContain('publishing-tag-menu')
     expect(desk).toContain("placeholder='选择或新建栏目'")
+    expect(desk).toContain('封面图片')
+    expect(desk).not.toContain('<datalist')
   })
 
   it('links completed course notes into the publishing desk', () => {
@@ -34,8 +36,10 @@ describe('course publishing UI', () => {
     expect(course).toContain('/desk/publish?job=')
   })
 
-  it('renders public content by collection instead of one flat list', () => {
+  it('renders public content through category and collection disclosure levels', () => {
     expect(publicIndex).toContain('groupContentByCollection')
+    expect(publicIndex).toContain('content-category')
     expect(publicIndex).toContain('content-collection')
+    expect(publicIndex).toContain('generated-cover')
   })
 })

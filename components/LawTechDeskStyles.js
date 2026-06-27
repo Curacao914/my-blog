@@ -3798,7 +3798,8 @@ button, a, input, textarea, select, summary {
 .lawtech-public-page {
   position: relative;
   min-height: 100vh;
-  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   color: var(--ink);
   background:
     radial-gradient(circle at 12% 0%, rgba(219, 174, 75, 0.2), transparent 28rem),
@@ -5686,40 +5687,70 @@ html.course-focus-open body { overflow:hidden; }
   resize: vertical;
 }
 
-.publishing-field-label {
+.publishing-field-label,
+.publishing-choice > span {
   color: var(--muted);
   font-size: 12px;
 }
 
+.publishing-choice,
 .publishing-tag-editor {
+  position: relative;
   display: grid;
   gap: 7px;
 }
 
-.publishing-tag-input {
+.publishing-choice-control,
+.publishing-tag-shell {
+  position: relative;
+  min-width: 0;
+}
+
+.publishing-choice-control > input {
+  padding-right: 38px;
+}
+
+.publishing-choice-control > button {
+  position: absolute;
+  z-index: 2;
+  top: 4px;
+  right: 4px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--quiet);
+  background: transparent;
+  cursor: pointer;
+}
+
+.publishing-choice-control.is-open > button {
+  color: var(--blue);
+  background: rgba(226,237,241,.64);
+}
+
+.publishing-choice-menu,
+.publishing-tag-menu {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  min-height: 43px;
+  gap: 5px;
+  max-height: 210px;
+  overflow: auto;
   border: 1px solid rgba(17,63,49,.1);
-  border-radius: 12px;
-  padding: 6px 8px;
-  background: rgba(255,255,255,.72);
+  border-radius: 13px;
+  padding: 8px;
+  background: rgba(250,252,250,.97);
+  box-shadow: 0 18px 42px rgba(24,63,50,.15), inset 0 1px 0 rgba(255,255,255,.85);
+  backdrop-filter: blur(20px);
 }
 
-.publishing-tag-input input {
-  flex: 1 1 150px;
-  width: auto;
-  min-width: 110px;
-  border: 0;
-  padding: 4px 2px;
-  background: transparent;
-  outline: none;
-}
-
-.publishing-tag-input button,
-.publishing-tag-suggestions button,
+.publishing-choice-menu button,
+.publishing-tag-menu button,
 .publishing-preview-tags span {
   border: 1px solid rgba(49,90,140,.14);
   border-radius: 999px;
@@ -5728,12 +5759,60 @@ html.course-focus-open body { overflow:hidden; }
   background: rgba(226,237,241,.54);
   font-size: 10px;
   line-height: 1.25;
+  cursor: pointer;
+}
+
+.publishing-choice-menu button:hover,
+.publishing-choice-menu button.active,
+.publishing-tag-menu button:hover {
+  color: var(--blue);
+  border-color: rgba(49,90,140,.28);
+  background: rgba(214,230,237,.82);
+}
+
+.publishing-choice-menu p,
+.publishing-tag-menu p {
+  width: 100%;
+  margin: 2px;
+  color: var(--quiet);
+  font-size: 10px;
+}
+
+.publishing-tag-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: center;
+  gap: 4px;
+  min-height: 43px;
+  border: 1px solid rgba(17,63,49,.1);
+  border-radius: 12px;
+  padding: 5px 7px;
+  background: rgba(255,255,255,.72);
+}
+
+.publishing-tag-input input {
+  flex: 0 1 92px;
+  width: 92px;
+  min-width: 68px;
+  border: 0;
+  padding: 3px 2px;
+  background: transparent;
+  outline: none;
 }
 
 .publishing-tag-input button {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
+  min-height: 26px;
+  border: 1px solid rgba(49,90,140,.14);
+  border-radius: 999px;
+  padding: 3px 7px;
+  color: #355d86;
+  background: rgba(226,237,241,.54);
+  font-size: 10px;
+  line-height: 1.15;
   cursor: pointer;
 }
 
@@ -5742,23 +5821,10 @@ html.course-focus-open body { overflow:hidden; }
   font-style: normal;
 }
 
-.publishing-tag-suggestions,
 .publishing-preview-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-}
-
-.publishing-tag-suggestions button {
-  padding: 3px 7px;
-  color: var(--quiet);
-  background: rgba(255,255,255,.42);
-  cursor: pointer;
-}
-
-.publishing-tag-suggestions button:hover {
-  color: var(--blue);
-  background: rgba(226,237,241,.66);
 }
 
 .publishing-preview-tags {
@@ -5791,6 +5857,25 @@ html.course-focus-open body { overflow:hidden; }
   background: rgba(255,255,255,.58);
   line-height: 1.85;
 }
+
+.publishing-preview-cover {
+  display: grid;
+  align-content: end;
+  gap: 5px;
+  min-height: 170px;
+  margin: calc(clamp(18px,3vw,34px) * -1) calc(clamp(18px,3vw,34px) * -1) 22px;
+  padding: 22px;
+  color: rgba(255,255,255,.94);
+  background:
+    radial-gradient(circle at 82% 12%, rgba(116,167,178,.72), transparent 42%),
+    linear-gradient(145deg,#204b3e,#4f776b);
+  background-size: cover;
+  background-position: center;
+}
+
+.publishing-preview-cover span { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; opacity: .76; }
+.publishing-preview-cover strong { font-family: var(--display-serif); font-size: 27px; font-weight: 560; }
+.publishing-preview-cover.has-image { min-height: 220px; }
 
 .publishing-preview-meta {
   display: flex;
@@ -6292,8 +6377,8 @@ html.course-focus-open body { overflow:hidden; }
 .course-note-course-index,
 .course-note-toc {
   position: sticky;
-  top: 58px;
-  max-height: calc(100dvh - 125px);
+  top: 12px;
+  max-height: calc(100dvh - 116px);
   overflow: auto;
   padding: 14px;
 }

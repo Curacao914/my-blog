@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 
 import { MarkdownDocument } from '@/components/content/MarkdownDocument'
 import { formatCourseApiError, requestCourseJson } from '@/lib/course/clientApi'
@@ -9,6 +9,7 @@ import { isCourseContentSource } from '@/lib/contentPublishingModel'
 const emptyForm = {
   title: '',
   summary: '',
+  cover: '',
   slug: '',
   category: '遇事不决',
   collection: '',
@@ -23,7 +24,7 @@ const emptyForm = {
   pinned: false
 }
 
-const emptyTaxonomy = { categories: [], collections: [], tags: [] }
+const emptyTaxonomy = { categories: [], collections: [], collectionsByCategory: {}, tags: [] }
 
 function unique(values = []) {
   return [...new Set(values.map(value => String(value || '').trim()).filter(Boolean))]
@@ -37,23 +38,58 @@ function sourceLink(item) {
   return `/desk/publish?job=${encodeURIComponent(jobId)}&lesson=${encodeURIComponent(lessonKey)}`
 }
 
-function EditableChoice({ id, label, value, onChange, options, placeholder }) {
-  return <label>
-    {label}
-    <input list={id} value={value} onChange={event => onChange(event.target.value)} placeholder={placeholder} />
-    <datalist id={id}>{options.map(option => <option key={option} value={option} />)}</datalist>
+function EditableChoice({ label, value, onChange, options, placeholder }) {
+  const [open, setOpen] = useState(false)
+  const keyword = String(value || '').trim().toLocaleLowerCase('zh-CN')
+  const visible = unique(options).filter(option => !keyword || option.toLocaleLowerCase('zh-CN').includes(keyword))
+
+  return <label className='publishing-choice'>
+    <span>{label}</span>
+    <div className={`publishing-choice-control ${open ? 'is-open' : ''}`} onBlur={event => {
+      if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
+    }}>
+      <input
+        value={value}
+        onChange={event => {
+          onChange(event.target.value)
+          setOpen(true)
+        }}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder}
+      />
+      <button type='button' aria-label={`展开${label}选项`} aria-expanded={open} onClick={() => setOpen(current => !current)}>⌄</button>
+      {open ? <div className='publishing-choice-menu' role='listbox'>
+        {visible.map(option => <button
+          type='button'
+          role='option'
+          aria-selected={option === value}
+          className={option === value ? 'active' : ''}
+          key={option}
+          onClick={() => {
+            onChange(option)
+            setOpen(false)
+          }}
+        >{option}</button>)}
+        {!visible.length ? <p>{value.trim() ? `将新建“${value.trim()}”` : '暂无已有选项，可直接输入新名称。'}</p> : null}
+      </div> : null}
+    </div>
   </label>
 }
 
 function TagEditor({ tags = [], suggestions = [], onChange }) {
   const [draft, setDraft] = useState('')
+  const [open, setOpen] = useState(false)
   const selected = unique(tags)
-  const available = suggestions.filter(tag => !selected.includes(tag))
+  const keyword = draft.trim().toLocaleLowerCase('zh-CN')
+  const available = unique(suggestions)
+    .filter(tag => !selected.includes(tag))
+    .filter(tag => !keyword || tag.toLocaleLowerCase('zh-CN').includes(keyword))
 
   function add(values) {
     const next = unique([...selected, ...values.flatMap(value => String(value || '').split(/[，,]/))])
     onChange(next)
     setDraft('')
+    setOpen(true)
   }
 
   function remove(tag) {
@@ -65,30 +101,38 @@ function TagEditor({ tags = [], suggestions = [], onChange }) {
       event.preventDefault()
       if (draft.trim()) add([draft])
     }
-    if (event.key === 'Backspace' && !draft && selected.length) {
-      remove(selected[selected.length - 1])
-    }
+    if (event.key === 'Backspace' && !draft && selected.length) remove(selected[selected.length - 1])
+    if (event.key === 'Escape') setOpen(false)
   }
 
   return <div className='publishing-tag-editor wide'>
     <span className='publishing-field-label'>标签</span>
-    <div className='publishing-tag-input'>
-      {selected.map(tag => <button type='button' className='selected' key={tag} onClick={() => remove(tag)} title='移除标签'>
-        {tag}<i>×</i>
-      </button>)}
-      <input
-        list='publishing-tag-options'
-        value={draft}
-        onBlur={() => draft.trim() && add([draft])}
-        onChange={event => setDraft(event.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={selected.length ? '继续添加' : '输入或选择标签'}
-      />
-      <datalist id='publishing-tag-options'>{available.map(tag => <option key={tag} value={tag} />)}</datalist>
+    <div className='publishing-tag-shell' onBlur={event => {
+      if (!event.currentTarget.contains(event.relatedTarget)) {
+        if (draft.trim()) add([draft])
+        setOpen(false)
+      }
+    }}>
+      <div className='publishing-tag-input'>
+        {selected.map(tag => <button type='button' className='selected' key={tag} onClick={() => remove(tag)} title='移除标签'>
+          {tag}<i>×</i>
+        </button>)}
+        <input
+          value={draft}
+          onChange={event => {
+            setDraft(event.target.value)
+            setOpen(true)
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={handleKeyDown}
+          placeholder={selected.length ? '添加' : '输入或选择标签'}
+        />
+      </div>
+      {open ? <div className='publishing-tag-menu' aria-label='已有标签'>
+        {available.slice(0, 30).map(tag => <button type='button' key={tag} onMouseDown={event => event.preventDefault()} onClick={() => add([tag])}>{tag}</button>)}
+        {!available.length ? <p>{draft.trim() ? `按回车新建“${draft.trim()}”` : '没有更多已有标签。'}</p> : null}
+      </div> : null}
     </div>
-    {available.length ? <div className='publishing-tag-suggestions' aria-label='已有标签'>
-      {available.slice(0, 18).map(tag => <button type='button' key={tag} onClick={() => add([tag])}>{tag}</button>)}
-    </div> : null}
   </div>
 }
 
@@ -150,10 +194,10 @@ export function ContentPublishingDesk() {
     () => unique([form.category, ...taxonomy.categories]),
     [form.category, taxonomy.categories]
   )
-  const collectionOptions = useMemo(
-    () => unique([form.collection, ...taxonomy.collections]),
-    [form.collection, taxonomy.collections]
-  )
+  const collectionOptions = useMemo(() => {
+    const scoped = taxonomy.collectionsByCategory?.[form.category] || []
+    return unique([form.collection, ...scoped, ...(!scoped.length ? taxonomy.collections : [])])
+  }, [form.category, form.collection, taxonomy.collections, taxonomy.collectionsByCategory])
   const tagOptions = useMemo(
     () => unique([...(form.tags || []), ...taxonomy.tags]),
     [form.tags, taxonomy.tags]
@@ -161,6 +205,23 @@ export function ContentPublishingDesk() {
 
   function update(name, value) {
     setForm(current => ({ ...current, [name]: value }))
+  }
+
+  function rememberCurrentTaxonomy() {
+    setTaxonomy(current => {
+      const category = String(form.category || '').trim()
+      const collection = String(form.collection || '').trim()
+      const collectionsByCategory = { ...(current.collectionsByCategory || {}) }
+      if (category && collection) {
+        collectionsByCategory[category] = unique([...(collectionsByCategory[category] || []), collection])
+      }
+      return {
+        categories: unique([...current.categories, category]),
+        collections: unique([...current.collections, collection]),
+        collectionsByCategory,
+        tags: unique([...current.tags, ...(form.tags || [])])
+      }
+    })
   }
 
   async function save(action) {
@@ -179,8 +240,10 @@ export function ContentPublishingDesk() {
       )
       setPublication(data.publication)
       setForm(current => ({ ...current, ...(data.publication?.settings || {}), tags: unique(data.publication?.settings?.tags || current.tags) }))
+      setItems(current => [data.publication, ...current.filter(item => item.id !== data.publication?.id)].filter(Boolean))
+      rememberCurrentTaxonomy()
       setMessage(action === 'publish' ? '已经发布。' : action === 'withdraw' ? '已经撤回为草稿。' : '草稿已保存。')
-      await loadIndex()
+      void loadIndex().catch(error => console.warn('[publishing desk] background refresh failed', error))
     } catch (error) {
       setMessage(formatCourseApiError(error, '发布操作失败'))
     } finally {
@@ -225,8 +288,9 @@ export function ContentPublishingDesk() {
         {mode === 'settings' ? <div className='publishing-form'>
           <label>标题<input value={form.title} onChange={event => update('title', event.target.value)} /></label>
           <label className='wide'>摘要<textarea rows={3} value={form.summary} onChange={event => update('summary', event.target.value)} /></label>
-          <EditableChoice id='publishing-category-options' label='栏目' value={form.category} onChange={value => update('category', value)} options={categoryOptions} placeholder='选择或新建栏目' />
-          <EditableChoice id='publishing-collection-options' label='合集' value={form.collection} onChange={value => update('collection', value)} options={collectionOptions} placeholder='选择或新建合集' />
+          <label className='wide'>封面图片<input value={form.cover || ''} onChange={event => update('cover', event.target.value)} placeholder='粘贴图片 URL；留空则使用自动生成封面' /></label>
+          <EditableChoice label='栏目' value={form.category} onChange={value => update('category', value)} options={categoryOptions} placeholder='选择或新建栏目' />
+          <EditableChoice label='合集' value={form.collection} onChange={value => update('collection', value)} options={collectionOptions} placeholder='选择或新建合集' />
           <TagEditor tags={form.tags} suggestions={tagOptions} onChange={tags => update('tags', tags)} />
           <label className='wide'>链接路径<input value={form.slug} onChange={event => update('slug', event.target.value)} placeholder='notes/course/lesson-1' /></label>
           <label>访问方式<select value={form.accessMode} onChange={event => update('accessMode', event.target.value)}>
@@ -246,6 +310,9 @@ export function ContentPublishingDesk() {
             </> : null}
           </div>
         </div> : <article className='publishing-preview'>
+          <div className={`publishing-preview-cover ${form.cover ? 'has-image' : ''}`} style={form.cover ? { backgroundImage: `url("${form.cover}")` } : undefined}>
+            {!form.cover ? <><span>{form.category || '内容'}</span><strong>{form.collection || source.courseName}</strong></> : null}
+          </div>
           <div className='publishing-preview-meta'>
             <span>{form.category}</span>
             <span>{form.collection}</span>

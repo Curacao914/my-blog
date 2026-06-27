@@ -300,3 +300,18 @@ Implemented scope:
 - public content library search, category/type/tag filters, compact cards, and sidebar signature;
 - gradual Notion inclusion by indexing published Notion metadata while preserving existing article routes;
 - reusable animated Curacao signature component for new public and reading sidebars.
+
+## Current Phase: Content Hierarchy and Reader Reliability
+
+Status: code prepared in the current handoff workspace. Static syntax/transpile checks, `git diff --check`, taxonomy/Notion/public-card smoke checks, and patch-application checks are required before handoff; dependency-backed Jest, production build, and Preview verification remain local tasks.
+
+Implemented scope:
+
+- sticky `/content` filter sidebar without an overflow ancestor disabling `position: sticky`;
+- four-category first view, followed by collapsible collection and content levels;
+- Notion fallback collection `文章` instead of `独立内容`;
+- persisted or deterministic generated covers, glass cards and hover lift;
+- scroll-container-aware table of contents for both `.desk-page-content` and `window`;
+- removal of active TOC `scrollIntoView`, which previously caused snap-back to the top;
+- category-aware editable collection choices, dense inline tag chips and optional cover URL in publishing;
+- bulk Supabase relation reads, Notion taxonomy caching and optimistic publishing refresh to reduce waiting.

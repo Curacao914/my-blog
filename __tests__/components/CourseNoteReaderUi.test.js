@@ -4,6 +4,7 @@ const path = require('path')
 describe('course note library reading experience', () => {
   const library = fs.readFileSync(path.join(process.cwd(), 'components/CourseNotesLibrary.js'), 'utf8')
   const reader = fs.readFileSync(path.join(process.cwd(), 'components/CourseNoteReader.js'), 'utf8')
+  const navigator = fs.readFileSync(path.join(process.cwd(), 'components/content/ReadingNavigator.js'), 'utf8')
   const page = fs.readFileSync(path.join(process.cwd(), 'pages/desk/materials/[jobId]/[lessonKey].js'), 'utf8')
 
   it('opens note cards in a dedicated reader instead of the course workbench', () => {
@@ -29,5 +30,12 @@ describe('course note library reading experience', () => {
     expect(reader).toContain('courseIndexOpen')
     expect(reader).toContain('tocOpen')
     expect(reader).toContain('DynamicSignature')
+  })
+
+  it('tracks the actual desk scroll container without scrolling the document back to the toc', () => {
+    expect(navigator).toContain('findReadingScrollContainer')
+    expect(navigator).toContain("scrollTarget.addEventListener('scroll'")
+    expect(navigator).toContain('nav.scrollTo')
+    expect(navigator).not.toContain('active?.scrollIntoView')
   })
 })

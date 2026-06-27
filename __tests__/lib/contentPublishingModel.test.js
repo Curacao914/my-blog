@@ -40,12 +40,31 @@ describe('course publication defaults', () => {
         category: '法律之上',
         collection: '专题论文',
         slug: 'articles/Market Failure',
+        cover: 'https://example.com/cover.jpg',
         accessMode: 'public'
       }
     })
 
     expect(model.slug).toBe('articles/market-failure')
     expect(model.settings.folderPath).toEqual(['法律之上', '专题论文'])
+    expect(model.settings.cover).toBe('https://example.com/cover.jpg')
     expect(model.settings.allowIndexing).toBe(true)
   })
+  it('allows an existing cover to be cleared so generated covers can take over', () => {
+    const model = buildCoursePublicationModel({
+      jobId: 'job-1',
+      workflow: { courseSpec: { courseName: '经济法' } },
+      lesson: {
+        key: 'lesson-3',
+        order: 3,
+        title: '第三课',
+        finalNote: { markdown: '# 第三课\n\n正文。' }
+      },
+      existing: { settings: { cover: 'https://example.com/old.jpg' } },
+      settings: { cover: '' }
+    })
+
+    expect(model.settings.cover).toBe('')
+  })
+
 })

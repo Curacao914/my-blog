@@ -1,7 +1,7 @@
 import { normalizeNotionContentIndex } from '@/lib/content/notionIndex'
 
 describe('Notion content index compatibility', () => {
-  it('keeps published Notion posts on their existing routes', () => {
+  it('keeps published Notion posts on their existing routes and gives them a readable collection', () => {
     const items = normalizeNotionContentIndex([
       {
         id: 'notion-1',
@@ -23,7 +23,8 @@ describe('Notion content index compatibility', () => {
       href: '/article/market-failure',
       source: 'notion',
       category: '法律之上',
-      folder: { path: ['法律之上'] }
+      collection: '文章',
+      folder: { path: ['法律之上', '文章'] }
     })
   })
 })
