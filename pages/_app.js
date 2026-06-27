@@ -41,11 +41,7 @@ const MyApp = ({ Component, pageProps }) => {
   const route = useRouter()
   const notionTheme = pageProps?.NOTION_CONFIG?.THEME
   const theme = useMemo(() => {
-    return (
-      getQueryParam(route.asPath, 'theme') ||
-      notionTheme ||
-      BLOG.THEME
-    )
+    return getQueryParam(route.asPath, 'theme') || notionTheme || BLOG.THEME
   }, [route.asPath, notionTheme])
 
   // 整体布局
@@ -73,15 +69,22 @@ const MyApp = ({ Component, pageProps }) => {
       <NativeDifyChat />
     </GlobalContextProvider>
   )
-  
-  return (
-    <CourseTaskProvider>
-      {enableClerk ? (
-        <ClerkProvider localization={zhCN}>{content}</ClerkProvider>
-      ) : (
-        content
-      )}
-    </CourseTaskProvider>
+
+  const clerkContent = enableClerk ? (
+    <ClerkProvider {...pageProps} localization={zhCN}>
+      {content}
+    </ClerkProvider>
+  ) : (
+    content
+  )
+  const isAuthRoute =
+    route.pathname.startsWith('/sign-in') ||
+    route.pathname.startsWith('/sign-up')
+
+  return isAuthRoute ? (
+    clerkContent
+  ) : (
+    <CourseTaskProvider>{clerkContent}</CourseTaskProvider>
   )
 }
 

@@ -1,0 +1,219 @@
+import { useAuth } from '@clerk/nextjs'
+import dynamic from 'next/dynamic'
+import Head from 'next/head'
+import Link from 'next/link'
+import { useRouter } from 'next/router'
+import { useEffect } from 'react'
+
+import { authRedirectFromQuery } from '@/lib/auth/redirect'
+
+const SignIn = dynamic(() => import('@clerk/nextjs').then(mod => mod.SignIn), {
+  ssr: false
+})
+
+const SignUp = dynamic(() => import('@clerk/nextjs').then(mod => mod.SignUp), {
+  ssr: false
+})
+
+function ClerkAuthFlow({ mode, redirectTo, routerReady }) {
+  const router = useRouter()
+  const { isLoaded, isSignedIn } = useAuth()
+
+  useEffect(() => {
+    if (routerReady && isLoaded && isSignedIn) void router.replace(redirectTo)
+  }, [isLoaded, isSignedIn, redirectTo, router, routerReady])
+
+  if (!routerReady || !isLoaded || isSignedIn) {
+    return <div className='auth-progress'>正在进入工作台…</div>
+  }
+
+  if (mode === 'sign-up') {
+    return (
+      <SignUp
+        fallbackRedirectUrl={redirectTo}
+        path='/sign-up'
+        routing='path'
+        signInFallbackRedirectUrl={redirectTo}
+        signInUrl={`/sign-in?redirect_url=${encodeURIComponent(redirectTo)}`}
+      />
+    )
+  }
+
+  return (
+    <SignIn
+      fallbackRedirectUrl={redirectTo}
+      path='/sign-in'
+      routing='path'
+      signUpFallbackRedirectUrl={redirectTo}
+      signUpUrl={`/sign-up?redirect_url=${encodeURIComponent(redirectTo)}`}
+    />
+  )
+}
+
+export function AuthPage({ mode = 'sign-in' }) {
+  const router = useRouter()
+  const isSignUp = mode === 'sign-up'
+  const redirectTo = authRedirectFromQuery(router.query, '/desk/today')
+  const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
+
+  return (
+    <>
+      <Head>
+        <title>{isSignUp ? '注册' : '登录'} · law-tech.dev</title>
+        <meta name='robots' content='noindex,nofollow' />
+      </Head>
+
+      <main className='auth-page'>
+        <Link className='brand' href='/'>
+          law-tech.dev
+        </Link>
+        <section className='auth-card'>
+          <div className='copy'>
+            <p>law-tech.dev</p>
+            <h1>工作台</h1>
+          </div>
+          {clerkEnabled ? (
+            <ClerkAuthFlow
+              mode={mode}
+              redirectTo={redirectTo}
+              routerReady={router.isReady}
+            />
+          ) : (
+            <div className='auth-unavailable'>
+              <strong>{isSignUp ? '注册' : '登录'}服务未配置</strong>
+              <span>
+                请在 Vercel Preview 中补充 Clerk 环境变量后再进入工作台。
+              </span>
+            </div>
+          )}
+        </section>
+      </main>
+
+      <style jsx global>{`
+        html,
+        body,
+        #__next {
+          min-height: 100%;
+        }
+
+        body {
+          margin: 0;
+        }
+
+        .auth-page,
+        .auth-page *,
+        .auth-page *::before,
+        .auth-page *::after {
+          box-sizing: border-box;
+        }
+
+        .auth-page {
+          position: relative;
+          width: 100%;
+          height: 100dvh;
+          min-height: 100svh;
+          display: grid;
+          place-items: center;
+          overflow: auto;
+          padding: 88px 20px 40px;
+          color: #1e2322;
+          background:
+            radial-gradient(
+              circle at 20% 12%,
+              rgba(201, 154, 59, 0.12),
+              transparent 22rem
+            ),
+            radial-gradient(
+              circle at 85% 16%,
+              rgba(49, 90, 140, 0.1),
+              transparent 18rem
+            ),
+            linear-gradient(180deg, #fcfefd 0%, #f7f9f8 100%);
+          font-family:
+            -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC',
+            'PingFang SC', sans-serif;
+        }
+
+        .auth-page .brand {
+          position: absolute;
+          top: 28px;
+          left: 32px;
+          color: #66716b;
+          font-size: 14px;
+          font-weight: 720;
+          letter-spacing: -0.03em;
+          text-decoration: none;
+        }
+
+        .auth-page .auth-card {
+          width: min(520px, 100%);
+          display: grid;
+          gap: 24px;
+          align-items: center;
+          padding: 28px;
+          border: 1px solid rgba(223, 231, 225, 0.9);
+          border-radius: 34px;
+          background: rgba(255, 255, 255, 0.72);
+          box-shadow: 0 24px 80px rgba(37, 55, 48, 0.08);
+          backdrop-filter: blur(22px);
+        }
+
+        .auth-page .copy p {
+          margin: 0 0 14px;
+          color: #c99a3b;
+          font-size: 13px;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+        }
+
+        .auth-page .copy h1 {
+          margin: 0;
+          font-size: 24px;
+          line-height: 1.2;
+          letter-spacing: -0.04em;
+        }
+
+        .auth-page .auth-unavailable,
+        .auth-page .auth-progress {
+          display: grid;
+          gap: 8px;
+          min-height: 76px;
+          place-items: center;
+          padding: 18px;
+          border: 1px solid #dfe7e1;
+          border-radius: 20px;
+          background: rgba(247, 249, 248, 0.78);
+          color: #66716b;
+          line-height: 1.6;
+          text-align: center;
+        }
+
+        .auth-page .auth-unavailable strong {
+          color: #1e2322;
+        }
+
+        .auth-page .cl-rootBox,
+        .auth-page .cl-cardBox {
+          width: 100%;
+        }
+
+        @media (max-width: 640px) {
+          .auth-page {
+            align-items: start;
+            padding: 76px 14px 24px;
+          }
+
+          .auth-page .brand {
+            top: 22px;
+            left: 20px;
+          }
+
+          .auth-page .auth-card {
+            padding: 18px;
+            border-radius: 26px;
+          }
+        }
+      `}</style>
+    </>
+  )
+}
