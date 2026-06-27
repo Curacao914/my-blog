@@ -29,7 +29,8 @@ describe('user-facing product copy', () => {
       'provider adapter',
       'workflow JSON',
       '本地处理服务',
-      '今日阅读'
+      '今日阅读',
+      '普通资料在浏览器读取；扫描资料在线识别后只保存文字。'
     ]
 
     const offenders = []

@@ -4939,6 +4939,111 @@ button, a, input, textarea, select, summary {
   .today-later-list > div > button { grid-template-columns:1fr; gap:2px; }
 }
 
+/* Desk density and overflow guardrails */
+.desk-nav {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+
+.course-import-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+}
+
+.course-import-header h2 {
+  font-size: clamp(1.45rem, 2.2vw, 1.9rem);
+  line-height: 1.18;
+}
+
+.course-import-steps {
+  position: relative;
+  top: auto;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(100%, 720px);
+  max-width: 100%;
+  min-height: 40px;
+  gap: 4px;
+  overflow: hidden;
+  border-radius: 12px;
+  padding: 3px;
+  background: rgba(247, 248, 244, .9);
+  backdrop-filter: blur(14px);
+}
+
+.course-import-steps button {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 12px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.course-import-steps button.active {
+  color: #fff8e6;
+  background: var(--leaf);
+}
+
+.desk-product-hero {
+  min-height: 180px;
+  gap: 14px;
+  padding: 20px;
+}
+
+.desk-product-orb {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+}
+
+.desk-product-copy h2 {
+  margin: 6px 0 8px;
+  font-size: clamp(26px, 2.8vw, 36px);
+  line-height: 1.18;
+}
+
+.desk-product-copy p {
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.desk-product-card {
+  min-height: 180px;
+  gap: 14px;
+  padding: 17px;
+}
+
+.desk-product-card h3 {
+  font-size: 20px;
+}
+
+.desk-product-card p {
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+@media (max-width: 680px) {
+  .course-import-steps {
+    width: 100%;
+  }
+
+  .course-import-steps button {
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  .desk-product-copy h2 {
+    font-size: clamp(25px, 9vw, 34px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
 }
