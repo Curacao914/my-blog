@@ -157,3 +157,13 @@ Work should proceed in this order unless the user changes priorities:
 7. Daily 09:00 Asia/Shanghai workspace digest email.
 
 Performance optimization of large shared First Load JS is real debt, but it should not displace correctness, workflow durability, or publication continuity.
+
+## Phase Update: Lesson Note Lifecycle
+
+- Lesson-note deletion now follows `active → trash → restore or permanent delete`.
+- Soft delete keeps final Markdown and all final-note versions.
+- Permanent deletion requires an explicit confirmation phrase and removes only the final note and final-note versions.
+- Source material, outline, nodes, and node reviews remain after permanent deletion.
+- Permanent deletion must never automatically regenerate or spend model credits. Regeneration is a separate explicit user action.
+- This phase supersedes the earlier note that lesson-level deletion was still pending.
+- After local and Preview verification, the next product phase is course-note publishing into Supabase content records and `/content`.

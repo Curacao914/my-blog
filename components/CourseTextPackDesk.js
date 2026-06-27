@@ -54,7 +54,7 @@ function humanStatus(status) {
     preflight_required: '等待确认偏好', preflight_approved: '准备生成大纲', outline_pending: '等待生成大纲', outline_generating: '正在生成大纲',
     outline_review: '等待确认大纲', outline_approved: '大纲已确认', node_planning: '正在准备正文', node_pending: '等待整理正文',
     node_generating: '正在整理正文', node_review: '审查处理中', node_revision_required: '修改处理中', node_human_review: '需要人工处理', node_failed: '节点处理失败', assembly_pending: '等待整理全文',
-    assembling: '正在整理全文', final_revision_required: '修改最终笔记', final_review: '等待最终确认', final_review_human: '等待最终确认', completed: '已完成', paused: '已暂停', failed: '处理失败', cancelled: '已取消'
+    assembling: '正在整理全文', final_revision_required: '修改最终笔记', note_removed: '最终笔记已删除', final_review: '等待最终确认', final_review_human: '等待最终确认', completed: '已完成', paused: '已暂停', failed: '处理失败', cancelled: '已取消'
   })[status] || '准备中'
 }
 
@@ -320,6 +320,49 @@ function NodeWorkbench({ lesson, taskLeases = [], onAction, busy }) {
   </section>
 }
 
+function TrashedNoteStage({ lesson, onAction, busy }) {
+  const deletedAt = lesson.noteDeletion?.deletedAt
+  async function purge() {
+    if (typeof window === 'undefined') return
+    if (!window.confirm('永久删除本课最终笔记和最终版本？原始材料、大纲和节点正文会保留。')) return
+    const confirmation = window.prompt('这是不可撤销操作。请输入“永久删除”继续：', '')
+    if (confirmation !== '永久删除') return
+    await onAction({ type: 'purge-lesson-note', lessonKey: lesson.key }, '最终笔记已永久删除。', false)
+  }
+
+  return <section className='course-stage-card course-note-trash-card'>
+    <div className='course-stage-heading'>
+      <div><span>回收站</span><h3>本课笔记已移入回收站</h3></div>
+      <p>正文和历史版本仍然保留；恢复前不会参与笔记库展示。</p>
+    </div>
+    <div className='course-note-trash-meta'>
+      <span>课次</span><strong>{lesson.title}</strong>
+      <small>{deletedAt ? `移除时间：${new Date(deletedAt).toLocaleString('zh-CN')}` : '已移入回收站'}</small>
+    </div>
+    <div className='course-primary-row'>
+      <button className='soft-button primary' type='button' disabled={busy} onClick={() => onAction({ type: 'restore-lesson-note', lessonKey: lesson.key }, '笔记已恢复。', false)}>恢复笔记</button>
+      <button className='soft-button danger' type='button' disabled={busy} onClick={() => void purge()}>永久删除</button>
+    </div>
+  </section>
+}
+
+function RemovedNoteStage({ lesson, onAction, busy }) {
+  return <section className='course-stage-card course-note-trash-card'>
+    <div className='course-stage-heading'>
+      <div><span>最终成果</span><h3>最终笔记已永久删除</h3></div>
+      <p>原始材料、大纲、节点正文和节点审查仍然保留，不需要从头整理。</p>
+    </div>
+    <div className='course-note-trash-meta'>
+      <span>可以继续</span>
+      <strong>从已经批准的节点重新拼装最终笔记</strong>
+      <small>重新生成会调用一次接缝整理模型，完成后仍由你确认。</small>
+    </div>
+    <div className='course-primary-row'>
+      <button className='soft-button primary' type='button' disabled={busy} onClick={() => onAction({ type: 'regenerate-lesson-note', lessonKey: lesson.key }, '最终笔记已进入重新生成队列。')}>重新生成笔记</button>
+    </div>
+  </section>
+}
+
 function FinalNoteStage({ lesson, onAction, busy }) {
   const [markdown, setMarkdown] = useState(lesson.finalNote?.markdown || '')
   const [mode, setMode] = useState('preview')
@@ -438,7 +481,7 @@ function CourseWorkbench({ jobId, workflow, capabilities, onAction, onRefresh, o
       const next = await onAction(jobId, action)
       setMessage(success || '操作已完成。')
       await onRefresh(jobId)
-      if (next?.status === 'completed') dismissTask(jobId)
+      if (['completed', 'note_removed'].includes(next?.status)) dismissTask(jobId)
       const nextLesson = next?.lessons?.find(item => item.status !== 'completed') || next?.lessons?.[0]
       if (resume && capabilities?.courseWriting?.configured && AUTO_STATUSES.has(nextLesson?.status || next?.status)) startTask(jobId, { courseName: next?.courseSpec?.courseName || workflow.courseSpec?.courseName })
     } catch (error) { setMessage(formatCourseApiError(error, '操作失败')) } finally { setBusy(false) }

@@ -230,3 +230,17 @@ git status --short
 git commit -m "<coherent message>"
 git push origin codex/homepage-phase1
 ```
+
+## Latest Phase: Lesson Note Lifecycle
+
+Status: code patch prepared; local tests and Preview verification still required.
+
+The note library now supports:
+
+- soft deletion into a recoverable trash view;
+- restoration without losing Markdown or final-note versions;
+- guarded permanent deletion after an explicit confirmation phrase;
+- preservation of source material, outline, node drafts, node reviews, and approved-node state;
+- explicit regeneration from approved nodes, with no automatic model spending after deletion.
+
+This supersedes the earlier statement that lesson-level deletion was not implemented. The next product phase after verification is course final note publishing into Supabase content records and `/content`.

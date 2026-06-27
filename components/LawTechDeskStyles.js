@@ -5438,6 +5438,85 @@ html.course-focus-open body { overflow:hidden; }
   }
 }
 
+/* Lesson note trash and recovery */
+.note-library-tabs {
+  display: inline-flex;
+  justify-self: start;
+  gap: 3px;
+  border: 1px solid rgba(17,63,49,.09);
+  border-radius: 12px;
+  padding: 3px;
+  background: rgba(255,255,255,.46);
+}
+
+.note-library-tabs button {
+  min-height: 31px;
+  border: 0;
+  border-radius: 9px;
+  padding: 0 13px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.note-library-tabs button.active {
+  color: var(--leaf);
+  background: rgba(220,233,223,.82);
+  font-weight: 720;
+}
+
+.note-library-lesson.is-trashed {
+  border-style: dashed;
+  background: rgba(255,255,255,.31);
+  opacity: .9;
+}
+
+.note-library-lesson-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.soft-button.danger.subtle {
+  color: #8d5d55;
+  background: transparent;
+  box-shadow: none;
+}
+
+.course-note-trash-card {
+  display: grid;
+  gap: 14px;
+}
+
+.course-note-trash-meta {
+  display: grid;
+  gap: 4px;
+  border: 1px dashed rgba(17,63,49,.13);
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(255,255,255,.38);
+}
+
+.course-note-trash-meta span,
+.course-note-trash-meta small {
+  color: var(--quiet);
+  font-size: 11px;
+}
+
+.course-note-trash-meta strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+@media (max-width: 760px) {
+  .note-library-lesson-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
 }

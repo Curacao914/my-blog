@@ -124,3 +124,7 @@ git push origin codex/homepage-phase1
 ```
 
 Never include nonexistent test paths in `git add`. A failed pathspec aborts the whole staging command.
+
+## Latest Phase Override: Lesson Note Lifecycle
+
+The latest patch adds a recoverable lesson-note trash flow. Soft deletion retains the final note and versions. Permanent deletion requires typing `永久删除`, clears only the final-note layer, preserves source material, outline, approved nodes and node reviews, and leaves regeneration as a separate explicit action. After verification, the next phase is course-note publishing into Supabase content records and `/content`.

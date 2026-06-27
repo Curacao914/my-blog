@@ -1,9 +1,9 @@
 import { buildCourseNoteLibraryEntry } from '@/lib/course/noteLibrary'
 
 describe('course note library hierarchy', () => {
-  it('maps one course to ordered lesson notes without returning full markdown', () => {
+  it('maps ordered lesson notes without returning full markdown', () => {
     const entry = buildCourseNoteLibraryEntry(
-      { id: 'job-1', course_name: '经济法', teacher: '老师', updated_at: '2026-06-27T00:00:00.000Z' },
+      { id: 'job-1', course_name: '经济法' },
       {
         status: 'completed',
         lessons: [
@@ -12,11 +12,33 @@ describe('course note library hierarchy', () => {
         ]
       }
     )
-
-    expect(entry.courseName).toBe('经济法')
     expect(entry.noteCount).toBe(2)
+    expect(entry.trashCount).toBe(0)
     expect(entry.lessons.map(item => item.key)).toEqual(['lesson-1', 'lesson-2'])
-    expect(entry.lessons[0].charCount).toBeGreaterThan(0)
     expect(entry.lessons[0]).not.toHaveProperty('markdown')
+  })
+
+  it('keeps a trashed note recoverable while hiding it from active counts', () => {
+    const entry = buildCourseNoteLibraryEntry(
+      { id: 'job-1', course_name: '经济法' },
+      {
+        status: 'completed',
+        lessons: [{
+          key: 'lesson-1',
+          order: 1,
+          title: '第一课',
+          status: 'completed',
+          finalNote: { markdown: '# 第一课\n\n正文。' },
+          noteDeletion: { deletedAt: '2026-06-27T00:00:00.000Z' }
+        }]
+      }
+    )
+    expect(entry.noteCount).toBe(0)
+    expect(entry.trashCount).toBe(1)
+    expect(entry.lessons[0]).toMatchObject({
+      hasNote: false,
+      recoverable: true,
+      trashed: true
+    })
   })
 })

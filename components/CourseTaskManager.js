@@ -11,7 +11,7 @@ const TERMINAL_STATUSES = new Set(['completed', 'cancelled'])
 const MAX_RECONNECT_ATTEMPTS = 5
 
 function labelForStatus(status) {
-  return ({ preflight_required: '等待设置偏好', preflight_approved: '后台准备生成大纲', outline_pending: '后台正在生成大纲', outline_generating: '后台正在生成大纲', outline_review: '大纲待确认', outline_approved: '后台正在准备正文', node_planning: '后台正在准备正文', node_pending: '后台正在整理正文', node_generating: '后台正在整理正文', node_review: '后台正在审查正文', node_revision_required: '后台正在修改正文', node_human_review: '有节点需要处理', assembly_pending: '后台正在整理全文', assembling: '后台正在整理全文', final_revision_required: '后台正在按要求修改最终笔记', final_review: '最终笔记待你确认', final_review_human: '最终笔记待确认', completed: '课程整理完成', failed: '课程处理失败', paused: '课程已暂停', cancelled: '课程已取消' })[status] || '课程后台处理中'
+  return ({ preflight_required: '等待设置偏好', preflight_approved: '后台准备生成大纲', outline_pending: '后台正在生成大纲', outline_generating: '后台正在生成大纲', outline_review: '大纲待确认', outline_approved: '后台正在准备正文', node_planning: '后台正在准备正文', node_pending: '后台正在整理正文', node_generating: '后台正在整理正文', node_review: '后台正在审查正文', node_revision_required: '后台正在修改正文', node_human_review: '有节点需要处理', assembly_pending: '后台正在整理全文', assembling: '后台正在整理全文', final_revision_required: '后台正在按要求修改最终笔记', note_removed: '最终笔记已删除', final_review: '最终笔记待你确认', final_review_human: '最终笔记待确认', completed: '课程整理完成', failed: '课程处理失败', paused: '课程已暂停', cancelled: '课程已取消' })[status] || '课程后台处理中'
 }
 function stateForStatus(status) {
   if (status === 'failed') return 'error'
