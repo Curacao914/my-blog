@@ -1,5 +1,17 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
+jest.mock('react-markdown', () => {
+  const React = require('react')
+
+  return function ReactMarkdownMock({ children }) {
+    return React.createElement(
+      'div',
+      { 'data-testid': 'markdown-preview' },
+      children
+    )
+  }
+})
+
 import { CourseTextPackDesk } from '@/components/CourseTextPackDesk'
 
 const workflow = {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
+import ReactMarkdown from 'react-markdown'
 
 import { useCourseTaskManager } from '@/components/CourseTaskManager'
 import {
@@ -18,6 +19,7 @@ import { formatCourseApiError, requestCourseJson } from '@/lib/course/clientApi'
 import { formatCourseWorkflowError, getCourseErrorHistory, getCurrentCourseError } from '@/lib/course/errorState'
 import { buildTextPack, safeName, summarizeTextPack } from '@/lib/course/textpack'
 import { getCourseUiState } from '@/lib/course/uiState'
+import { countCourseNoteChars } from '@/lib/course/markdownStats'
 
 const ROLE_OPTIONS = [
   ['transcript', '课堂转录'],
@@ -27,7 +29,7 @@ const ROLE_OPTIONS = [
   ['existing_note', '已有笔记']
 ]
 const KIND_LABELS = { transcript: '课堂转录', deck: '课件', document: '文档', markdown: 'Markdown', note: '已有笔记', ocr: '扫描资料' }
-const AUTO_STATUSES = new Set(['preflight_approved', 'outline_pending', 'outline_generating', 'outline_approved', 'node_planning', 'node_pending', 'node_generating', 'node_review', 'node_revision_required', 'assembly_pending', 'assembling', 'final_review'])
+const AUTO_STATUSES = new Set(['preflight_approved', 'outline_pending', 'outline_generating', 'outline_approved', 'node_planning', 'node_pending', 'node_generating', 'node_review', 'node_revision_required', 'assembly_pending', 'assembling'])
 
 function formatNumber(value) {
   return new Intl.NumberFormat('zh-CN').format(Number(value || 0))
@@ -318,17 +320,66 @@ function NodeWorkbench({ lesson, taskLeases = [], onAction, busy }) {
   </section>
 }
 
-function FinalNoteStage({ lesson, onAction, busy, onlineBusy }) {
+function FinalNoteStage({ lesson, onAction, busy }) {
   const [markdown, setMarkdown] = useState(lesson.finalNote?.markdown || '')
-  useEffect(() => setMarkdown(lesson.finalNote?.markdown || ''), [lesson.key, lesson.finalNote?.markdown])
-  function exportMarkdown() { if (typeof window === 'undefined' || !markdown) return; const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `${safeName(lesson.title || '课程笔记')}-最终笔记.md`; link.click(); URL.revokeObjectURL(url) }
-  if (!markdown) return <section className='course-stage-card'><LoadingLine label={onlineBusy ? '正在整理最终笔记…' : '等待整理最终笔记'} /></section>
+  const [mode, setMode] = useState('preview')
+  const savedMarkdown = lesson.finalNote?.markdown || ''
+  const dirty = markdown !== savedMarkdown
+  const charCount = countCourseNoteChars(markdown)
+  const awaitingConfirmation = ['final_review', 'final_review_human'].includes(lesson.status)
+
+  useEffect(() => {
+    setMarkdown(lesson.finalNote?.markdown || '')
+    setMode('preview')
+  }, [lesson.key, lesson.finalNote?.markdown])
+
+  function exportMarkdown() {
+    if (typeof window === 'undefined' || !markdown) return
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${safeName(lesson.title || '课程笔记')}-最终笔记.md`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  if (!markdown) {
+    return <section className='course-stage-card'><LoadingLine label='正在整理最终笔记…' /></section>
+  }
+
   const report = lesson.qualityReport || lesson.finalNote?.qualityReport
-  return <section className='course-stage-card'><div className='course-stage-heading'><div><span>最终成果</span><h3>{lesson.status === 'completed' ? '本课笔记已完成' : '检查最终笔记'}</h3></div><p>{lesson.status === 'completed' ? '可以继续编辑或导出 Markdown。' : '整体检查通过后，本课才会完成。'}</p></div>
-    {onlineBusy ? <LoadingLine label='正在最终检查…' /> : null}
-    <textarea className='course-final-note' value={markdown} onChange={event => setMarkdown(event.target.value)} />
-    <div className='course-primary-row'><button className='soft-button' type='button' disabled={busy || !markdown.trim()} onClick={() => onAction({ type: 'save-final-note', lessonKey: lesson.key, markdown }, '最终笔记修改已保存。')}>保存修改</button><button className='soft-button' type='button' onClick={() => navigator.clipboard?.writeText(markdown)}>复制</button><button className='soft-button primary' data-course-export type='button' onClick={exportMarkdown}>导出 Markdown</button>{lesson.status === 'final_review_human' ? <button className='soft-button primary' type='button' disabled={busy} onClick={() => onAction({ type: 'approve-final-review', lessonKey: lesson.key }, '最终笔记已确认。')}>确认最终笔记</button> : null}</div>
-    {report ? <ReviewReport report={report} /> : <p className='empty-copy'>等待整体检查结果。</p>}
+
+  return <section className='course-stage-card course-final-stage'>
+    <div className='course-stage-heading'>
+      <div>
+        <span>最终成果</span>
+        <h3>{lesson.status === 'completed' ? '本课笔记已完成' : '通读并确认最终笔记'}</h3>
+      </div>
+      <p>{lesson.status === 'completed' ? '仍可继续编辑或导出 Markdown。' : '最终内容由你确认；保存修改后即可完成本课。'}</p>
+    </div>
+
+    <div className='course-final-toolbar'>
+      <div className='course-final-mode' role='tablist' aria-label='最终笔记视图'>
+        <button type='button' role='tab' aria-selected={mode === 'preview'} onClick={() => setMode('preview')}>阅读</button>
+        <button type='button' role='tab' aria-selected={mode === 'edit'} onClick={() => setMode('edit')}>编辑</button>
+      </div>
+      <span className='course-final-count'>约 {formatNumber(charCount)} 字</span>
+    </div>
+
+    {mode === 'preview'
+      ? <article className='course-final-preview'><ReactMarkdown>{markdown}</ReactMarkdown></article>
+      : <textarea className='course-final-note' value={markdown} onChange={event => setMarkdown(event.target.value)} />}
+
+    <div className='course-primary-row course-final-actions'>
+      {mode === 'edit' ? <button className='soft-button' type='button' disabled={busy || !markdown.trim() || !dirty} onClick={() => onAction({ type: 'save-final-note', lessonKey: lesson.key, markdown }, '最终笔记修改已保存。', false)}>保存修改</button> : null}
+      <button className='soft-button' type='button' onClick={() => navigator.clipboard?.writeText(markdown)}>复制</button>
+      <button className='soft-button' data-course-export type='button' onClick={exportMarkdown}>导出 Markdown</button>
+      {awaitingConfirmation ? <button className='soft-button primary' type='button' disabled={busy || dirty} title={dirty ? '请先保存修改' : ''} onClick={() => onAction({ type: 'approve-final-review', lessonKey: lesson.key }, '最终笔记已由你确认。', false)}>确认无误，完成本课</button> : null}
+    </div>
+
+    {dirty ? <p className='course-final-unsaved'>当前修改尚未保存，保存后才能确认完成。</p> : null}
+    {report ? <details className='course-final-history'><summary>查看历史自动检查结果</summary><ReviewReport report={report} /></details> : null}
   </section>
 }
 

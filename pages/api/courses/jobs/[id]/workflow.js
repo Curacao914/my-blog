@@ -1,6 +1,6 @@
 import { getAdminCandidate, requireAdminRequest } from '@/lib/auth/serverAdmin'
 import { signalCourseOrchestrator } from '@/lib/course/orchestrator'
-import { applyCourseWorkflowAction, getTextPackCourseJobForOwner, getTextPackCourseRuntimeForOwner } from '@/lib/courseRepository'
+import { applyCourseWorkflowAction, getTextPackCourseJobForOwner, getTextPackCourseRuntimeForOwner, workflowFromJob } from '@/lib/courseRepository'
 import { ensureProfile } from '@/lib/server/supabase'
 
 async function getOwnerProfile(req) {
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, ...result })
       }
       const job = await getTextPackCourseJobForOwner(owner.ownerId, jobId)
-      return res.status(200).json({ ok: true, job, workflow: job.preprocess_result?.workflow || null })
+      return res.status(200).json({ ok: true, job, workflow: workflowFromJob(job) })
     }
     if (req.method === 'PATCH' || req.method === 'POST') {
       if (containsWorkerOnlyFields(req.body || {})) return res.status(403).json({ ok: false, error: '审查结果只能由课程处理服务写入' })
