@@ -284,3 +284,19 @@ Preview acceptance must confirm that the new dynamic page and `/api/courses/note
 ## Course publication source compatibility
 
 The deployed `content_items_source_check` accepts `course-worker`, not `course-workflow`. Browser course publication therefore persists `source = course-worker` and uses the namespaced `source_id = <jobId>:<lessonKey>` to distinguish workflow notes. Reads remain backward-compatible with both labels so any short-lived test records are still discoverable. Do not change the write label without an explicit Supabase constraint migration.
+
+## Current Phase: Content Library and Reading Navigation
+
+Status: code prepared in the current handoff workspace. TypeScript transpile parsing, `git diff --check`, taxonomy smoke tests, and Notion-normalization smoke tests pass. Dependency-backed Jest, production build, and Preview verification remain required.
+
+Implemented scope:
+
+- removed development-commentary copy from the note-library category panel;
+- collapsible lesson directory and live table of contents in the independent course-note reader;
+- active heading tracking and document reading percentage;
+- shared Markdown heading ids and duplicate-leading-title removal;
+- public content detail reading navigation and improved Markdown typography;
+- editable category/collection suggestions and compact tag chips in the publishing desk;
+- public content library search, category/type/tag filters, compact cards, and sidebar signature;
+- gradual Notion inclusion by indexing published Notion metadata while preserving existing article routes;
+- reusable animated Curacao signature component for new public and reading sidebars.

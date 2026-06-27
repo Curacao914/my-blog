@@ -19,7 +19,14 @@ describe('course publishing UI', () => {
     expect(desk).toContain('保存草稿')
     expect(desk).toContain('更新发布版本')
     expect(desk).toContain('撤回')
-    expect(desk).toContain('ReactMarkdown')
+    expect(desk).toContain('MarkdownDocument')
+  })
+
+  it('supports editable taxonomy choices and compact reusable tags', () => {
+    expect(desk).toContain('<datalist id={id}>')
+    expect(desk).toContain("function TagEditor")
+    expect(desk).toContain("contentData.taxonomy")
+    expect(desk).toContain("placeholder='选择或新建栏目'")
   })
 
   it('links completed course notes into the publishing desk', () => {
@@ -29,6 +36,6 @@ describe('course publishing UI', () => {
 
   it('renders public content by collection instead of one flat list', () => {
     expect(publicIndex).toContain('groupContentByCollection')
-    expect(publicIndex).toContain('collection-group')
+    expect(publicIndex).toContain('content-collection')
   })
 })

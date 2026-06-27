@@ -30,6 +30,8 @@ describe('course completion and note library UI', () => {
   it('renames the ambiguous materials entry and renders course-to-lesson hierarchy', () => {
     expect(navigation).toContain("label: '笔记库'")
     expect(library).toContain('课程 → 课次')
-    expect(library).toContain('阅读 / 修改')
+    expect(library).toContain('noteReaderHref')
+    expect(library).toContain('编辑原笔记')
+    expect(library).toContain('转入发布')
   })
 })

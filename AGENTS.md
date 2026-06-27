@@ -192,3 +192,12 @@ Performance optimization of large shared First Load JS is real debt, but it shou
 ## Course publication source compatibility
 
 The deployed `content_items_source_check` accepts `course-worker`, not `course-workflow`. Browser course publication therefore persists `source = course-worker` and uses the namespaced `source_id = <jobId>:<lessonKey>` to distinguish workflow notes. Reads remain backward-compatible with both labels so any short-lived test records are still discoverable. Do not change the write label without an explicit Supabase constraint migration.
+
+## Phase Update: Content Library and Reading Navigation
+
+- Product-facing copy must not expose implementation jokes, debugging commentary, deployment notes, or assistant-to-user banter. Internal explanations belong in docs and handoffs, not in the shipped UI.
+- Course-note reading now uses collapsible local lesson and table-of-contents panels. The table of contents tracks the active heading and reading percentage while the document scrolls.
+- Public Markdown detail pages use the same heading-id and reading-navigation model as the private course-note reader.
+- Publishing taxonomy fields are editable comboboxes: existing categories and collections can be selected, while new values remain writable. Tags use compact removable chips and reusable suggestions.
+- The public `/content` index federates three sources: published Notion post metadata, live JSON snapshots, and Supabase content rows. Existing Notion posts keep their current routes; a matching newer snapshot or database slug may override the card without breaking unrelated legacy routes.
+- The animated Curacao signature is a reusable visual component. Use it sparingly in suitable sidebar footers; do not present it as a pet widget in the new product UI.

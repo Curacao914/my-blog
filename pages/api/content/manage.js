@@ -1,4 +1,8 @@
 import { requireAdminRequest } from '@/lib/auth/serverAdmin'
+import { getLiveContentIndex } from '@/lib/contentSnapshots'
+import { normalizeNotionContentIndex } from '@/lib/content/notionIndex'
+import { collectContentTaxonomy } from '@/lib/content/taxonomy'
+import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
 import {
   listManagedContent,
   withdrawManagedContent
@@ -11,8 +15,16 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const items = await listManagedContent()
+      let legacyItems = getLiveContentIndex()
+      try {
+        const notionData = await fetchGlobalAllData({ from: 'content-manage-taxonomy' })
+        legacyItems = [...normalizeNotionContentIndex(notionData?.allPages || []), ...legacyItems]
+      } catch (error) {
+        console.warn('[content manage] Notion taxonomy read failed', error)
+      }
+      const taxonomy = collectContentTaxonomy([...legacyItems, ...items])
       res.setHeader('Cache-Control', 'private, no-store')
-      return res.status(200).json({ ok: true, items })
+      return res.status(200).json({ ok: true, items, taxonomy })
     }
 
     if (req.method === 'PATCH') {

@@ -1,8 +1,14 @@
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { Children, isValidElement, useEffect, useMemo, useState } from 'react'
-import ReactMarkdown from 'react-markdown'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
+import {
+  extractMarkdownHeadings,
+  MarkdownDocument,
+  stripLeadingDuplicateTitle
+} from '@/components/content/MarkdownDocument'
+import { ReadingNavigator } from '@/components/content/ReadingNavigator'
+import { DynamicSignature } from '@/components/law-tech/DynamicSignature'
 import { formatCourseApiError, requestCourseJson } from '@/lib/course/clientApi'
 
 function formatDate(value) {
@@ -16,60 +22,19 @@ function formatDate(value) {
   })
 }
 
-function plainText(children) {
-  return Children.toArray(children).map(child => {
-    if (typeof child === 'string' || typeof child === 'number') return String(child)
-    if (isValidElement(child)) return plainText(child.props.children)
-    return ''
-  }).join('')
-}
-
-function headingId(value = '') {
-  return String(value || '')
-    .trim()
-    .toLocaleLowerCase('zh-CN')
-    .replace(/[`*_~[\]()<>{}:：，。！？、“”‘’'"/\\]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '') || 'section'
-}
-
-function extractHeadings(markdown = '') {
-  return String(markdown || '').split('\n').flatMap((line, index) => {
-    const match = line.match(/^\s{0,3}(#{1,4})\s+(.+?)\s*#*\s*$/)
-    if (!match) return []
-    const title = match[2]
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-      .replace(/[*_~`]/g, '')
-      .trim()
-    return [{ level: match[1].length, title, id: headingId(title), line: index + 1 }]
-  })
-}
-
-function headingComponent(level) {
-  const Tag = `h${level}`
-  return function MarkdownHeading({ children }) {
-    return <Tag id={headingId(plainText(children))}>{children}</Tag>
-  }
-}
-
-const markdownComponents = {
-  h1: headingComponent(1),
-  h2: headingComponent(2),
-  h3: headingComponent(3),
-  h4: headingComponent(4)
-}
-
 function noteHref(courseId, lessonKey) {
   return `/desk/materials/${encodeURIComponent(courseId)}/${encodeURIComponent(lessonKey)}`
 }
 
 export function CourseNoteReader({ jobId, lessonKey }) {
   const router = useRouter()
+  const articleRef = useRef(null)
   const [note, setNote] = useState(null)
   const [state, setState] = useState('loading')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [courseIndexOpen, setCourseIndexOpen] = useState(true)
+  const [tocOpen, setTocOpen] = useState(true)
 
   useEffect(() => {
     if (!jobId || !lessonKey) return
@@ -88,7 +53,11 @@ export function CourseNoteReader({ jobId, lessonKey }) {
     })
   }, [jobId, lessonKey])
 
-  const headings = useMemo(() => extractHeadings(note?.lesson?.markdown || ''), [note?.lesson?.markdown])
+  const readableMarkdown = useMemo(
+    () => stripLeadingDuplicateTitle(note?.lesson?.markdown || '', note?.lesson?.title || ''),
+    [note?.lesson?.markdown, note?.lesson?.title]
+  )
+  const headings = useMemo(() => extractMarkdownHeadings(readableMarkdown), [readableMarkdown])
 
   async function moveToTrash() {
     if (!note || busy || typeof window === 'undefined') return
@@ -112,8 +81,12 @@ export function CourseNoteReader({ jobId, lessonKey }) {
     }
   }
 
+  function closeMobilePanel() {
+    if (typeof window !== 'undefined' && window.innerWidth <= 900) setTocOpen(false)
+  }
+
   if (state === 'loading') {
-    return <section className='course-note-reader-state'><p>正在铺开笔记…</p></section>
+    return <section className='course-note-reader-state'><p>正在打开笔记…</p></section>
   }
 
   if (state === 'error' || !note) {
@@ -126,7 +99,7 @@ export function CourseNoteReader({ jobId, lessonKey }) {
 
   const { course, lesson, navigation } = note
 
-  return <section className='course-note-reader'>
+  return <section className={`course-note-reader ${courseIndexOpen ? 'course-index-open' : 'course-index-closed'} ${tocOpen ? 'toc-open' : 'toc-closed'}`}>
     <header className='course-note-reader-head'>
       <div className='course-note-breadcrumbs'>
         <Link href='/desk/materials'>笔记库</Link>
@@ -135,21 +108,32 @@ export function CourseNoteReader({ jobId, lessonKey }) {
         <span>›</span>
         <span>{course.name}</span>
       </div>
-      <details className='course-note-reader-manage'>
-        <summary>管理</summary>
-        <div>
-          <Link href={`/desk/courses?job=${encodeURIComponent(course.id)}&lesson=${encodeURIComponent(lesson.key)}`}>编辑原笔记</Link>
-          <Link href={`/desk/publish?job=${encodeURIComponent(course.id)}&lesson=${encodeURIComponent(lesson.key)}`}>转入发布</Link>
-          <button className='danger' type='button' disabled={busy} onClick={() => void moveToTrash()}>{busy ? '处理中…' : '移入回收站'}</button>
-        </div>
-      </details>
+      <div className='course-note-reader-tools'>
+        <button type='button' aria-pressed={courseIndexOpen} onClick={() => setCourseIndexOpen(open => !open)}>
+          {courseIndexOpen ? '收起课次' : '课次'}
+        </button>
+        <button type='button' aria-pressed={tocOpen} onClick={() => setTocOpen(open => !open)}>
+          {tocOpen ? '收起目录' : '目录'}
+        </button>
+        <details className='course-note-reader-manage'>
+          <summary>管理</summary>
+          <div>
+            <Link href={`/desk/courses?job=${encodeURIComponent(course.id)}&lesson=${encodeURIComponent(lesson.key)}`}>编辑原笔记</Link>
+            <Link href={`/desk/publish?job=${encodeURIComponent(course.id)}&lesson=${encodeURIComponent(lesson.key)}`}>转入发布</Link>
+            <button className='danger' type='button' disabled={busy} onClick={() => void moveToTrash()}>{busy ? '处理中…' : '移入回收站'}</button>
+          </div>
+        </details>
+      </div>
     </header>
 
     {message ? <p className='status-line error'>{message}</p> : null}
 
     <div className='course-note-reader-grid'>
-      <aside className='course-note-course-index' aria-label='课程目录'>
-        <span>课程</span>
+      {courseIndexOpen ? <aside className='course-note-course-index' aria-label='课程目录'>
+        <div className='course-note-side-head'>
+          <span>课程目录</span>
+          <button type='button' onClick={() => setCourseIndexOpen(false)} aria-label='收起课程目录'>×</button>
+        </div>
         <h2>{course.name}</h2>
         <p>{course.teacher || '未填写教师'} · {course.noteCount} 份笔记</p>
         <nav>
@@ -163,7 +147,10 @@ export function CourseNoteReader({ jobId, lessonKey }) {
             <span>{item.title}</span>
           </Link>)}
         </nav>
-      </aside>
+        <div className='course-note-signature' aria-hidden='true'>
+          <DynamicSignature compact />
+        </div>
+      </aside> : <button className='course-note-edge-toggle left' type='button' onClick={() => setCourseIndexOpen(true)}>课次</button>}
 
       <main className='course-note-article'>
         <header>
@@ -171,9 +158,12 @@ export function CourseNoteReader({ jobId, lessonKey }) {
           <h1>{lesson.title}</h1>
           <p>{Number(lesson.charCount || 0).toLocaleString('zh-CN')} 字 · {formatDate(lesson.updatedAt)}{lesson.versionCount ? ` · ${lesson.versionCount} 个版本` : ''}</p>
         </header>
-        <article className='course-note-markdown'>
-          <ReactMarkdown components={markdownComponents}>{lesson.markdown}</ReactMarkdown>
-        </article>
+        <MarkdownDocument
+          articleRef={articleRef}
+          className='course-note-markdown'
+          markdown={readableMarkdown}
+          title={lesson.title}
+        />
         <nav className='course-note-pagination' aria-label='相邻课次'>
           {navigation.previous ? <Link href={noteHref(course.id, navigation.previous.key)}>
             <span>上一课</span>
@@ -186,14 +176,18 @@ export function CourseNoteReader({ jobId, lessonKey }) {
         </nav>
       </main>
 
-      <aside className='course-note-toc' aria-label='本文目录'>
-        <span>本文目录</span>
-        {headings.length ? <nav>{headings.map((heading, index) => <a
-          className={`level-${heading.level}`}
-          href={`#${heading.id}`}
-          key={`${heading.line}:${index}`}
-        >{heading.title}</a>)}</nav> : <p>这份笔记没有标题层级。</p>}
-      </aside>
+      {tocOpen ? <aside className='course-note-toc' aria-label='本文目录'>
+        <div className='course-note-side-head'>
+          <span>阅读导航</span>
+          <button type='button' onClick={() => setTocOpen(false)} aria-label='收起本文目录'>×</button>
+        </div>
+        <ReadingNavigator articleRef={articleRef} headings={headings} onNavigate={closeMobilePanel} />
+      </aside> : <button className='course-note-edge-toggle right' type='button' onClick={() => setTocOpen(true)}>目录</button>}
     </div>
+
+    {(courseIndexOpen || tocOpen) ? <button className='course-note-panel-backdrop' type='button' aria-label='关闭阅读导航' onClick={() => {
+      setCourseIndexOpen(false)
+      setTocOpen(false)
+    }} /> : null}
   </section>
 }

@@ -191,7 +191,7 @@ export function CourseNotesLibrary() {
     {visibleCourses.length ? <section className='note-library-category'>
       <header>
         <div><span>栏目</span><h3>遇事不决</h3></div>
-        <p>“遇事不决，北大法学。”这里放课程笔记，不放 Vercel 报错。</p>
+        <p>课程笔记按课程与课次归档，完成后可进入独立阅读页。</p>
       </header>
       <div className='note-library-list'>{visibleCourses.map(course => {
         const forcedOpen = Boolean(normalizedSearch(query))

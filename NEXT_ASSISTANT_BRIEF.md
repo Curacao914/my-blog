@@ -142,3 +142,7 @@ The newest phase separates reading from production. `/desk/materials` now presen
 ## Course publication source compatibility
 
 The deployed `content_items_source_check` accepts `course-worker`, not `course-workflow`. Browser course publication therefore persists `source = course-worker` and uses the namespaced `source_id = <jobId>:<lessonKey>` to distinguish workflow notes. Reads remain backward-compatible with both labels so any short-lived test records are still discoverable. Do not change the write label without an explicit Supabase constraint migration.
+
+## Current Phase Override: Content Library and Reading Navigation
+
+The latest patch turns `/content` from a placeholder-like landing page into a compact searchable library. Published Notion post metadata is included alongside live JSON and Supabase content, while old Notion routes remain intact. Public detail pages and private course-note pages share stable Markdown heading ids, active-section navigation, and reading progress. Course and table-of-contents panels can be collapsed; on narrower screens they become floating panels. Publishing category and collection fields are writable datalist inputs, and tags are compact chips with reusable suggestions. The animated Curacao signature is reused in sidebar footers. Product copy must remain neutral and must not contain development jokes or assistant commentary.

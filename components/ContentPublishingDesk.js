@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useEffect, useMemo, useState } from 'react'
-import ReactMarkdown from 'react-markdown'
 
+import { MarkdownDocument } from '@/components/content/MarkdownDocument'
 import { formatCourseApiError, requestCourseJson } from '@/lib/course/clientApi'
 import { isCourseContentSource } from '@/lib/contentPublishingModel'
 
@@ -23,16 +23,73 @@ const emptyForm = {
   pinned: false
 }
 
-function tagsText(value) {
-  return Array.isArray(value) ? value.join('，') : String(value || '')
+const emptyTaxonomy = { categories: [], collections: [], tags: [] }
+
+function unique(values = []) {
+  return [...new Set(values.map(value => String(value || '').trim()).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, 'zh-CN'))
 }
 
 function sourceLink(item) {
   if (!isCourseContentSource(item.source) || !item.sourceId) return ''
   const [jobId, lessonKey] = String(item.sourceId).split(':')
-  // Local course-worker imports use numeric lesson ids and have no browser workflow to reopen.
   if (!jobId || !lessonKey || /^\d+$/.test(lessonKey)) return ''
   return `/desk/publish?job=${encodeURIComponent(jobId)}&lesson=${encodeURIComponent(lessonKey)}`
+}
+
+function EditableChoice({ id, label, value, onChange, options, placeholder }) {
+  return <label>
+    {label}
+    <input list={id} value={value} onChange={event => onChange(event.target.value)} placeholder={placeholder} />
+    <datalist id={id}>{options.map(option => <option key={option} value={option} />)}</datalist>
+  </label>
+}
+
+function TagEditor({ tags = [], suggestions = [], onChange }) {
+  const [draft, setDraft] = useState('')
+  const selected = unique(tags)
+  const available = suggestions.filter(tag => !selected.includes(tag))
+
+  function add(values) {
+    const next = unique([...selected, ...values.flatMap(value => String(value || '').split(/[，,]/))])
+    onChange(next)
+    setDraft('')
+  }
+
+  function remove(tag) {
+    onChange(selected.filter(item => item !== tag))
+  }
+
+  function handleKeyDown(event) {
+    if (event.key === 'Enter' || event.key === ',' || event.key === '，') {
+      event.preventDefault()
+      if (draft.trim()) add([draft])
+    }
+    if (event.key === 'Backspace' && !draft && selected.length) {
+      remove(selected[selected.length - 1])
+    }
+  }
+
+  return <div className='publishing-tag-editor wide'>
+    <span className='publishing-field-label'>标签</span>
+    <div className='publishing-tag-input'>
+      {selected.map(tag => <button type='button' className='selected' key={tag} onClick={() => remove(tag)} title='移除标签'>
+        {tag}<i>×</i>
+      </button>)}
+      <input
+        list='publishing-tag-options'
+        value={draft}
+        onBlur={() => draft.trim() && add([draft])}
+        onChange={event => setDraft(event.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={selected.length ? '继续添加' : '输入或选择标签'}
+      />
+      <datalist id='publishing-tag-options'>{available.map(tag => <option key={tag} value={tag} />)}</datalist>
+    </div>
+    {available.length ? <div className='publishing-tag-suggestions' aria-label='已有标签'>
+      {available.slice(0, 18).map(tag => <button type='button' key={tag} onClick={() => add([tag])}>{tag}</button>)}
+    </div> : null}
+  </div>
 }
 
 export function ContentPublishingDesk() {
@@ -42,9 +99,9 @@ export function ContentPublishingDesk() {
   const [source, setSource] = useState(null)
   const [publication, setPublication] = useState(null)
   const [form, setForm] = useState(emptyForm)
-  const [tagInput, setTagInput] = useState('')
   const [items, setItems] = useState([])
   const [courses, setCourses] = useState([])
+  const [taxonomy, setTaxonomy] = useState(emptyTaxonomy)
   const [mode, setMode] = useState('settings')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -55,6 +112,7 @@ export function ContentPublishingDesk() {
       requestCourseJson('/api/courses/notes', {}, '课程笔记读取失败')
     ])
     setItems(contentData.items || [])
+    setTaxonomy({ ...emptyTaxonomy, ...(contentData.taxonomy || {}) })
     setCourses(courseData.courses || [])
   }
 
@@ -63,7 +121,6 @@ export function ContentPublishingDesk() {
       setSource(null)
       setPublication(null)
       setForm(emptyForm)
-      setTagInput('')
       return
     }
     const data = await requestCourseJson(
@@ -73,8 +130,7 @@ export function ContentPublishingDesk() {
     )
     setSource(data.source)
     setPublication(data.publication)
-    setForm({ ...emptyForm, ...(data.settings || {}) })
-    setTagInput(tagsText(data.settings?.tags))
+    setForm({ ...emptyForm, ...(data.settings || {}), tags: unique(data.settings?.tags || []) })
   }
 
   useEffect(() => {
@@ -90,6 +146,19 @@ export function ContentPublishingDesk() {
       .map(lesson => ({ course, lesson }))
   ), [courses])
 
+  const categoryOptions = useMemo(
+    () => unique([form.category, ...taxonomy.categories]),
+    [form.category, taxonomy.categories]
+  )
+  const collectionOptions = useMemo(
+    () => unique([form.collection, ...taxonomy.collections]),
+    [form.collection, taxonomy.collections]
+  )
+  const tagOptions = useMemo(
+    () => unique([...(form.tags || []), ...taxonomy.tags]),
+    [form.tags, taxonomy.tags]
+  )
+
   function update(name, value) {
     setForm(current => ({ ...current, [name]: value }))
   }
@@ -104,19 +173,12 @@ export function ContentPublishingDesk() {
         {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            lessonKey,
-            action,
-            settings: {
-              ...form,
-              tags: tagInput.split(/[，,]/).map(item => item.trim()).filter(Boolean)
-            }
-          })
+          body: JSON.stringify({ lessonKey, action, settings: form })
         },
         action === 'publish' ? '发布失败' : action === 'withdraw' ? '撤回失败' : '草稿保存失败'
       )
       setPublication(data.publication)
-      setForm(current => ({ ...current, ...(data.publication?.settings || {}) }))
+      setForm(current => ({ ...current, ...(data.publication?.settings || {}), tags: unique(data.publication?.settings?.tags || current.tags) }))
       setMessage(action === 'publish' ? '已经发布。' : action === 'withdraw' ? '已经撤回为草稿。' : '草稿已保存。')
       await loadIndex()
     } catch (error) {
@@ -131,7 +193,7 @@ export function ContentPublishingDesk() {
       <div>
         <span>Publishing Desk</span>
         <h2>内容发布</h2>
-        <p>课程最终稿进入这里后，设置栏目、合集和访问方式，再保存或发布。</p>
+        <p>设置内容归档、访问方式和公开信息。</p>
       </div>
       <div className='publishing-head-actions'>
         <Link className='soft-button' href='/content'>查看公开内容</Link>
@@ -163,9 +225,9 @@ export function ContentPublishingDesk() {
         {mode === 'settings' ? <div className='publishing-form'>
           <label>标题<input value={form.title} onChange={event => update('title', event.target.value)} /></label>
           <label className='wide'>摘要<textarea rows={3} value={form.summary} onChange={event => update('summary', event.target.value)} /></label>
-          <label>栏目<input value={form.category} onChange={event => update('category', event.target.value)} placeholder='遇事不决' /></label>
-          <label>合集<input value={form.collection} onChange={event => update('collection', event.target.value)} placeholder='课程或专题名称' /></label>
-          <label className='wide'>标签<input value={tagInput} onChange={event => setTagInput(event.target.value)} placeholder='课程笔记，经济法' /></label>
+          <EditableChoice id='publishing-category-options' label='栏目' value={form.category} onChange={value => update('category', value)} options={categoryOptions} placeholder='选择或新建栏目' />
+          <EditableChoice id='publishing-collection-options' label='合集' value={form.collection} onChange={value => update('collection', value)} options={collectionOptions} placeholder='选择或新建合集' />
+          <TagEditor tags={form.tags} suggestions={tagOptions} onChange={tags => update('tags', tags)} />
           <label className='wide'>链接路径<input value={form.slug} onChange={event => update('slug', event.target.value)} placeholder='notes/course/lesson-1' /></label>
           <label>访问方式<select value={form.accessMode} onChange={event => update('accessMode', event.target.value)}>
             <option value='private'>私密</option>
@@ -191,7 +253,8 @@ export function ContentPublishingDesk() {
           </div>
           <h1>{form.title || source.lessonTitle}</h1>
           <p>{form.summary}</p>
-          <ReactMarkdown>{source.bodyMarkdown || ''}</ReactMarkdown>
+          <div className='publishing-preview-tags'>{(form.tags || []).map(tag => <span key={tag}>{tag}</span>)}</div>
+          <MarkdownDocument markdown={source.bodyMarkdown || ''} title={form.title || source.lessonTitle} />
         </article>}
 
         <div className='publishing-actions'>
@@ -204,7 +267,7 @@ export function ContentPublishingDesk() {
       <div>
         <span>从课程笔记开始</span>
         <h3>选择一份已经完成的课次笔记</h3>
-        <p>课程笔记默认进入“遇事不决”，课程名作为合集，单课笔记作为合集中的内容。</p>
+        <p>课程笔记默认按栏目、课程合集和课次内容归档。</p>
       </div>
       <div className='publishing-note-list'>
         {availableNotes.map(({ course, lesson }) => <Link

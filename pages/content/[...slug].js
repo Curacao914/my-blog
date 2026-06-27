@@ -1,3 +1,19 @@
+import Head from 'next/head'
+import Link from 'next/link'
+import { useMemo, useRef, useState } from 'react'
+
+import {
+  extractMarkdownHeadings,
+  MarkdownDocument,
+  stripLeadingDuplicateTitle
+} from '@/components/content/MarkdownDocument'
+import { ReadingNavigator } from '@/components/content/ReadingNavigator'
+import { DynamicSignature } from '@/components/law-tech/DynamicSignature'
+import { PublicHeader } from '@/components/law-tech/PublicHeader'
+import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
+import {
+  mergeContentPaths
+} from '@/lib/contentHierarchy'
 import {
   getLiveContentBySlug,
   getLiveContentPaths,
@@ -8,11 +24,6 @@ import {
   listPublishedContentMetadata,
   toSnapshotLikeContent
 } from '@/lib/contentRepository'
-import { mergeContentPaths } from '@/lib/contentHierarchy'
-import Head from 'next/head'
-import Link from 'next/link'
-import { useState } from 'react'
-import ReactMarkdown from 'react-markdown'
 
 const typeLabels = {
   article: '文章',
@@ -31,9 +42,8 @@ function formatDate(date) {
   }).format(new Date(date))
 }
 
-function PasswordGate({ content }) {
+function PasswordGate({ content, onUnlock }) {
   const [password, setPassword] = useState('')
-  const [body, setBody] = useState('')
   const [status, setStatus] = useState('idle')
 
   async function unlock(event) {
@@ -48,419 +58,224 @@ function PasswordGate({ content }) {
 
     if (response.ok) {
       const data = await response.json()
-      setBody(data.bodyMarkdown)
+      onUnlock(data.bodyMarkdown || '')
       setStatus('unlocked')
       return
     }
 
-    if (response.status === 410) {
-      setStatus('expired')
-      return
-    }
-
-    setStatus('error')
+    setStatus(response.status === 410 ? 'expired' : 'error')
   }
 
-  if (status === 'unlocked') {
-    return (
-      <article className='article-body'>
-        <ReactMarkdown>{body}</ReactMarkdown>
-      </article>
-    )
-  }
-
-  return (
-    <section className='gate' aria-label='密码访问'>
-      <p className='gate-kicker'>需要密码</p>
-      <h2>这篇内容被设置为密码访问。</h2>
-      <p>输入密码后可以继续阅读。</p>
-      <form onSubmit={event => void unlock(event)}>
-        <input
-          aria-label='访问密码'
-          autoComplete='current-password'
-          onChange={event => setPassword(event.target.value)}
-          placeholder='输入访问密码'
-          type='password'
-          value={password}
-        />
-        <button disabled={status === 'loading'} type='submit'>
-          {status === 'loading' ? '验证中…' : '打开'}
-        </button>
-      </form>
-      {status === 'error' && <small>密码不对，或者这条分享不可访问。</small>}
-      {status === 'expired' && <small>分享已过期。</small>}
-    </section>
-  )
+  return <section className='content-access-gate' aria-label='密码访问'>
+    <span>密码访问</span>
+    <h2>输入密码后继续阅读</h2>
+    <p>这篇内容未公开展示正文。</p>
+    <form onSubmit={event => void unlock(event)}>
+      <input
+        aria-label='访问密码'
+        autoComplete='current-password'
+        onChange={event => setPassword(event.target.value)}
+        placeholder='输入访问密码'
+        type='password'
+        value={password}
+      />
+      <button disabled={status === 'loading'} type='submit'>{status === 'loading' ? '验证中…' : '打开'}</button>
+    </form>
+    {status === 'error' ? <small>密码不正确，或者这条分享不可访问。</small> : null}
+    {status === 'expired' ? <small>分享已经过期。</small> : null}
+  </section>
 }
 
 const ContentDetailPage = ({ content }) => {
-  return (
-    <>
-      <Head>
-        <title>{`${content.title} · law-tech.dev`}</title>
-        <meta name='description' content={content.summary || content.title} />
-        {content.access?.allowIndexing === false && (
-          <meta name='robots' content='noindex,nofollow' />
-        )}
-      </Head>
+  const articleRef = useRef(null)
+  const [unlockedBody, setUnlockedBody] = useState('')
+  const [tocOpen, setTocOpen] = useState(true)
+  const body = content.locked ? unlockedBody : content.bodyMarkdown
+  const readableBody = useMemo(() => stripLeadingDuplicateTitle(body || '', content.title), [body, content.title])
+  const headings = useMemo(() => extractMarkdownHeadings(readableBody), [readableBody])
+  const folderPath = content.folder?.path || []
+  const tags = content.display?.tags || content.tags || []
 
-      <div className='detail-page'>
-        <div className='wrap'>
-          <nav className='top-nav' aria-label='主导航'>
-            <Link className='brand' href='/'>
-              law-tech.dev
-            </Link>
-            <div className='nav-links'>
-              <Link href='/content'>内容</Link>
-              <Link href='/#projects'>项目</Link>
-              <Link href='/tools'>工具</Link>
-              <Link href='/#about'>关于</Link>
-              <Link className='desk-link' href='/desk'>
-                工作台
-              </Link>
+  return <>
+    <Head>
+      <title>{`${content.title} · law-tech.dev`}</title>
+      <meta name='description' content={content.summary || content.title} />
+      {content.access?.allowIndexing === false ? <meta name='robots' content='noindex,nofollow' /> : null}
+      <meta name='theme-color' content='#f5f3eb' />
+    </Head>
+
+    <main className='lawtech-public-page content-reader-page'>
+      <div className='public-aurora public-aurora-one' aria-hidden='true' />
+      <div className='public-aurora public-aurora-two' aria-hidden='true' />
+      <div className='public-shell content-reader-shell'>
+        <PublicHeader active='content' />
+
+        <div className={`content-reader-layout ${tocOpen ? 'toc-open' : 'toc-closed'}`}>
+          <aside className='content-reader-meta'>
+            <Link className='content-reader-back' href='/content'>← 内容</Link>
+            <div className='content-reader-meta-block'>
+              <span>归档</span>
+              <strong>{folderPath[0] || content.display?.category || content.category || '未归档'}</strong>
+              {folderPath[1] ? <small>{folderPath[1]}</small> : null}
             </div>
-          </nav>
+            <div className='content-reader-meta-block'>
+              <span>类型</span>
+              <strong>{typeLabels[content.type] || content.type}</strong>
+              <small>{formatDate(content.date || content.updatedAt)}</small>
+            </div>
+            {content.course ? <div className='content-reader-meta-block'>
+              <span>课程</span>
+              <strong>{content.course.name || '课程笔记'}</strong>
+              {content.course.lesson ? <small>{content.course.lesson}</small> : null}
+              {content.course.teacher ? <small>{content.course.teacher}</small> : null}
+            </div> : null}
+            {tags.length ? <div className='content-reader-tags'>{tags.map(tag => <span key={tag}>{tag}</span>)}</div> : null}
+            <div className='content-reader-signature' aria-hidden='true'><DynamicSignature compact /></div>
+          </aside>
 
-          <main className='main'>
-            <Link className='back' href='/content'>
-              ← 回到内容
-            </Link>
-
-            <header className='article-head'>
-              <div className='meta'>
+          <article className='content-reader-article'>
+            <header className='content-reader-head'>
+              <div className='content-reader-kicker'>
                 <span>{typeLabels[content.type] || content.type}</span>
-                <span>{content.display?.category || content.category}</span>
-                <span>{formatDate(content.date || content.updatedAt)}</span>
+                <span>{content.access?.mode === 'password' ? '密码访问' : '公开'}</span>
               </div>
               <h1>{content.title}</h1>
-              {content.summary && <p>{content.summary}</p>}
-              <div className='chips'>
-                {(content.display?.tags || content.tags || []).map(tag => (
-                  <span key={tag}>{tag}</span>
-                ))}
-              </div>
+              {content.summary ? <p>{content.summary}</p> : null}
+              <button className='content-reader-toc-toggle' type='button' aria-pressed={tocOpen} onClick={() => setTocOpen(open => !open)}>
+                {tocOpen ? '收起目录' : '打开目录'}
+              </button>
             </header>
 
-            {content.course && (
-              <section className='course-panel' aria-label='课程信息'>
-                {content.course.name && (
-                  <div>
-                    <small>课程</small>
-                    <strong>{content.course.name}</strong>
-                  </div>
-                )}
-                {content.course.lesson && (
-                  <div>
-                    <small>课次</small>
-                    <strong>{content.course.lesson}</strong>
-                  </div>
-                )}
-                {content.course.teacher && (
-                  <div>
-                    <small>教师</small>
-                    <strong>{content.course.teacher}</strong>
-                  </div>
-                )}
-                {content.course.date && (
-                  <div>
-                    <small>日期</small>
-                    <strong>{formatDate(content.course.date)}</strong>
-                  </div>
-                )}
-              </section>
-            )}
+            {content.expired ? <section className='content-access-gate'>
+              <span>分享已过期</span>
+              <h2>这条内容的临时访问已经失效</h2>
+            </section> : content.locked && !unlockedBody ? <PasswordGate content={content} onUnlock={setUnlockedBody} /> : <MarkdownDocument
+              articleRef={articleRef}
+              className='content-public-markdown'
+              markdown={readableBody}
+              title={content.title}
+            />}
+          </article>
 
-            {content.expired ? (
-              <section className='gate'>
-                <p className='gate-kicker'>分享已过期</p>
-                <h2>这条内容的临时访问已经失效。</h2>
-                <p>可以之后再向我拿新的访问方式。</p>
-              </section>
-            ) : content.locked ? (
-              <PasswordGate content={content} />
-            ) : (
-              <article className='article-body'>
-                <ReactMarkdown>{content.bodyMarkdown}</ReactMarkdown>
-              </article>
-            )}
-          </main>
+          {tocOpen ? <aside className='content-reader-toc' aria-label='本文目录'>
+            <div className='content-reader-toc-head'>
+              <span>阅读导航</span>
+              <button type='button' onClick={() => setTocOpen(false)} aria-label='收起目录'>×</button>
+            </div>
+            <ReadingNavigator articleRef={articleRef} headings={headings} title='本文目录' />
+          </aside> : <button className='content-reader-edge-toggle' type='button' onClick={() => setTocOpen(true)}>目录</button>}
         </div>
       </div>
+    </main>
 
-      <style jsx>{`
-        .detail-page {
-          --bg: #f7f9f8;
-          --ink: #1e2322;
-          --muted: #66716b;
-          --quiet: #87938c;
-          --line: #dfe7e1;
-          --green: #3f5f3a;
-          --blue: #315a8c;
-          --gold: #c99a3b;
-          min-height: 100vh;
-          color: var(--ink);
-          background:
-            radial-gradient(
-              circle at 8% 12%,
-              rgba(201, 154, 59, 0.08),
-              transparent 18rem
-            ),
-            linear-gradient(180deg, #fcfefd 0%, var(--bg) 100%);
-          font-family:
-            -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC',
-            'PingFang SC', sans-serif;
-        }
+    <style jsx>{`
+      .content-reader-page { min-height: 100vh; }
+      .content-reader-shell { width: min(1320px,calc(100% - 36px)); }
+      .content-reader-layout {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(170px,.48fr) minmax(0,1.65fr) minmax(170px,.48fr);
+        gap: 16px;
+        align-items: start;
+        padding: 38px 0 90px;
+      }
+      .content-reader-layout.toc-closed { grid-template-columns: minmax(170px,.48fr) minmax(0,1.65fr) 0; }
+      .content-reader-meta,
+      .content-reader-toc {
+        position: sticky;
+        top: 18px;
+        max-height: calc(100dvh - 36px);
+        overflow: auto;
+        border: 1px solid rgba(23,35,29,.08);
+        border-radius: 22px;
+        padding: 15px;
+        background: rgba(255,255,255,.56);
+        box-shadow: 0 18px 54px rgba(24,63,50,.055), inset 0 1px 0 rgba(255,255,255,.72);
+        backdrop-filter: blur(18px);
+      }
+      .content-reader-back { display: inline-flex; color: var(--blue); font-size: 11px; }
+      .content-reader-meta-block { display: grid; gap: 4px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(23,35,29,.07); }
+      .content-reader-meta-block > span,
+      .content-reader-toc-head > span { color: var(--quiet); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
+      .content-reader-meta-block strong { font-family: var(--display-serif); font-size: 15px; font-weight: 600; }
+      .content-reader-meta-block small { color: var(--quiet); font-size: 10px; line-height: 1.45; }
+      .content-reader-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 16px; }
+      .content-reader-tags span { border-radius: 999px; padding: 3px 6px; color: #41617a; background: rgba(226,237,241,.62); font-size: 9px; }
+      .content-reader-signature { margin-top: 22px; padding-top: 14px; border-top: 1px solid rgba(23,35,29,.07); color: rgba(25,59,49,.72); }
 
-        .wrap {
-          width: min(860px, calc(100% - 40px));
-          margin: 0 auto;
-        }
+      .content-reader-article {
+        min-width: 0;
+        border: 1px solid rgba(23,35,29,.075);
+        border-radius: 28px;
+        padding: clamp(28px,5vw,64px);
+        background: rgba(255,255,255,.68);
+        box-shadow: 0 24px 76px rgba(24,63,50,.065), inset 0 1px 0 rgba(255,255,255,.82);
+      }
+      .content-reader-head { position: relative; padding-bottom: 30px; border-bottom: 1px solid rgba(23,35,29,.08); }
+      .content-reader-kicker { display: flex; flex-wrap: wrap; gap: 9px; color: var(--blue); font-size: 10px; }
+      .content-reader-kicker span + span::before { content: '·'; margin-right: 9px; color: var(--quiet); }
+      .content-reader-head h1 { margin: 13px 0 0; font-family: var(--display-serif); font-size: clamp(34px,5vw,58px); font-weight: 600; line-height: 1.15; letter-spacing: -.05em; }
+      .content-reader-head p { margin: 17px 0 0; max-width: 720px; color: var(--muted); font-size: 15px; line-height: 1.8; }
+      .content-reader-toc-toggle { position: absolute; right: 0; top: 0; border: 1px solid rgba(23,35,29,.08); border-radius: 999px; padding: 6px 10px; color: var(--quiet); background: rgba(255,255,255,.62); font-size: 10px; cursor: pointer; }
+      :global(.content-public-markdown) { padding-top: 26px; color: #26302c; font-size: 16px; line-height: 2; }
+      :global(.content-public-markdown h1),
+      :global(.content-public-markdown h2),
+      :global(.content-public-markdown h3),
+      :global(.content-public-markdown h4) { scroll-margin-top: 36px; font-family: var(--display-serif); font-weight: 600; line-height: 1.4; letter-spacing: -.02em; }
+      :global(.content-public-markdown h1) { margin: 0 0 1em; font-size: 32px; }
+      :global(.content-public-markdown h2) { margin: 2.2em 0 .8em; font-size: 26px; }
+      :global(.content-public-markdown h3) { margin: 1.85em 0 .7em; font-size: 21px; }
+      :global(.content-public-markdown h4) { margin: 1.55em 0 .6em; font-size: 18px; }
+      :global(.content-public-markdown p),
+      :global(.content-public-markdown ul),
+      :global(.content-public-markdown ol),
+      :global(.content-public-markdown blockquote) { margin: 1em 0; }
+      :global(.content-public-markdown ul),
+      :global(.content-public-markdown ol) { padding-left: 1.4em; }
+      :global(.content-public-markdown blockquote) { border-left: 3px solid rgba(49,90,140,.26); padding: 2px 0 2px 17px; color: var(--muted); }
+      :global(.content-public-markdown pre) { overflow: auto; border-radius: 15px; padding: 15px; color: #f4f7f5; background: #1f2925; }
+      :global(.content-public-markdown code:not(pre code)) { border-radius: 5px; padding: 2px 5px; background: rgba(49,90,140,.07); }
+      :global(.content-public-markdown a) { color: #315a8c; text-decoration: underline; text-decoration-color: rgba(49,90,140,.25); text-underline-offset: 3px; }
+      :global(.content-public-markdown table) { display: block; max-width: 100%; overflow: auto; border-collapse: collapse; }
+      :global(.content-public-markdown th),
+      :global(.content-public-markdown td) { border: 1px solid rgba(23,35,29,.1); padding: 8px 10px; text-align: left; }
 
-        .top-nav {
-          height: 82px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          font-size: 14px;
-        }
+      .content-reader-toc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .content-reader-toc-head button { width: 24px; height: 24px; border: 0; border-radius: 50%; color: var(--quiet); background: rgba(220,233,223,.55); cursor: pointer; }
+      .content-reader-edge-toggle { position: sticky; top: 92px; align-self: start; justify-self: end; width: 30px; min-height: 76px; border: 1px solid rgba(23,35,29,.08); border-radius: 13px 0 0 13px; color: var(--green); background: rgba(248,251,249,.9); writing-mode: vertical-rl; letter-spacing: .12em; font-size: 10px; cursor: pointer; }
+      .content-access-gate { margin-top: 28px; border: 1px solid rgba(23,35,29,.08); border-radius: 20px; padding: 24px; background: rgba(247,249,248,.68); }
+      .content-access-gate > span { color: var(--gold); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+      .content-access-gate h2 { margin: 10px 0 0; font-family: var(--display-serif); font-size: 24px; }
+      .content-access-gate p { color: var(--muted); }
+      .content-access-gate form { display: flex; gap: 8px; margin-top: 18px; }
+      .content-access-gate input { flex: 1; min-width: 0; border: 1px solid rgba(23,35,29,.1); border-radius: 999px; padding: 11px 13px; background: #fff; }
+      .content-access-gate button { border: 0; border-radius: 999px; padding: 0 16px; color: #fff; background: var(--green); cursor: pointer; }
+      .content-access-gate small { display: block; margin-top: 10px; color: #9a643b; }
 
-        .brand {
-          font-weight: 720;
-          letter-spacing: -0.03em;
-        }
-
-        .nav-links {
-          display: flex;
-          align-items: center;
-          gap: 24px;
-          color: var(--muted);
-        }
-
-        .desk-link {
-          padding: 8px 12px;
-          border: 1px solid var(--line);
-          border-radius: 999px;
-          background: rgba(255, 255, 255, 0.68);
-          color: var(--blue);
-        }
-
-        .main {
-          padding: 44px 0 92px;
-        }
-
-        .back {
-          color: var(--quiet);
-          font-size: 13px;
-        }
-
-        .article-head {
-          margin-top: 34px;
-          padding-bottom: 34px;
-          border-bottom: 1px solid var(--line);
-        }
-
-        .meta,
-        .chips {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 12px;
-          color: var(--blue);
-          font-size: 13px;
-        }
-
-        .meta span + span::before {
-          content: '·';
-          color: var(--quiet);
-          margin-right: 12px;
-        }
-
-        h1,
-        h2,
-        p {
-          margin: 0;
-        }
-
-        h1 {
-          margin-top: 18px;
-          font-size: clamp(32px, 5vw, 56px);
-          line-height: 1.13;
-          letter-spacing: -0.06em;
-        }
-
-        .article-head p {
-          margin-top: 18px;
-          max-width: 680px;
-          color: #58645e;
-          font-size: 16px;
-          line-height: 1.8;
-        }
-
-        .chips {
-          margin-top: 22px;
-        }
-
-        .chips span {
-          border: 1px solid rgba(63, 95, 58, 0.18);
-          border-radius: 999px;
-          padding: 6px 10px;
-          color: var(--green);
-          background: rgba(63, 95, 58, 0.055);
-          font-size: 12px;
-        }
-
-        .course-panel {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 12px;
-          margin-top: 26px;
-          padding: 18px;
-          border: 1px solid var(--line);
-          border-radius: 22px;
-          background: rgba(255, 255, 255, 0.72);
-        }
-
-        .course-panel small {
-          display: block;
-          color: var(--quiet);
-          font-size: 12px;
-          margin-bottom: 6px;
-        }
-
-        .course-panel strong {
-          font-size: 14px;
-        }
-
-        .article-body,
-        .gate {
-          margin-top: 34px;
-          padding: 30px;
-          border: 1px solid var(--line);
-          border-radius: 28px;
-          background: rgba(255, 255, 255, 0.78);
-          box-shadow: 0 18px 52px rgba(37, 55, 48, 0.045);
-        }
-
-        .gate-kicker {
-          color: var(--gold);
-          font-size: 13px;
-          letter-spacing: 0.1em;
-        }
-
-        .gate h2 {
-          margin-top: 12px;
-          font-size: 24px;
-          letter-spacing: -0.04em;
-        }
-
-        .gate p {
-          margin-top: 12px;
-          color: #58645e;
-          line-height: 1.75;
-        }
-
-        .gate form {
-          display: flex;
-          gap: 10px;
-          margin-top: 22px;
-        }
-
-        .gate input {
-          flex: 1;
-          min-width: 0;
-          border: 1px solid var(--line);
-          border-radius: 999px;
-          padding: 12px 14px;
-          background: #fff;
-          color: var(--ink);
-        }
-
-        .gate button {
-          border: 0;
-          border-radius: 999px;
-          padding: 0 18px;
-          background: var(--green);
-          color: #fff;
-          cursor: pointer;
-        }
-
-        .gate button:disabled {
-          opacity: 0.7;
-          cursor: default;
-        }
-
-        .gate small {
-          display: block;
-          margin-top: 12px;
-          color: #9a643b;
-        }
-
-        :global(.article-body h1),
-        :global(.article-body h2),
-        :global(.article-body h3) {
-          margin: 1.5em 0 0.6em;
-          letter-spacing: -0.035em;
-          line-height: 1.35;
-        }
-
-        :global(.article-body h1:first-child),
-        :global(.article-body h2:first-child),
-        :global(.article-body h3:first-child) {
-          margin-top: 0;
-        }
-
-        :global(.article-body p),
-        :global(.article-body li) {
-          color: #37413c;
-          font-size: 16px;
-          line-height: 1.9;
-        }
-
-        :global(.article-body p + p) {
-          margin-top: 1em;
-        }
-
-        :global(.article-body ul),
-        :global(.article-body ol) {
-          padding-left: 1.35em;
-        }
-
-        :global(.article-body code) {
-          border-radius: 6px;
-          padding: 0.12em 0.36em;
-          background: rgba(63, 95, 58, 0.08);
-        }
-
-        @media (max-width: 760px) {
-          .top-nav {
-            height: auto;
-            padding: 24px 0;
-            align-items: flex-start;
-            flex-direction: column;
-            gap: 14px;
-          }
-
-          .nav-links {
-            width: 100%;
-            justify-content: space-between;
-            gap: 10px;
-            font-size: 13px;
-          }
-
-          .course-panel {
-            grid-template-columns: 1fr 1fr;
-          }
-
-          .gate form {
-            flex-direction: column;
-          }
-
-          .gate button {
-            height: 44px;
-          }
-        }
-      `}</style>
-    </>
-  )
+      @media (max-width: 1080px) {
+        .content-reader-layout,
+        .content-reader-layout.toc-closed { grid-template-columns: minmax(150px,.42fr) minmax(0,1.58fr); }
+        .content-reader-toc { position: fixed; z-index: 44; top: 88px; right: 18px; width: min(290px,calc(100vw - 36px)); background: rgba(250,252,251,.98); box-shadow: 0 24px 70px rgba(17,45,36,.18); }
+        .content-reader-edge-toggle { position: fixed; z-index: 32; right: 0; top: 130px; }
+      }
+      @media (max-width: 760px) {
+        .content-reader-layout,
+        .content-reader-layout.toc-closed { grid-template-columns: 1fr; padding-top: 20px; }
+        .content-reader-meta { position: static; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; max-height: none; }
+        .content-reader-back,
+        .content-reader-signature { grid-column: 1 / -1; }
+        .content-reader-meta-block { margin: 0; }
+        .content-reader-signature { max-width: 230px; }
+        .content-reader-article { padding: 24px 18px; }
+        .content-reader-head h1 { padding-right: 0; }
+        .content-reader-toc-toggle { position: static; margin-top: 16px; }
+        .content-reader-toc { top: 72px; bottom: 18px; max-height: none; }
+        .content-access-gate form { flex-direction: column; }
+        .content-access-gate button { height: 42px; }
+      }
+    `}</style>
+    <LawTechDeskStyles />
+  </>
 }
 
 ContentDetailPage.layout = 'bare'
@@ -491,31 +306,18 @@ export async function getStaticProps({ params }) {
     const row = await getPublishedContentBySlug(slug)
     if (row) {
       const content = toSnapshotLikeContent(row, { includeBody: true })
-      if (content.access?.mode === 'private') {
-        return { notFound: true }
-      }
-
-      return {
-        props: {
-          content
-        },
-        revalidate: 3600
-      }
+      if (content.access?.mode === 'private') return { notFound: true }
+      return { props: { content }, revalidate: 3600 }
     }
   } catch (error) {
     console.warn('[content detail] database read failed, fallback to live JSON', error)
   }
 
   const snapshot = getLiveContentBySlug(params.slug)
-
-  if (!snapshot) {
-    return { notFound: true }
-  }
+  if (!snapshot) return { notFound: true }
 
   return {
-    props: {
-      content: toPublicContentProps(snapshot, { includeBody: true })
-    },
+    props: { content: toPublicContentProps(snapshot, { includeBody: true }) },
     revalidate: 3600
   }
 }

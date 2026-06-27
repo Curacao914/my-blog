@@ -219,3 +219,16 @@ git push origin codex/homepage-phase1
 ## Course publication source compatibility
 
 The deployed `content_items_source_check` accepts `course-worker`, not `course-workflow`. Browser course publication therefore persists `source = course-worker` and uses the namespaced `source_id = <jobId>:<lessonKey>` to distinguish workflow notes. Reads remain backward-compatible with both labels so any short-lived test records are still discoverable. Do not change the write label without an explicit Supabase constraint migration.
+
+## 当前追加：内容库与阅读导航
+
+状态：代码已在本轮工作区完成；已通过 JSX/JavaScript 转译解析、`git diff --check`、栏目标签归集与 Notion 元数据转换冒烟测试。仍需本地 Jest、生产构建和最新 Preview 验收。
+
+- 前端移除调试梗和开发注释式文案，产品界面只保留面向使用者的信息。
+- 课程笔记阅读页的课次栏和目录栏均可收起；窄屏下改为悬浮面板。
+- 目录会随正文滚动更新当前标题，并显示阅读百分比。
+- 课程阅读页与公开内容详情页共用 Markdown 标题 ID、重复首标题清理和阅读导航逻辑。
+- 发布台栏目与合集支持“已有选项下拉 + 直接输入新值”；标签改为紧凑可删除标签，并提供已有标签建议。
+- `/content` 改为紧凑内容库，支持搜索、栏目、类型与标签筛选。
+- 已发布 Notion 文章的元数据逐步并入新内容索引，点击后仍进入原有 NotionNext 路由；live JSON 与 Supabase 内容继续按 slug 合并，数据库版本优先。
+- 原动态签名被抽成可复用组件，放在课程阅读、公开内容和内容库侧栏底部。

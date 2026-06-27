@@ -21,10 +21,13 @@ describe('course note library reading experience', () => {
     expect(library).toContain('移入回收站')
   })
 
-  it('provides course navigation, article navigation, and a table of contents', () => {
+  it('provides collapsible course navigation and a live reading navigator', () => {
     expect(reader).toContain("aria-label='课程目录'")
     expect(reader).toContain("aria-label='本文目录'")
     expect(reader).toContain("aria-label='相邻课次'")
-    expect(reader).toContain('<ReactMarkdown components={markdownComponents}>')
+    expect(reader).toContain('ReadingNavigator')
+    expect(reader).toContain('courseIndexOpen')
+    expect(reader).toContain('tocOpen')
+    expect(reader).toContain('DynamicSignature')
   })
 })
