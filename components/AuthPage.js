@@ -1,39 +1,15 @@
-import { useAuth } from '@clerk/nextjs'
-import dynamic from 'next/dynamic'
+import { SignIn, SignUp } from '@clerk/nextjs'
 import Head from 'next/head'
 import Link from 'next/link'
-import { useRouter } from 'next/router'
-import { useEffect } from 'react'
 
-import { authRedirectFromQuery } from '@/lib/auth/redirect'
-
-const SignIn = dynamic(() => import('@clerk/nextjs').then(mod => mod.SignIn), {
-  ssr: false
-})
-
-const SignUp = dynamic(() => import('@clerk/nextjs').then(mod => mod.SignUp), {
-  ssr: false
-})
-
-function ClerkAuthFlow({ mode, redirectTo, routerReady }) {
-  const router = useRouter()
-  const { isLoaded, isSignedIn } = useAuth()
-
-  useEffect(() => {
-    if (routerReady && isLoaded && isSignedIn) void router.replace(redirectTo)
-  }, [isLoaded, isSignedIn, redirectTo, router, routerReady])
-
-  if (!routerReady || !isLoaded || isSignedIn) {
-    return <div className='auth-progress'>正在进入工作台…</div>
-  }
-
+function ClerkAuthFlow({ mode, redirectTo }) {
   if (mode === 'sign-up') {
     return (
       <SignUp
-        fallbackRedirectUrl={redirectTo}
+        forceRedirectUrl={redirectTo}
         path='/sign-up'
         routing='path'
-        signInFallbackRedirectUrl={redirectTo}
+        signInForceRedirectUrl={redirectTo}
         signInUrl={`/sign-in?redirect_url=${encodeURIComponent(redirectTo)}`}
       />
     )
@@ -41,19 +17,17 @@ function ClerkAuthFlow({ mode, redirectTo, routerReady }) {
 
   return (
     <SignIn
-      fallbackRedirectUrl={redirectTo}
+      forceRedirectUrl={redirectTo}
       path='/sign-in'
       routing='path'
-      signUpFallbackRedirectUrl={redirectTo}
+      signUpForceRedirectUrl={redirectTo}
       signUpUrl={`/sign-up?redirect_url=${encodeURIComponent(redirectTo)}`}
     />
   )
 }
 
-export function AuthPage({ mode = 'sign-in' }) {
-  const router = useRouter()
+export function AuthPage({ mode = 'sign-in', redirectTo = '/desk/today' }) {
   const isSignUp = mode === 'sign-up'
-  const redirectTo = authRedirectFromQuery(router.query, '/desk/today')
   const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
 
   return (
@@ -73,11 +47,7 @@ export function AuthPage({ mode = 'sign-in' }) {
             <h1>工作台</h1>
           </div>
           {clerkEnabled ? (
-            <ClerkAuthFlow
-              mode={mode}
-              redirectTo={redirectTo}
-              routerReady={router.isReady}
-            />
+            <ClerkAuthFlow mode={mode} redirectTo={redirectTo} />
           ) : (
             <div className='auth-unavailable'>
               <strong>{isSignUp ? '注册' : '登录'}服务未配置</strong>
@@ -173,8 +143,7 @@ export function AuthPage({ mode = 'sign-in' }) {
           letter-spacing: -0.04em;
         }
 
-        .auth-page .auth-unavailable,
-        .auth-page .auth-progress {
+        .auth-page .auth-unavailable {
           display: grid;
           gap: 8px;
           min-height: 76px;

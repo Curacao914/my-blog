@@ -18,16 +18,12 @@ import BLOG from '@/blog.config'
 import ExternalPlugins from '@/components/ExternalPlugins'
 import SEO from '@/components/SEO'
 import { zhCN } from '@clerk/localizations'
-import dynamic from 'next/dynamic'
+import { ClerkProvider } from '@clerk/nextjs'
 
 // 【核心新增 1】：引入我们刚刚自己写的 React 原生聊天挂件
 import NativeDifyChat from '@/components/NativeDifyChat'
 import { CourseTaskProvider } from '@/components/CourseTaskManager'
 
-// import { ClerkProvider } from '@clerk/nextjs'
-const ClerkProvider = dynamic(() =>
-  import('@clerk/nextjs').then(m => m.ClerkProvider)
-)
 
 /**
  * App挂载DOM 入口文件
