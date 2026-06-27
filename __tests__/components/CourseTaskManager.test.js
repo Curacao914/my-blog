@@ -7,7 +7,7 @@ import { requestCourseJson } from '@/lib/course/clientApi'
 const push = jest.fn()
 
 jest.mock('next/router', () => ({
-  useRouter: () => ({ push })
+  useRouter: () => ({ push, pathname: '/desk/today' })
 }))
 
 jest.mock('@/lib/course/clientApi', () => {
@@ -38,29 +38,25 @@ describe('CourseTaskProvider', () => {
     window.localStorage.clear()
     requestCourseJson.mockReset()
     push.mockReset()
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
   })
 
-  it('continues processing after the course page child is unmounted', async () => {
-    requestCourseJson.mockImplementation(async url => {
-      if (String(url).endsWith('/workflow')) {
-        return {
-          workflow: {
-            status: 'outline_pending',
-            progress: 12,
-            courseSpec: { courseName: '国际法' },
-            lessons: [{ key: 'lesson-1', status: 'outline_pending' }]
-          }
-        }
+  it('starts one durable orchestrator and only polls a lightweight summary after leaving the course page', async () => {
+    requestCourseJson.mockImplementation(async (url, options = {}) => {
+      if (String(url).endsWith('/orchestrator')) {
+        expect(options.method).toBe('POST')
+        return { ok: true, runId: 'run-1', status: 'pending' }
       }
-      if (String(url).endsWith('/run-next')) {
+      if (String(url).includes('/workflow?summary=1')) {
         return {
-          completedStep: 'generate-outline',
-          workflow: {
+          job: { id: 'job-1', course_name: '国际法', current_node: 'outline_review' },
+          runtime: {
             status: 'outline_review',
             progress: 28,
-            courseSpec: { courseName: '国际法' },
-            lessons: [{ key: 'lesson-1', status: 'outline_review' }]
-          }
+            workflowVersion: 2,
+            counts: { total: 0, approved: 0, attention: 0 }
+          },
+          orchestrator: { runId: 'run-1', state: 'waiting', waitingReason: 'waiting-outline-approval' }
         }
       }
       throw new Error(`Unexpected URL: ${url}`)
@@ -72,10 +68,16 @@ describe('CourseTaskProvider', () => {
 
     expect(screen.getByText('今日页面')).toBeInTheDocument()
     await waitFor(() => expect(requestCourseJson).toHaveBeenCalledWith(
-      '/api/courses/jobs/job-1/run-next',
-      { method: 'POST' },
-      '课程处理失败'
+      '/api/courses/jobs/job-1/orchestrator',
+      expect.objectContaining({ method: 'POST' }),
+      '课程后台任务启动失败'
     ))
+    await waitFor(() => expect(requestCourseJson).toHaveBeenCalledWith(
+      '/api/courses/jobs/job-1/workflow?summary=1',
+      {},
+      '课程进度读取失败'
+    ))
+    expect(requestCourseJson.mock.calls.some(([url]) => String(url).includes('/run-next'))).toBe(false)
     await waitFor(() => expect(screen.getByText('大纲待确认')).toBeInTheDocument())
   })
 })

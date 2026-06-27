@@ -6,6 +6,7 @@ import { useRouter } from 'next/router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import CONFIG from '../config'
 import ButtonRandomPost from './ButtonRandomPost'
+import NotionRefreshButton from '@/components/NotionRefreshButton'
 import CategoryGroup from './CategoryGroup'
 import Logo from './Logo'
 import { MenuListTop } from './MenuListTop'
@@ -182,6 +183,9 @@ const Header = props => {
             </div>
             {showSearchButton && <SearchButton />}
             {showRandomButton && <ButtonRandomPost {...props} />}
+            {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && (
+              <SignedIn><NotionRefreshButton /></SignedIn>
+            )}
             {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && (
               <div className='flex items-center gap-1 ml-1'>
                 <SignedOut>

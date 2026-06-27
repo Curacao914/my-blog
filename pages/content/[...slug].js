@@ -507,7 +507,7 @@ export async function getStaticProps({ params }) {
         props: {
           content
         },
-        revalidate: 60
+        revalidate: 3600
       }
     }
   } catch (error) {
@@ -524,7 +524,7 @@ export async function getStaticProps({ params }) {
     props: {
       content: toPublicContentProps(snapshot, { includeBody: true })
     },
-    revalidate: 60
+    revalidate: 3600
   }
 }
 

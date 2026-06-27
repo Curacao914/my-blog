@@ -60,6 +60,32 @@ const items = [
   },
   {
     id: '44444444-4444-4444-8444-444444444444',
+    title: '普通今天事项',
+    section: '行政',
+    sectionKey: 'admin',
+    contentType: 'action',
+    date: '2026-06-27',
+    priority: 'normal',
+    importance: 'normal',
+    urgency: 'not_urgent',
+    status: 'active'
+  },
+  {
+    id: '45454545-4545-4545-8545-454545454545',
+    title: '明日紧急事项',
+    section: '写作',
+    sectionKey: 'writing',
+    contentType: 'action',
+    date: '2026-06-28',
+    time: '09:00',
+    priority: 'high',
+    importance: 'important',
+    urgency: 'urgent',
+    isPinned: true,
+    status: 'active'
+  },
+  {
+    id: '46464646-4646-4646-8646-464646464646',
     title: '无固定时间事项',
     section: '行政',
     sectionKey: 'admin',
@@ -117,7 +143,26 @@ function mockScheduleFetch(nextItems = items) {
 }
 
 describe('workspace desk views', () => {
-  it('renders Today with at most two focus cards and independent main/side stacks', async () => {
+  const RealDate = Date
+
+  beforeAll(() => {
+    const fixed = new RealDate('2026-06-27T04:00:00.000Z')
+    global.Date = class extends RealDate {
+      constructor(...args) {
+        super(...(args.length ? args : [fixed.toISOString()]))
+      }
+
+      static now() {
+        return fixed.getTime()
+      }
+    }
+  })
+
+  afterAll(() => {
+    global.Date = RealDate
+  })
+
+  it('keeps Today strict while showing a quiet future preview', async () => {
     mockScheduleFetch()
     const { container } = render(<TodayBoard />)
 
@@ -125,10 +170,16 @@ describe('workspace desk views', () => {
 
     expect(container.querySelectorAll('.focus-card')).toHaveLength(2)
     expect(container.querySelector('.focus-strip')).not.toHaveTextContent('已经完成的重要事项')
-    expect(container.querySelectorAll('.today-stack')).toHaveLength(2)
-    expect(screen.getByText('无固定时间事项')).toBeInTheDocument()
+    expect(container.querySelector('.focus-strip')).not.toHaveTextContent('明日紧急事项')
+    expect(container.querySelectorAll('.today-stack').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('普通今天事项')).toBeInTheDocument()
+    expect(screen.queryByText('无固定时间事项')).not.toBeInTheDocument()
     expect(screen.queryByText('待读长文章')).not.toBeInTheDocument()
     expect(screen.queryByText('今日阅读')).not.toBeInTheDocument()
+    const later = container.querySelector('.today-later-list')
+    expect(later).toHaveTextContent('明日紧急事项')
+    expect(later).toHaveTextContent('明天')
+    expect(later).not.toHaveTextContent('后天')
     expect(screen.getByRole('button', { name: /已完成 1/ })).toHaveAttribute('aria-expanded', 'false')
   })
 
@@ -187,7 +238,7 @@ describe('workspace desk views', () => {
   })
 
   it('does not show a working note-draft action for local-only reading items', async () => {
-    mockScheduleFetch([{ ...items[4], id: 'local-reading-id' }])
+    mockScheduleFetch([{ ...items[6], id: 'local-reading-id' }])
     render(<ReadingBox />)
 
     await waitFor(() => expect(screen.getAllByText('待读长文章').length).toBeGreaterThan(0))

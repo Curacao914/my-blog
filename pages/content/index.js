@@ -582,7 +582,7 @@ export async function getStaticProps() {
       stats: getContentStats(snapshots),
       source
     },
-    revalidate: 60
+    revalidate: 3600
   }
 }
 

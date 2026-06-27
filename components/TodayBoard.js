@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { selectRelevantItems } from '@/lib/domain/schedule-context'
 import { cleanDisplayText, tagsFromItem } from '@/lib/domain/metadata'
+import { calendarDateInTimeZone, calendarDateLabel, isCalendarDate } from '@/lib/domain/calendarDate'
 
 const storageKey = 'law-tech.schedule.v2'
 const commandPlaceholder = '写下今天要处理的事、阅读材料或提醒。'
@@ -22,24 +23,11 @@ function makeId() {
 }
 
 function todayIso() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-  return `${values.year}-${values.month}-${values.day}`
-}
-
-function addDays(isoDate, days) {
-  const date = new Date(`${isoDate}T00:00:00+08:00`)
-  date.setUTCDate(date.getUTCDate() + days)
-  return date.toISOString().slice(0, 10)
+  return calendarDateInTimeZone(new Date(), timeZone)
 }
 
 function isIsoDate(value = '') {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value)
+  return isCalendarDate(value)
 }
 
 function dateKind(date, referenceDate = todayIso()) {
@@ -170,14 +158,7 @@ function dateLabel(date) {
   if (date === 'reading') return '待读'
   if (date === 'later') return '以后'
   if (date === 'none') return '未定'
-  if (isIsoDate(date)) {
-    const today = todayIso()
-    if (date < today) return '留到今天'
-    if (date === today) return '今天'
-    if (date === addDays(today, 1)) return '明天'
-    if (date === addDays(today, 2)) return '后天'
-    return date
-  }
+  if (isIsoDate(date)) return calendarDateLabel(date, todayIso())
   return '接下来'
 }
 
@@ -416,16 +397,18 @@ export function TodayBoard() {
   const scheduleItems = useMemo(() => items.filter((item) => !isReadingItem(item)), [items])
   const overdueItems = useMemo(() => scheduleItems.filter((item) => item.status === 'active' && dateKind(item.date) === 'overdue'), [scheduleItems])
   const upcomingStrip = useMemo(
-    () => sortItems(scheduleItems).filter((item) => item.status === 'active' && dateKind(item.date) === 'upcoming').slice(0, 6),
+    () => sortItems(scheduleItems).filter((item) => item.status === 'active' && dateKind(item.date) === 'upcoming').slice(0, 3),
     [scheduleItems]
   )
   const focusItems = useMemo(() => {
     return sortItems(scheduleItems)
       .filter((item) => {
         if (item.status !== 'active') return false
+        const kind = dateKind(item.date)
+        if (!['today', 'overdue'].includes(kind)) return false
         if (item.isPinned) return true
         if (item.importance === 'important' && item.urgency === 'urgent') return true
-        if (['today', 'overdue'].includes(dateKind(item.date)) && item.time) return true
+        if (item.time) return true
         return item.priority === 'high'
       })
       .slice(0, 2)
@@ -437,7 +420,7 @@ export function TodayBoard() {
     if (view === 'upcoming') return sorted.filter((item) => item.status === 'active' && dateKind(item.date) === 'upcoming')
     if (view === 'matrix') return sorted.filter((item) => item.status === 'active')
     return sorted.filter(
-      (item) => item.status === 'active' && ['today', 'overdue', 'none'].includes(dateKind(item.date))
+      (item) => item.status === 'active' && ['today', 'overdue'].includes(dateKind(item.date))
     )
   }, [scheduleItems, view])
 
@@ -446,7 +429,7 @@ export function TodayBoard() {
     if (view === 'matrix') return []
     if (view === 'upcoming') return sorted.filter((item) => dateKind(item.date) === 'upcoming')
     if (view === 'all') return sorted
-    return sorted.filter((item) => ['today', 'overdue', 'none'].includes(dateKind(item.date)))
+    return sorted.filter((item) => ['today', 'overdue'].includes(dateKind(item.date)))
   }, [scheduleItems, view])
 
   const focusIds = useMemo(() => new Set(focusItems.map((item) => item.id)), [focusItems])
@@ -651,21 +634,27 @@ export function TodayBoard() {
                 </div>
               ))
             ) : null}
-            {view === 'today' && upcomingStrip.length ? (
-              <section className="upcoming-strip">
-                {upcomingStrip.map((item) => (
-                  <button key={item.id} type="button" onClick={() => setExpandedId(expandedId === item.id ? '' : item.id)}>
-                    <span>{dateLabel(item.date)}</span>
-                    {item.time ? <span>{item.time}</span> : null}
-                    <strong>{item.title}</strong>
-                  </button>
-                ))}
-              </section>
-            ) : null}
           </div>
           ) : null}
         </section>
       )}
+
+      {view === 'today' && upcomingStrip.length ? (
+        <section className="today-later-list" aria-label="稍后">
+          <header>
+            <span>稍后</span>
+            <button type="button" onClick={() => setView('upcoming')}>查看接下来 →</button>
+          </header>
+          <div>
+            {upcomingStrip.map((item) => (
+              <button key={item.id} type="button" onClick={() => { setExpandedId(item.id); setView('upcoming') }}>
+                <span>{dateLabel(item.date)}{item.time ? ` · ${item.time}` : ''}</span>
+                <strong>{item.title}</strong>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {view !== 'matrix' && completedItems.length ? (
         <section className="history-section">

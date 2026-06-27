@@ -4915,6 +4915,30 @@ button, a, input, textarea, select, summary {
   .course-review-actions textarea { min-height:150px; }
 }
 
+/* Today: a quiet preview of future items, visually separate from today's commitments. */
+.today-later-list {
+  display:grid; gap:8px; margin-top:2px; padding:12px 14px;
+  border:1px solid rgba(28,70,55,.08); border-radius:20px;
+  background:rgba(255,255,255,.38);
+}
+.today-later-list > header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.today-later-list > header span { color:var(--muted); font-size:12px; font-weight:700; letter-spacing:.08em; }
+.today-later-list > header button { border:0; padding:3px 0; color:var(--muted); background:transparent; font-size:11px; cursor:pointer; }
+.today-later-list > header button:hover { color:var(--leaf); }
+.today-later-list > div { display:grid; gap:2px; }
+.today-later-list > div > button {
+  display:grid; grid-template-columns:minmax(92px,auto) minmax(0,1fr);
+  align-items:center; gap:12px; width:100%; border:0; border-radius:12px;
+  padding:7px 8px; color:inherit; text-align:left; background:transparent; cursor:pointer;
+}
+.today-later-list > div > button:hover { background:rgba(255,255,255,.62); }
+.today-later-list > div span { color:var(--muted); font-size:11px; white-space:nowrap; }
+.today-later-list > div strong { min-width:0; overflow:hidden; color:rgba(24,52,43,.78); font-size:12px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+@media (max-width: 640px) {
+  .today-later-list { padding:11px 12px; border-radius:16px; }
+  .today-later-list > div > button { grid-template-columns:1fr; gap:2px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
 }

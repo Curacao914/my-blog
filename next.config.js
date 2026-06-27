@@ -4,6 +4,7 @@ const path = require('node:path')
 const BLOG = require('./blog.config')
 const { extractLangPrefix } = require('./lib/utils/pageId')
 const { isExport } = require('./lib/utils/buildMode')
+const { withWorkflow } = require('workflow/next')
 
 // 打包时是否分析代码
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
@@ -285,9 +286,13 @@ const nextConfig = {
       THEME
     )
 
-    // 性能优化配置
-    if (!dev) {
-      // 生产环境优化
+    // 只在浏览器编译中追加自定义分包。
+    // Next 会分别执行 client、Node server 和 Edge server 三次 webpack 编译；
+    // 若服务端编译也强制输出同名 vendors/common chunk，Node 与 Edge 产物可能互相覆盖，
+    // 使 Node 路由加载到依赖 `self` 的 Edge chunk。Workflow 生成的内部 Route Handler
+    // 会触发这一冲突，因此服务端必须保留 Next 自己的 splitChunks 配置。
+    if (!dev && !isServer) {
+      // 生产环境浏览器分包优化
       config.optimization = {
         ...config.optimization,
         splitChunks: {
@@ -347,6 +352,18 @@ const nextConfig = {
   }
 }
 
+const workflowBaseConfig = { ...nextConfig }
+delete workflowBaseConfig.exportPathMap
+const workflowConfig = withWorkflow(workflowBaseConfig)
+const nextMajor = Number(String(require('next/package.json').version || '0').split('.')[0])
+const runtimeConfig = isExport()
+  ? nextConfig
+  : async (...args) => {
+      const config = await workflowConfig(...args)
+      if (nextMajor < 15 && config?.turbopack) delete config.turbopack
+      return config
+    }
+
 module.exports = process.env.ANALYZE
-  ? withBundleAnalyzer(nextConfig)
-  : nextConfig
+  ? withBundleAnalyzer(runtimeConfig)
+  : runtimeConfig

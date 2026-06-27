@@ -1,4 +1,5 @@
 import { cleanDisplayTags, cleanDisplayText } from '@/lib/domain/metadata'
+import { addCalendarDays } from '@/lib/domain/calendarDate'
 
 export const runtime = 'nodejs'
 
@@ -63,20 +64,14 @@ function getShanghaiToday() {
   return `${values.year}-${values.month}-${values.day}`
 }
 
-function addDays(isoDate, days) {
-  const date = new Date(`${isoDate}T00:00:00+08:00`)
-  date.setUTCDate(date.getUTCDate() + days)
-  return date.toISOString().slice(0, 10)
-}
-
 function normalizeDateValue(date, referenceDate) {
   const value = String(date || '').trim()
   if (!value) return 'none'
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
   if (value === 'reading' || value === 'none') return value
   if (value === 'today') return referenceDate
-  if (value === 'tomorrow') return addDays(referenceDate, 1)
-  if (value === 'day-after-tomorrow' || value === 'after_tomorrow' || value === '后天') return addDays(referenceDate, 2)
+  if (value === 'tomorrow') return addCalendarDays(referenceDate, 1)
+  if (value === 'day-after-tomorrow' || value === 'after_tomorrow' || value === '后天') return addCalendarDays(referenceDate, 2)
   return 'none'
 }
 

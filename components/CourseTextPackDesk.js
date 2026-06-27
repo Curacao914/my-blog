@@ -329,7 +329,7 @@ function CourseWorkbench({ jobId, workflow, capabilities, onAction, onRefresh, o
   const errorHistory = getCourseErrorHistory(workflow)
 
   useEffect(() => { if (!workflow.lessons?.some(item => item.key === activeLessonKey)) setActiveLessonKey(firstIncomplete?.key || ''); setCourseSpec(workflow.courseSpec || {}) }, [workflow.updatedAt, activeLessonKey, firstIncomplete?.key])
-  useEffect(() => { if (task?.updatedAt) onRefresh(jobId).catch(() => {}) }, [task?.updatedAt, jobId])
+  useEffect(() => { if (task?.workflowVersion) onRefresh(jobId).catch(() => {}) }, [task?.workflowVersion, jobId])
   useEffect(() => {
     if (!lesson || workflow.paused || workflow.status === 'failed' || !capabilities?.courseWriting?.configured) return
     if (AUTO_STATUSES.has(lesson.status || workflow.status)) startTask(jobId, { courseName: workflow.courseSpec?.courseName, label: humanStatus(lesson.status || workflow.status) })
@@ -362,11 +362,12 @@ function CourseWorkbench({ jobId, workflow, capabilities, onAction, onRefresh, o
 }
 
 function CourseJobRow({ job, active, onOpen, onDelete }) {
-  const workflow = job.preprocess_result?.workflow || {}
+  const runtime = job.runtime_summary || job.preferences?.web_adapter?.runtimeSummary || {}
   const stats = job.preferences?.textpack_stats || {}
-  const attentionCount = (workflow.lessons || []).flatMap(lesson => lesson.nodes || []).filter(node => ['node_human_review', 'node_failed'].includes(node.status)).length
-  const pendingHuman = ['preflight_required', 'outline_review', 'node_human_review', 'final_review_human'].includes(workflow.status) || attentionCount > 0
-  return <article className={`course-job-row ${active ? 'active' : ''}`}><div><span>{humanStatus(workflow.status || job.current_node)}</span><h3>{job.course_name}</h3><p>{job.teacher || '未填写教师'} · {formatNumber(stats.lessonCount)} 课 · {formatNumber(stats.totalChars)} 字</p><small>{pendingHuman ? `${attentionCount || 1} 项等待处理 · ` : ''}{job.updated_at ? new Date(job.updated_at).toLocaleString('zh-CN') : '刚刚更新'}</small></div><div className='course-row-actions'><button className='soft-button primary' type='button' onClick={() => onOpen(job.id)}>继续整理</button><button className='soft-button danger' type='button' onClick={() => onDelete(job.id)}>删除</button></div></article>
+  const attentionCount = Number(runtime.counts?.attention || 0)
+  const status = runtime.status || job.current_node
+  const pendingHuman = ['preflight_required', 'outline_review', 'node_human_review', 'final_review_human'].includes(status) || attentionCount > 0
+  return <article className={`course-job-row ${active ? 'active' : ''}`}><div><span>{humanStatus(status)}</span><h3>{job.course_name}</h3><p>{job.teacher || '未填写教师'} · {formatNumber(stats.lessonCount)} 课 · {formatNumber(stats.totalChars)} 字</p><small>{pendingHuman ? `${attentionCount || 1} 项等待处理 · ` : ''}{job.updated_at ? new Date(job.updated_at).toLocaleString('zh-CN') : '刚刚更新'}</small></div><div className='course-row-actions'><button className='soft-button primary' type='button' onClick={() => onOpen(job.id)}>继续整理</button><button className='soft-button danger' type='button' onClick={() => onDelete(job.id)}>删除</button></div></article>
 }
 
 function confidenceLabel(value) {
