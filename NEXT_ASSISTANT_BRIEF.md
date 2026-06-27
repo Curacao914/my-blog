@@ -4,80 +4,107 @@ Use this as the first briefing for a new model or coding agent.
 
 ## One-paragraph context
 
-`Curacao914/my-blog` is a NotionNext-based personal site becoming law-tech.dev. Work happens on `codex/homepage-phase1`; `main` and `law-tech.dev` remain production and must not be touched without explicit approval. The latest phase replaced browser-driven course polling with Vercel Workflow, tightened Clerk admin authorization, added administrator-only Notion refresh with six-hour ISR, and fixed the Today view's Asia/Shanghai date classification. Local targeted tests and build were reported successful, but deployed Preview verification is still required.
+`Curacao914/my-blog` is a NotionNext-based personal site becoming law-tech.dev. Work happens on `codex/homepage-phase1`; `main` and `law-tech.dev` remain production and must not be touched without explicit approval. Preview Clerk authentication is working. The course workflow now supports browser material import, OCR, lesson grouping, outline approval, node writing, independent review, local revision, final assembly, rendered Markdown reading, user-controlled final revision, and manual completion. A new note library presents `course → lesson → final note`. Local targeted tests and `npm run build` passed for the latest course-library phase; deployed Preview behavior still needs verification.
 
 ## Start every session with
 
 ```bash
 cd "/Users/curacao/Script/个人主页/my-blog-main" || exit 1
+
 git status --short
 git branch --show-current
-git log -3 --oneline
 git fetch origin
 git rev-list --left-right --count HEAD...origin/codex/homepage-phase1
+git log -5 --oneline
 ```
 
 Expected branch: `codex/homepage-phase1`.
 
-Do not automatically reset, stash, discard, merge, rebase, push, or switch branches when the worktree is not clean. Explain the state first.
-
-## Read these files before changing code
-
-1. `AGENTS.md`
-2. `PROJECT_STATUS.md`
-3. The actual files involved in the request
-4. Current test output and Vercel Preview logs, if available
-
-## Current technical invariants
-
-- No production merge or promotion without explicit approval.
-- No high-frequency browser loop that repeatedly calls both `/workflow` and `/run-next`.
-- Durable Workflow is the execution path; browser UI is status/control only.
-- One writer, at most two reviewers, one revision lane.
-- Persist drafts and sources outside workflow payloads.
-- Hosted Clerk auth fails closed and requires an admin allowlist.
-- Do not move Clerk back into Edge middleware casually.
-- Today calculations use `Asia/Shanghai` pure calendar dates.
-- Future tasks may appear only in the subdued `稍后` list on Today.
-- Notion manual refresh is administrator-only.
-- Custom webpack split chunks remain client-only so the Workflow server route does not load a browser `self` chunk.
-- The user has disabled `rm -rf`.
-
-## What to verify next
-
-1. Vercel Preview build and Workflow route.
-2. Preview Clerk login, unauthenticated redirect, and non-admin rejection.
-3. Close-page course continuation.
-4. Manual Notion refresh against a real changed page.
-5. Today/明天/后天 and `稍后` visual behavior.
-6. Vercel resource usage after 12–24 hours.
-
-Do not call any of these complete until deployed evidence exists.
-
-## Next planned feature
-
-Build a single daily 09:00 Asia/Shanghai email digest for schedule and reading status using Resend. Existing reminder code sends individual reminders and is not yet the requested digest. Treat this as a new coherent phase after Preview verification.
-
-## Useful commands
-
-Targeted validation:
+If the worktree is clean and the branch is behind:
 
 ```bash
-npx jest --runInBand \
-  __tests__/lib/calendarDate.test.js \
-  __tests__/lib/deskPageAuth.test.js \
-  __tests__/components/NotionRefreshButton.test.js \
-  __tests__/components/CourseTaskManager.test.js \
-  __tests__/components/DeskWorkspace.test.js \
-  __tests__/api/contentRevalidate.test.js \
-  __tests__/api/courseWorkflow.test.js \
-  __tests__/lib/courseWorkflowState.test.js \
-  __tests__/lib/courseWorkerTasks.test.js \
-  __tests__/lib/courseWorkflowE2E.test.js
-npm run build
+git pull --ff-only origin codex/homepage-phase1
 ```
 
-Before commit:
+Do not automatically reset, stash, discard, merge, rebase, push, or switch branches when the worktree is dirty. Explain the state first.
+
+## Read before changing code
+
+1. `AGENTS.md`
+2. `docs/LAW_TECH_PROGRESS.md`
+3. `PROJECT_STATUS.md`
+4. The actual source files, current test output, and Preview logs relevant to the request
+
+## Current invariants
+
+- No production merge, promotion, repository swap, or force-push without explicit approval.
+- Preview and Production are separate deployment/auth surfaces.
+- Durable Workflow is the course execution path; browser UI is status/control only.
+- Do not restore the former high-frequency `/workflow` + `/run-next` browser loop.
+- Default course concurrency remains one writer, up to two reviewers, and one revision lane.
+- Final AI review is no longer automatic.
+- Final revision runs only after the user provides a concrete instruction.
+- A completed note remains editable and versioned.
+- `lesson.finalNote` is the current canonical lesson-note record.
+- The note library is a view over course workflow data, not a duplicate note database.
+- Pause blocks new task claims but may allow already in-flight model calls to finish.
+- Hosted Clerk auth fails closed and uses direct server-side session verification.
+- Clerk must not be casually moved into Edge middleware.
+- Today uses `Asia/Shanghai` pure calendar dates.
+- Notion manual refresh is administrator-only.
+- Custom webpack split chunks remain client-only.
+- The user has disabled `rm -rf`.
+- Secrets must never be committed or copied into continuity docs.
+
+## Latest implemented phase
+
+The latest coherent phase added:
+
+- final-note feedback text and explicit `request-final-revision`;
+- a single bounded final revision call after user feedback;
+- completed-course labels such as `查看笔记`;
+- removal of stale floating task state after completion;
+- `加课次` for an existing course;
+- renaming the ambiguous `材料` area to `笔记库`;
+- a note library grouped by course and lesson;
+- local course-worker temp cleanup with a 24-hour default TTL;
+- `docs/LAW_TECH_PROGRESS.md` as the Chinese product-progress handoff.
+
+Reported local evidence:
+
+- targeted Jest tests passed;
+- `git diff --check` passed;
+- `npm run build` completed.
+
+Still unverified:
+
+- the latest phase on deployed Preview;
+- OCR service-side expiry cleanup;
+- Production behavior.
+
+## Verify next on Preview
+
+1. Open a completed or final-confirmation lesson.
+2. Submit a concrete final revision request.
+3. Confirm only one revision task runs and the page returns to manual confirmation.
+4. Confirm completion changes the course card to `已完成 / 查看笔记`.
+5. Confirm the floating task indicator disappears after completion.
+6. Open `笔记库` and verify course → lesson ordering, counts, summaries, and links.
+7. Use `加课次` and confirm it adds to the same course rather than creating an unrelated course.
+8. Observe that no final automatic review continues spending model credits.
+
+## Next planned product work
+
+1. Lesson-note soft delete, restore, and permanent delete rules.
+2. Course note publishing into Supabase content records and `/content`.
+3. Optional one-way Notion synchronization.
+4. Unified legacy-blog and new-content index.
+5. Explicitly approved Production rollout.
+6. Daily 09:00 Asia/Shanghai schedule-and-reading digest.
+
+## End every coding response with a complete handoff
+
+After tests, include all of the following without waiting for the user to ask again:
 
 ```bash
 git restore test-results/junit.xml 2>/dev/null || true
@@ -85,4 +112,15 @@ git diff --check
 git status --short
 ```
 
-Do not use the final `|| true` pattern for substantive tests or builds; it is only acceptable above for an optional generated test report file.
+Then provide exact `git add` paths based on actual changed files, followed by:
+
+```bash
+git diff --cached --check
+git diff --cached --stat
+git status --short
+
+git commit -m "<coherent message>"
+git push origin codex/homepage-phase1
+```
+
+Never include nonexistent test paths in `git add`. A failed pathspec aborts the whole staging command.

@@ -1,67 +1,174 @@
 # law-tech.dev 工作台进度
 
 更新时间：2026-06-27  
-开发分支：\`codex/homepage-phase1\`  
-Preview：\`https://preview.law-tech.dev\`  
-Production：\`main\`，尚未合并本阶段工作。
+开发分支：`codex/homepage-phase1`  
+Preview：`https://preview.law-tech.dev`  
+Production：`main`，尚未合并本阶段工作。
+
+## 先看这里
+
+新模型或编码代理开始工作时，依次阅读：
+
+1. `AGENTS.md`
+2. `NEXT_ASSISTANT_BRIEF.md`
+3. 本文件
+4. `PROJECT_STATUS.md`
+5. 当前代码、Git 状态、测试输出和 Preview 证据
+
+代码、数据库与部署事实优先于说明文档。完成一轮实质修改后，应在同一个提交中更新已经过时的说明。
 
 ## 当前已经完成
 
-- Clerk 管理员鉴权已经在 Preview 跑通，服务端直接验证 Session，不依赖 Clerk Middleware。
-- 工作台包含今日、随手记、阅读、事项、课程整理、写作、内容设置与系统页面。
-- 课程资料支持浏览器读取、扫描资料 OCR、课次归档、课程偏好、大纲确认、节点写作、独立审查、局部修订、最终拼装。
-- 审查分数兼容 0—10 与 0—100 两种模型输出；普通局部修订可与无依赖节点并行。
-- 最终检查改为人工确认，最终笔记支持 Markdown 阅读视图、编辑和字数统计。
-- 本轮增加最终笔记的“按要求修改”：只有用户主动提交意见时才调用修订模型。
-- 本轮把原“材料”入口调整为“笔记库”，数据结构明确为“课程 → 课次 → 最终笔记”。
-- 已完成课程会显示“查看笔记”，可从课程或笔记库继续增加课次。
-- 课程原始文件不在网页服务端长期保存；浏览器工作流只保存提取文字和流程状态。
+- Preview 的 Clerk 管理员登录已经跑通；服务端直接验证 Session，不依赖 Clerk Middleware。
+- 工作台包含今日、随手记、阅读、事项、课程整理、笔记库、写作、内容设置和系统页面。
+- 课程资料支持浏览器读取、扫描资料 OCR、课次归档、课程偏好、大纲确认、节点写作、独立审查、局部修订和最终拼装。
+- 审查分数兼容 0—10 与 0—100 两种模型输出；普通局部修订可与没有依赖关系的后续节点并行。
+- 最终自动 AI 审查已经退出正常流程。
+- 最终笔记支持 Markdown 阅读视图、直接编辑、低调字数统计、用户提出明确修改意见、人工确认完成。
+- 只有用户主动提交最终修改意见时，才会调用一次最终修订模型。
+- 原“材料”入口改为“笔记库”，按照“课程 → 课次 → 最终笔记”显示。
+- 已完成课程显示“查看笔记”，并可以继续“加课次”。
+- 完成课程后会清理前端悬浮任务状态，避免继续显示“暂停”。
+- 浏览器工作流不在 Vercel 长期保存原始上传文件。
+- 本地课程 Worker 已接入 24 小时临时目录清理。
 
-## 当前数据边界
+## 当前课程数据结构
 
-- 课程是 \`course_jobs\` 中的一项工作流。
-- 同一课程下可以有多个课次；每个课次拥有独立的大纲、节点、最终笔记和版本。
-- 当前最终笔记仍保存在课程工作流的 \`lesson.finalNote\` 中。
-- 笔记库暂时提供读取、继续修改和增加课次；单课次笔记的软删除、恢复和永久删除尚未实现。
-- 公开主页内容库使用 Supabase content 表；课程最终稿到内容库的浏览器发布按钮尚未接通。
-- Notion 单向镜像和旧博客统一索引尚未接通。
+```text
+一门课程
+  └─ 多个课次
+       ├─ 原始文字与材料映射
+       ├─ 大纲及版本
+       ├─ 节点正文、审查和版本
+       ├─ 最终笔记
+       ├─ 最终笔记版本
+       └─ 用户最终修改要求
+```
+
+当前事实来源：
+
+- 课程：`course_jobs`
+- 课程工作流：`preprocess_result.workflow`
+- 课次最终笔记：`lesson.finalNote`
+- 课次最终笔记版本：`lesson.finalNoteVersions`
+- 笔记库只是读取并展示现有工作流，不复制第二份正文
+
+## 暂停与计费语义
+
+当前“暂停”是软暂停：
+
+- 立即阻止后台领取新任务；
+- 已经发给模型的在途请求可能继续完成并保存结果；
+- 因此暂停后短时间仍可能看到迟到计费；
+- 最终人工确认阶段不会自动调用最终审查模型；
+- 只有用户明确提交修改意见，才会产生最终修订调用。
+
+后续界面仍可进一步区分“等待在途任务收尾”和“已经完全暂停”。
 
 ## 临时文件与容量
 
 - 浏览器导入不会把原始课程文件持久化到 Vercel。
-- OCR 完成后前端会请求删除 OCR 临时任务；OCR 服务自身仍需要保留超时兜底清理。
-- 本地 Course Worker 的临时目录具有安全删除函数。
-- 本轮增加 \`npm run course:worker:cleanup-temp\`，默认删除 24 小时前的本地课程临时目录。
-- \`prepare-local\` 每次启动时也会执行一次过期目录清理。
-- 这属于“每次运行时顺手清理”；真正按时钟运行的本机定时任务尚未配置。
+- OCR 完成后前端会请求删除 OCR 临时任务。
+- OCR 服务端的超时兜底清理仍需在 OCR 项目中单独核验。
+- 本地课程 Worker 临时目录使用安全路径检查，不使用 `rm -rf`。
+- 手动清理命令：
+
+```bash
+npm run course:worker:cleanup-temp
+```
+
+- 默认清理 24 小时前的目录。
+- `prepare-local` 每次启动时也会顺手清理过期目录。
+- 当前没有配置每天按时钟运行的本机清理任务。
+
+## 最新本地验证
+
+用户已经报告本轮以下内容通过：
+
+- 课程最终修改流程相关 Jest；
+- 笔记库相关 Jest；
+- 临时目录清理相关 Jest；
+- 课程界面回归测试；
+- `git diff --check`；
+- `npm run build`。
+
+这些证据属于“本地测试与构建通过”，尚不能替代最新功能的 Preview 部署验收。
+
+## 目前等待 Preview 验收
+
+1. 最终页填写修改意见后，只启动一次按要求修改。
+2. 修改结束后回到人工确认页面。
+3. 完成课次后课程库显示“已完成 / 查看笔记”。
+4. 完成后右下角悬浮任务提示消失。
+5. 笔记库正确展示课程、课次、字数、摘要和状态。
+6. “阅读 / 修改”打开正确课次。
+7. “加课次”进入原课程，而不是新建一门无关课程。
+8. 暂停、恢复不会制造重复任务或状态中断。
+9. 最终确认阶段没有自动模型消费。
 
 ## 接下来按顺序处理
 
-1. Preview 验收本轮：最终修改意见、完成状态、悬浮任务状态、笔记库、增加课次。
-2. 为笔记库增加课次级软删除、恢复与永久删除，并明确版本保留规则。
-3. 打通课程最终稿 → 内容设置台 → Supabase 内容库 → 主页 /content。
-4. 增加可选的 Notion 单向同步，Supabase 继续作为事实来源。
+1. 完成本轮 Preview 验收。
+2. 增加课次级笔记软删除、恢复与永久删除，明确版本保留规则。
+3. 打通课程最终稿 → 内容设置台 → Supabase 内容库 → `/content` 和主页。
+4. 增加可选 Notion 单向同步，Supabase 继续作为事实来源。
 5. 统一旧博客文章与新内容库索引。
-6. 配置 Production Clerk 环境变量并在明确批准后合并 main。
-7. 开发每日 09:00 工作台摘要邮件。
+6. 配置 Production Clerk 环境变量，并在用户明确批准后合并 `main`。
+7. 开发每天 09:00（Asia/Shanghai）的工作台摘要邮件。
+8. 最后再处理约 999 kB First Load JS 的性能债务。
 
-## 本轮建议测试
+## Git 连续性流程
 
-\`\`\`bash
+### 开始工作
+
+```bash
+cd "/Users/curacao/Script/个人主页/my-blog-main" || exit 1
+
+git status --short
+git branch --show-current
+git fetch origin
+git rev-list --left-right --count HEAD...origin/codex/homepage-phase1
+```
+
+只有工作区干净时才拉取：
+
+```bash
+git pull --ff-only origin codex/homepage-phase1
+```
+
+工作区不干净时，不要擅自 stash、reset、rebase、切分支或覆盖文件。
+
+### 结束工作
+
+先运行本轮对应的测试和构建，然后：
+
+```bash
+git restore test-results/junit.xml 2>/dev/null || true
 git diff --check
+git status --short
+```
 
-npx jest --runInBand \
-  __tests__/lib/courseFinalRevision.test.js \
-  __tests__/lib/courseNoteLibrary.test.js \
-  __tests__/lib/courseWorkerTemp.test.js \
-  __tests__/components/CourseLibraryUi.test.js \
-  __tests__/components/CourseTextPackDesk.test.js
+根据真实文件列表精确 `git add`，再检查：
 
-npm run build
-\`\`\`
+```bash
+git diff --cached --check
+git diff --cached --stat
+git status --short
+```
+
+最后：
+
+```bash
+git commit -m "<本轮统一提交说明>"
+git push origin codex/homepage-phase1
+```
+
+以后每次给出测试命令时，应在同一条回复顺手附上完整暂存、提交和 push 指令，不再要求用户额外追问。
 
 ## 重要约束
 
-- 未经明确批准，不合并或直接修改 \`main\`。
+- 未经明确批准，不合并或直接修改 `main`。
 - Preview 与 Production 的 Clerk 环境变量需要分别配置。
-- 任何模型自动修订都必须由流程规则或用户明确意见触发，不能在完成后自行继续消费额度。
+- 不得把任何 Secret 写入仓库或交接文档。
+- 不得把课程最终笔记、版本、转录或数据库记录当缓存清理。
+- 任何最终模型修订必须由用户明确意见触发。

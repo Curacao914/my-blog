@@ -1,69 +1,159 @@
 # AGENTS.md
 
-This repository is `Curacao914/my-blog`. It is a NotionNext-based personal site that is being gradually rebuilt into law-tech.dev: a public personal home, a private workspace, and a stable content/workflow layer.
+This repository is `Curacao914/my-blog`. It is a NotionNext-based personal site being rebuilt into law-tech.dev: a public personal home, a private workspace, and a stable content/workflow layer.
 
-## Read Current State First
+## Start Here
 
-- Before changing code, read `PROJECT_STATUS.md` and `NEXT_ASSISTANT_BRIEF.md`.
-- Treat those files as a navigation aid, not as stronger evidence than Git state, current code, test output, deployed behavior, or database state.
-- If the docs are stale, update them in the same coherent change that makes them stale.
+Before changing code, read these files in order:
 
-## Long-Term Architecture
+1. `AGENTS.md`
+2. `NEXT_ASSISTANT_BRIEF.md`
+3. `docs/LAW_TECH_PROGRESS.md`
+4. `PROJECT_STATUS.md`
+5. The actual files and current test/deployment evidence involved in the request
 
-- Keep NotionNext as the compatibility layer for existing articles, archive, category, tag, search, RSS, and sitemap routes until replacements are proven.
-- The new public home is independent from the NotionNext theme home. It should introduce Curacao, public content, public tools, about, and the private workspace entry.
-- The private workspace lives under `/desk`. It owns daily planning, reading, course work, materials, writing, publishing, settings, and future private workflows.
-- Notion remains one editing source for notes, but the frontend should not depend on Notion's live response shape. Content should move through Notion/Markdown/manual adapters into validated snapshots or database records.
-- Long term, data should flow through capture, normalized objects, workflows, views, and publish controls. Pages are views over data, not isolated data stores.
+These documents are continuity aids. Current Git state, current code, database state, deployed behavior, and explicit test output are stronger evidence.
 
-## Branch, Preview, and Production Safety
+When a coherent change makes these documents stale, update the relevant continuity files in the same commit.
 
-- Do not modify or merge `main` unless the user explicitly requests it.
-- Do not promote a Vercel Preview to production unless the user explicitly asks and the production blast radius has been checked.
-- Do not replace the production Vercel project with a different repository without an explicit migration plan and rollback path.
-- Use `codex/homepage-phase1` for the current reconstruction work unless the user says otherwise.
-- `law-tech.dev` is production. `preview.law-tech.dev` is the current test/Preview domain. Treat them as separate surfaces.
-- Never call a local test a public end-to-end test. Localhost, direct API calls, OpenClaw relay tests, Preview API tests, and real WeChat public tests are distinct evidence classes.
-- Batch related changes, test, build, commit, and push once per coherent phase. Avoid tiny commits that trigger frequent Preview deployments.
+## Repository and Branch Safety
 
-## Evidence Rules
+- Repository: `Curacao914/my-blog`
+- Current development branch: `codex/homepage-phase1`
+- Production branch: `main`
+- Preview domain: `https://preview.law-tech.dev`
+- Production domain: `https://law-tech.dev`
+- Do not modify, merge, force-push, or promote `main` without explicit user approval.
+- Do not promote a Vercel Preview to production without explicit approval and a rollback plan.
+- Treat Preview and Production environment variables, Clerk instances, cookies, and deployment evidence as separate.
+- Batch related changes, run tests and build, then commit and push once per coherent phase.
+- Never force-push unless the reason and consequences are fully understood and explicitly approved.
 
-- Repository code, Git state, deployed HTTP behavior, database state, and explicit test output override chat memory and older docs.
-- Do not say a feature is complete because files exist. Record whether it is actually end-to-end verified, locally integrated, unit-tested, build-only, code-only, or unfinished.
-- Do not claim old functionality is absent until Git history, branches, and relevant paths have been checked.
-- Do not silently remove large areas of code. If deletion is needed, explain the replacement and migration path first.
-- Do not use fallback, mock, sample, demo, or hardcoded example data to pretend a workflow succeeded.
-- If documentation conflicts with code or current tests, update the documentation or state the conflict clearly.
+## Git Synchronization Rules
+
+At the beginning of a new coding session:
+
+```bash
+cd "/Users/curacao/Script/个人主页/my-blog-main" || exit 1
+git status --short
+git branch --show-current
+git fetch origin
+git rev-list --left-right --count HEAD...origin/codex/homepage-phase1
+```
+
+Only pull when the worktree is clean:
+
+```bash
+git pull --ff-only origin codex/homepage-phase1
+```
+
+If the worktree is dirty, do not automatically stash, reset, discard, switch, rebase, or pull. Explain the state first.
+
+Before handing work back to the user, provide the complete sequence in one response:
+
+1. validation commands;
+2. `git diff --check` and `git status --short`;
+3. exact staging commands based on real changed files;
+4. commit command;
+5. push command;
+6. Preview verification targets.
+
+The user should not need a second turn merely to ask for push instructions.
+
+## Product Architecture
+
+- Keep NotionNext as the compatibility layer for existing article, archive, category, tag, search, RSS, and sitemap routes until replacements are proven.
+- The new public home is independent from the NotionNext theme home.
+- The private workspace lives under `/desk`.
+- Supabase is the intended source of truth for workflow state, permissions, versions, publishing, and new structured content.
+- Notion may remain an editing source or optional mirror, but the frontend should not depend on Notion's live response shape.
+- Pages are views over normalized data, not isolated data stores.
+
+## Current Course Model
+
+The course system is organized as:
+
+```text
+course job
+  └─ lessons
+       ├─ source material and transcript
+       ├─ outline
+       ├─ writing/review nodes
+       ├─ final note
+       └─ note versions
+```
+
+Important current behavior:
+
+- Course processing uses a durable server workflow. The browser is a status/control surface.
+- Do not reintroduce high-frequency browser polling.
+- Closing the browser should not stop durable processing.
+- One writer lane, up to two reviewer lanes, and one revision lane remain the default.
+- Review scores accept model output on either a 0–10 or 0–100 scale and are normalized to 0–100.
+- Final automatic AI review has been removed from the normal path.
+- After assembly, the user reads the rendered Markdown, edits directly, submits a specific revision request, or approves completion.
+- A final revision model call may run only after explicit user feedback.
+- Completed notes are displayed through the note library using the hierarchy `course → lesson → final note`.
+- `lesson.finalNote` remains the current source of truth for a lesson's completed note.
+- Do not create a second independent copy of a course note unless implementing the explicit publish/sync pipeline.
+- Pause is currently a soft pause: it prevents new task claims, while already in-flight requests may finish and persist results.
 
 ## Auth and Data Safety
 
-- Frontend changes must not alter data semantics. Do not change `contentType`, visibility, access, schedule status, importance, urgency, pinning, owner, or source behavior just to make a UI easier.
-- Clerk must not be placed back into Edge middleware casually. It previously caused Vercel `MIDDLEWARE_INVOCATION_FAILED`.
-- Hosted `/desk` pages and private APIs must fail closed when Clerk or the admin allowlist is missing. Local fallback is only for deliberate non-Vercel development.
-- Page-level or API-level auth must be verified as real session verification, not just cookie presence, before being described as secure.
-- Supabase service keys, Clerk secrets, AI API keys, WeChat tokens, Resend keys, and cron tokens must never be committed or printed in docs.
-- All external capture endpoints must return success only after the intended write has succeeded.
+- Clerk must not be moved back into Edge middleware casually. It previously caused `MIDDLEWARE_INVOCATION_FAILED`.
+- Hosted `/desk` pages and private APIs must fail closed when Clerk or the admin allowlist is missing.
+- Real Clerk session verification is required; cookie presence is not sufficient.
+- Local fallback is only for deliberate non-Vercel development.
+- Never commit or print Supabase service keys, Clerk secrets, AI keys, WeChat tokens, Resend keys, or cron tokens.
+- External capture endpoints must return success only after the intended write succeeds.
+- Frontend changes must not silently change visibility, ownership, schedule, access, pinning, importance, urgency, or publication semantics.
 
-## Resource and Workflow Safety
+## Resource and File Safety
 
-- Do not reintroduce browser-driven high-frequency course polling. The durable workflow is the production execution path; the page is a status and control surface.
-- A course step must be idempotent, bounded, resumable, and persisted before the next step starts.
-- Keep one writer lane, up to two reviewer lanes, and one revision lane unless the user explicitly approves a new concurrency model.
-- Do not put large drafts, transcripts, or source files into workflow metadata or hook payloads. Persist them in the existing data layer and pass identifiers.
-- The user has disabled `rm -rf`. Use the repository's safe clean script or a path-checked Node cleanup instead of asking them to re-enable it.
+- The user has disabled `rm -rf`.
+- Use path-checked Node cleanup or repository cleanup scripts.
+- Browser course imports do not persist original raw files in Vercel.
+- Local course-worker temporary directories are cleaned with:
+
+```bash
+npm run course:worker:cleanup-temp
+```
+
+- The default local temp TTL is 24 hours.
+- `prepare-local` also performs opportunistic expired-temp cleanup.
+- Do not delete final notes, versions, transcripts, or source records as if they were cache.
+- Lesson-level deletion should be implemented as soft delete and recovery before permanent deletion.
+- OCR service-side expiry cleanup remains a separate system that must be verified independently.
 
 ## Visual Direction
 
-- Preserve the current warm white, pale blue-green, deep ink green, serif typography, large radius, and soft shadow direction unless the user explicitly approves a new direction.
-- The desired feeling is restrained, personal, and static light glass. Do not turn it into a complex animated liquid-glass demo.
-- Avoid product copy that reads like implementation notes, chain-of-thought, architecture explanation, or AI-generated filler.
-- The private workspace should be practical first: clear scanning, efficient repeated use, and compact but graceful controls.
-- Do not introduce a large UI library for the current frontend refinement unless the user approves it.
+- Preserve warm white, pale blue-green, deep ink green, serif typography, large radius, and soft shadow.
+- The desired feeling is restrained, personal, practical, and lightly glass-like.
+- Avoid large animated liquid-glass effects.
+- Keep repeated work compact, but never hide critical text or controls.
+- Prefer progressive disclosure, focus mode, drawers, details, and readable scrolling over tiny fixed boxes.
+- Avoid implementation-note copy, architecture exposition, and generic AI filler in product UI.
+- Do not add a large UI library without explicit approval.
 
-## Current Phase
+## Evidence and Completion Rules
 
-- The course pipeline now uses a durable server workflow and must continue when the browser closes. Deployed end-to-end verification is still required before calling this complete.
-- Notion content uses a six-hour ISR default plus an administrator-only manual refresh button in the header.
-- Today uses `Asia/Shanghai` calendar dates. The main Today view contains today and overdue items; near-future items belong in the subdued `稍后` list.
-- The immediate next phase is Preview verification, resource-usage observation, and the daily 09:00 Asia/Shanghai schedule-and-reading email digest.
-- First Load JS is still large and should be optimized only after the current workflow/auth/refresh phase is verified.
+- Do not claim a feature is complete merely because files exist.
+- Use explicit labels such as code-only, unit-tested, build-passed, Preview-verified, or Production-verified.
+- Do not call localhost testing a public end-to-end test.
+- Do not silently remove large areas of code.
+- Do not use mock, fallback, demo, or hardcoded data to pretend a workflow succeeded.
+- Restore `test-results/junit.xml` before commit if Jest changes it.
+
+## Current Next Work
+
+Work should proceed in this order unless the user changes priorities:
+
+1. Preview verification of final revision requests, completion state, task indicator cleanup, note library, and adding lessons.
+2. Lesson-note soft deletion, recovery, and permanent deletion rules.
+3. Course final note → publishing settings → Supabase content records → `/content` and homepage.
+4. Optional one-way Notion mirror, while Supabase remains the source of truth.
+5. Unified index for legacy NotionNext articles and new content.
+6. Production Clerk variables and an explicitly approved merge to `main`.
+7. Daily 09:00 Asia/Shanghai workspace digest email.
+
+Performance optimization of large shared First Load JS is real debt, but it should not displace correctness, workflow durability, or publication continuity.
