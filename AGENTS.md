@@ -93,7 +93,9 @@ Important current behavior:
 - Final automatic AI review has been removed from the normal path.
 - After assembly, the user reads the rendered Markdown, edits directly, submits a specific revision request, or approves completion.
 - A final revision model call may run only after explicit user feedback.
-- Completed notes are displayed through the note library using the hierarchy `course → lesson → final note`.
+- Completed notes are displayed through the note library using the hierarchy `遇事不决 → course → lesson → final note`.
+- A note card opens the independent reader under `/desk/materials/[jobId]/[lessonKey]`; reading must not route through the course-production workbench.
+- Editing, publishing, trash, restore, and permanent deletion remain secondary actions behind progressive disclosure.
 - `lesson.finalNote` remains the current source of truth for a lesson's completed note.
 - Do not create a second independent copy of a course note unless implementing the explicit publish/sync pipeline.
 - Pause is currently a soft pause: it prevents new task claims, while already in-flight requests may finish and persist results.
@@ -148,13 +150,12 @@ npm run course:worker:cleanup-temp
 
 Work should proceed in this order unless the user changes priorities:
 
-1. Preview verification of final revision requests, completion state, task indicator cleanup, note library, and adding lessons.
-2. Lesson-note soft deletion, recovery, and permanent deletion rules.
-3. Course final note → publishing settings → Supabase content records → `/content` and homepage.
+1. Run targeted Jest, production build, and Preview verification for the publishing core and independent course-note reader.
+2. Verify Vercel Git integration so pushes to `codex/homepage-phase1` create the expected Preview instead of redeploying an older commit.
+3. Broader Notion-source normalization and unified homepage/search/RSS exposure.
 4. Optional one-way Notion mirror, while Supabase remains the source of truth.
-5. Unified index for legacy NotionNext articles and new content.
-6. Production Clerk variables and an explicitly approved merge to `main`.
-7. Daily 09:00 Asia/Shanghai workspace digest email.
+5. Production Clerk variables and an explicitly approved merge to `main`.
+6. Daily 09:00 Asia/Shanghai workspace digest email.
 
 Performance optimization of large shared First Load JS is real debt, but it should not displace correctness, workflow durability, or publication continuity.
 
@@ -175,3 +176,19 @@ Performance optimization of large shared First Load JS is real debt, but it shou
 - Folder depth may remain technically recursive, but the product UI should encourage one collection layer rather than arbitrary nesting.
 - New course-note publishing writes to Supabase content tables; legacy live JSON / Notion-derived snapshots remain readable and must be merged rather than hidden.
 - A database item with the same slug takes precedence over the legacy snapshot, while unrelated legacy content remains visible.
+
+
+## Phase Update: Independent Course Note Reader
+
+- `/desk/materials` is a hierarchy and discovery surface, not the reading surface itself.
+- Courses are collapsed by default and may be searched or sorted before opening their ordered lessons.
+- Clicking an available note opens `/desk/materials/[jobId]/[lessonKey]`.
+- The reader provides course breadcrumbs, lesson navigation, previous/next links, a Markdown article view, and a local table of contents.
+- Workflow state, model execution, outline approval, and reviewer controls do not appear in the reader.
+- Editing, publishing, and deletion are secondary actions under `管理`.
+- The reader uses `lesson.finalNote`; it does not create a duplicate note store.
+
+
+## Course publication source compatibility
+
+The deployed `content_items_source_check` accepts `course-worker`, not `course-workflow`. Browser course publication therefore persists `source = course-worker` and uses the namespaced `source_id = <jobId>:<lessonKey>` to distinguish workflow notes. Reads remain backward-compatible with both labels so any short-lived test records are still discoverable. Do not change the write label without an explicit Supabase constraint migration.

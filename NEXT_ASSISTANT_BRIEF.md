@@ -132,3 +132,13 @@ The latest patch adds a recoverable lesson-note trash flow. Soft deletion retain
 ## Current Phase Override: Course Publishing Core
 
 The current large phase connects completed course notes to the publishing desk and Supabase content records. Course notes default to `遇事不决 → 课程名 → 单课笔记`. The phrase `遇事不决` is intentionally the user's law-note category (“遇事不决，北大法学”), not a miscellaneous category. The public content index must merge database content with legacy live JSON / Notion-derived snapshots instead of replacing one source with the other.
+
+
+## Current Phase Override: Independent Note Reading
+
+The newest phase separates reading from production. `/desk/materials` now presents `遇事不决 → 课程 → 课次` with collapsed courses, search and sorting. An available lesson opens `/desk/materials/[jobId]/[lessonKey]`, where the user gets a dedicated Markdown reader, course directory, previous/next lesson navigation and a table of contents. Editing, publishing and deletion stay under a secondary `管理` menu. Full local Jest/build and deployed Preview verification are still required for this phase.
+
+
+## Course publication source compatibility
+
+The deployed `content_items_source_check` accepts `course-worker`, not `course-workflow`. Browser course publication therefore persists `source = course-worker` and uses the namespaced `source_id = <jobId>:<lessonKey>` to distinguish workflow notes. Reads remain backward-compatible with both labels so any short-lived test records are still discoverable. Do not change the write label without an explicit Supabase constraint migration.

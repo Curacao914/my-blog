@@ -261,3 +261,26 @@ Scope included in this phase:
 - default course-note hierarchy `遇事不决 → 课程名 → 单课笔记`.
 
 The next phase after verification is broader Notion-source normalization and unified homepage/search/RSS exposure.
+
+
+## Current Phase: Independent Course Note Reader
+
+Status: code integrated in the handoff package; syntax/model contract checks passed in the review sandbox. Full dependency-backed Jest, production build and Preview verification remain required.
+
+Implemented scope:
+
+- `/desk/materials` uses the hierarchy `遇事不决 → 课程 → 课次`;
+- courses are collapsed by default;
+- search covers course, teacher, lesson title and note summary;
+- sorting supports recent update and course name;
+- clicking an available note opens `/desk/materials/[jobId]/[lessonKey]` rather than `/desk/courses`;
+- the reader contains course breadcrumbs, an ordered lesson directory, Markdown rendering, a table of contents and previous/next lesson navigation;
+- edit, publish and trash actions are hidden under `管理`;
+- trash, restore and guarded permanent deletion remain available without duplicating `lesson.finalNote`.
+
+Preview acceptance must confirm that the new dynamic page and `/api/courses/notes/[id]` are protected by Clerk admin authorization and can read the intended owner's note only.
+
+
+## Course publication source compatibility
+
+The deployed `content_items_source_check` accepts `course-worker`, not `course-workflow`. Browser course publication therefore persists `source = course-worker` and uses the namespaced `source_id = <jobId>:<lessonKey>` to distinguish workflow notes. Reads remain backward-compatible with both labels so any short-lived test records are still discoverable. Do not change the write label without an explicit Supabase constraint migration.

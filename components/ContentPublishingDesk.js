@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 
 import { formatCourseApiError, requestCourseJson } from '@/lib/course/clientApi'
+import { isCourseContentSource } from '@/lib/contentPublishingModel'
 
 const emptyForm = {
   title: '',
@@ -27,9 +28,10 @@ function tagsText(value) {
 }
 
 function sourceLink(item) {
-  if (item.source !== 'course-workflow' || !item.sourceId) return ''
+  if (!isCourseContentSource(item.source) || !item.sourceId) return ''
   const [jobId, lessonKey] = String(item.sourceId).split(':')
-  if (!jobId || !lessonKey) return ''
+  // Local course-worker imports use numeric lesson ids and have no browser workflow to reopen.
+  if (!jobId || !lessonKey || /^\d+$/.test(lessonKey)) return ''
   return `/desk/publish?job=${encodeURIComponent(jobId)}&lesson=${encodeURIComponent(lessonKey)}`
 }
 

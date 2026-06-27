@@ -1,4 +1,7 @@
-import { buildCoursePublicationModel } from '@/lib/contentPublishingModel'
+import {
+  buildCoursePublicationModel,
+  isCourseContentSource
+} from '@/lib/contentPublishingModel'
 
 describe('course publication defaults', () => {
   it('uses 遇事不决 as the note category and course name as the collection', () => {
@@ -16,7 +19,10 @@ describe('course publication defaults', () => {
     expect(model.settings.category).toBe('遇事不决')
     expect(model.settings.collection).toBe('经济法')
     expect(model.settings.folderPath).toEqual(['遇事不决', '经济法'])
+    expect(model.source).toBe('course-worker')
     expect(model.sourceId).toBe('job-1:lesson-1')
+    expect(isCourseContentSource('course-worker')).toBe(true)
+    expect(isCourseContentSource('course-workflow')).toBe(true)
     expect(model.settings.accessMode).toBe('private')
   })
 

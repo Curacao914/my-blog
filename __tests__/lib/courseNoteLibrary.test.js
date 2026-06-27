@@ -1,4 +1,4 @@
-import { buildCourseNoteLibraryEntry } from '@/lib/course/noteLibrary'
+import { buildCourseNoteLibraryEntry, buildCourseNoteReaderEntry } from '@/lib/course/noteLibrary'
 
 describe('course note library hierarchy', () => {
   it('maps ordered lesson notes without returning full markdown', () => {
@@ -41,4 +41,24 @@ describe('course note library hierarchy', () => {
       trashed: true
     })
   })
+
+  it('builds an independent reader with ordered navigation and no trashed notes', () => {
+    const reader = buildCourseNoteReaderEntry(
+      { id: 'job-1', course_name: '物权法与债权法', teacher: 'XJ' },
+      {
+        lessons: [
+          { key: 'lesson-3', order: 3, title: '第三课', finalNote: { markdown: '# 第三课\n\n正文三。', updatedAt: '2026-06-27T03:00:00.000Z' } },
+          { key: 'lesson-1', order: 1, title: '第一课', finalNote: { markdown: '# 第一课\n\n正文一。', updatedAt: '2026-06-27T01:00:00.000Z' } },
+          { key: 'lesson-2', order: 2, title: '第二课', finalNote: { markdown: '# 第二课\n\n正文二。' }, noteDeletion: { deletedAt: '2026-06-27T02:00:00.000Z' } }
+        ]
+      },
+      'lesson-3'
+    )
+
+    expect(reader.course.lessons.map(item => item.key)).toEqual(['lesson-1', 'lesson-3'])
+    expect(reader.lesson).toMatchObject({ key: 'lesson-3', markdown: '# 第三课\n\n正文三。' })
+    expect(reader.navigation.previous).toMatchObject({ key: 'lesson-1' })
+    expect(reader.navigation.next).toBeNull()
+  })
+
 })

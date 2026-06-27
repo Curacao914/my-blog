@@ -201,3 +201,21 @@ git push origin codex/homepage-phase1
 - 同 slug 时数据库版本优先，但不会隐藏其他旧内容。
 
 分类语义特别说明：`遇事不决` 才是课程和法律笔记栏目，来自“遇事不决，北大法学”；课程名作为合集，单课笔记作为内容。
+
+
+## 当前追加：课程笔记独立阅读器
+
+状态：代码已进入交接包；审查环境完成语法与数据模型契约检查。仍需在本地安装依赖后运行 Jest、`npm run build`，并在最新 Preview 验收。
+
+- 笔记库按照“遇事不决 → 课程 → 课次”显示，课程默认收起。
+- 支持按课程、教师、课次和摘要搜索，并按最近更新或课程名称排序。
+- 有最终稿的课次卡片直接进入 `/desk/materials/[jobId]/[lessonKey]`，不再跳回课程整理。
+- 独立阅读页包含课程面包屑、课程目录、Markdown 正文、本文目录、上一课与下一课。
+- 阅读页不展示模型执行、大纲审批、节点审查等生产信息。
+- 编辑原笔记、转入发布和移入回收站收进“管理”菜单，阅读是主行为。
+- 阅读器仍读取 `lesson.finalNote`，没有复制第二份正文。
+
+
+## Course publication source compatibility
+
+The deployed `content_items_source_check` accepts `course-worker`, not `course-workflow`. Browser course publication therefore persists `source = course-worker` and uses the namespaced `source_id = <jobId>:<lessonKey>` to distinguish workflow notes. Reads remain backward-compatible with both labels so any short-lived test records are still discoverable. Do not change the write label without an explicit Supabase constraint migration.
