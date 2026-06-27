@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { publicNav } from '@/lib/domain/navigation'
 import { LawTechIcon } from '@/components/LawTechIcons'
+import { AdminContentSync } from '@/components/law-tech/AdminContentSync'
 
 export function PublicHeader({ active = '' }) {
   return (
@@ -21,6 +22,7 @@ export function PublicHeader({ active = '' }) {
             {item.label}
           </Link>
         ))}
+        <AdminContentSync />
         <Link className='public-desk-link' href='/desk'><LawTechIcon name='spark' size={15} />工作台</Link>
       </nav>
     </header>

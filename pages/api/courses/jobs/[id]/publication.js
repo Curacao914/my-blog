@@ -5,6 +5,7 @@ import {
   withdrawManagedContent
 } from '@/lib/contentManagement'
 import { buildCoursePublicationModel } from '@/lib/contentPublishingModel'
+import { removeAlgoliaContent, upsertAlgoliaContent } from '@/lib/content/algoliaSearch'
 import { revalidatePublicContentSurfaces } from '@/lib/content/revalidation'
 import {
   applyCourseWorkflowAction,
@@ -90,6 +91,37 @@ export default async function handler(req, res) {
         stale: false
       }
     })
+
+    if (action === 'withdraw') {
+      await removeAlgoliaContent(publication).catch(error => console.warn('[course publication] Algolia remove failed', error))
+    } else {
+      const settings = publication.settings || {}
+      const searchItem = {
+        ...publication,
+        access: {
+          mode: settings.accessMode || 'public',
+          allowIndexing: settings.allowIndexing !== false
+        },
+        display: {
+          category: settings.category || '',
+          tags: settings.tags || [],
+          pinned: Boolean(settings.pinned),
+          showInRecent: settings.showInRecent !== false
+        },
+        category: settings.category || '',
+        tags: settings.tags || [],
+        folder: { path: settings.folderPath || [settings.category || '未归档', settings.collection || '内容'] }
+      }
+      if (
+        publication.status === 'published' &&
+        searchItem.access.mode === 'public' &&
+        searchItem.access.allowIndexing
+      ) {
+        await upsertAlgoliaContent(searchItem).catch(error => console.warn('[course publication] Algolia update failed', error))
+      } else {
+        await removeAlgoliaContent(searchItem).catch(error => console.warn('[course publication] Algolia remove failed', error))
+      }
+    }
 
     await revalidatePublicContentSurfaces(res, publication.slug, 'course publication')
     return res.status(200).json({

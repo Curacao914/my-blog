@@ -332,3 +332,19 @@ Implemented scope:
 - shared public cards preserve a real cover when available and generate a deterministic cover otherwise.
 
 The next phase after verification is optional one-way Notion mirroring or broader homepage/content polish based on observed Preview behavior. Supabase remains the source of truth for new workbench publications.
+
+## Current Phase: Site-wide Surface Audit and Product Consolidation
+
+Status: implementation prepared; static syntax parsing and `git diff --check` pass. Local Jest, `npm run build`, and Preview traversal remain required.
+
+Main changes:
+
+- one documented route map in `docs/SITE_SURFACE_AUDIT.md`;
+- one shared public browsing model for content, archive, category, tag, and search;
+- one workbench shell with functional Tasks, Writing, and System surfaces;
+- administrator-controlled Notion/content synchronization with Notion body extraction for full-text search;
+- progressive Algolia full-text search with local fallback;
+- explicit shutdown of the unfinished OAuth exchange and removal of token-display UI;
+- legacy routes redirected instead of maintaining parallel themes and workspaces.
+
+The next step is a complete Preview walkthrough across public, workbench, auth, error, mobile, empty, and failure states. Do not begin another large feature before this traversal is recorded.

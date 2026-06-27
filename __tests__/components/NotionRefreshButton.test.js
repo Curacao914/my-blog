@@ -32,7 +32,7 @@ describe('NotionRefreshButton', () => {
     fireEvent.click(button)
 
     await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(
-      '/api/content/revalidate',
+      '/api/content/sync',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ path: '/zh-CN/article/test?from=nav' })

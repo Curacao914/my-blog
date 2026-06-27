@@ -256,3 +256,18 @@ The deployed `content_items_source_check` accepts `course-worker`, not `course-w
 - Sitemap 仅加入公开、允许 Sitemap 且未禁止索引的新内容；Notion 原有文章路径继续保留。
 - 发布和撤回会同时刷新首页、内容库、搜索页与具体内容页，避免新内容只在详情页可见。
 - 本轮不复制 Notion 正文，不改变新内容以 Supabase 为事实来源的原则。
+
+## 当前追加：整站页面审计与产品收口
+
+状态：代码已在本轮工作区完成；`git diff --check` 与变更文件 TypeScript/JSX 解析通过。仍需本地 Jest、生产构建和 Preview 全路由巡检。
+
+- 新增 `docs/SITE_SURFACE_AUDIT.md`，记录公开页、工作台、鉴权页、错误页与遗留路由的定位和边界。
+- 首页最近内容改为“一张主卡 + 四张次卡”，避免不同摘要长度在三列等宽布局中产生松散和失衡。
+- 归档、栏目和标签页面改为读取统一公开内容索引，并进入新版 law-tech 公共视觉系统。
+- 旧分页、旧搜索分页和旧 Dashboard 路由转入当前内容库、搜索与工作台，不再维护第二套浏览逻辑。
+- 404、500、通用错误、Notion OAuth 结果和暂不可用的分享页统一为正式状态页面。
+- 未完成的 Notion OAuth 交换入口已明确停用，不再交换、记录或通过 URL 传递 Client Secret 与 Token。
+- `/desk/tasks` 直接使用真实事项数据；`/desk/writing` 汇总随手记、发布草稿与公开内容；`/desk/system` 展示数据库健康、权限边界和内容同步。
+- 管理员同步会清除 Notion 与统一内容索引缓存、重新拉取内容、提取 Notion 正文、刷新公开目录与详情页，并在配置存在时同步 Algolia；只有 Notion 成功读取后才清理失效的旧 Notion 索引。
+- `/search` 在 Algolia 可用时检索正文，在不可用时继续使用现有标题、摘要、栏目、合集、课程和标签索引。
+- 私密、密码、禁止索引和撤回内容不会进入 Algolia；Notion 正文与工作台 Markdown 只在管理员索引流程中读取。

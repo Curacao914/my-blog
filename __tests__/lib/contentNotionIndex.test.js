@@ -14,7 +14,8 @@ describe('Notion content index compatibility', () => {
         tags: ['经济法'],
         publishDate: Date.parse('2026-06-01T00:00:00Z')
       },
-      { slug: 'draft', type: 'Post', status: 'Invisible', title: '草稿' }
+      { slug: 'draft', type: 'Post', status: 'Invisible', title: '草稿' },
+      { slug: 'locked', type: 'Post', status: 'Published', title: '密码文章', password: 'secret' }
     ])
 
     expect(items).toHaveLength(1)

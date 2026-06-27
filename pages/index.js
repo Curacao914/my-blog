@@ -28,6 +28,9 @@ function categorySummary(items = []) {
 }
 
 export default function HomePage({ recentContent = [], contentCount = 0, categories = {} }) {
+  const featuredContent = recentContent[0] || null
+  const secondaryContent = recentContent.slice(1, 5)
+
   return <>
     <Head>
       <title>Curacao · law-tech.dev</title>
@@ -80,7 +83,7 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
             <div>
               <span className='eyebrow'>Recently published</span>
               <h2 id='home-recent-title'>最近内容</h2>
-              <p>来自 Notion 与工作台的公开内容，统一进入同一套目录与搜索。</p>
+              <p>文章、课程笔记与项目，统一进入同一套目录与搜索。</p>
             </div>
             <div className='public-home-content-actions'>
               <span>{contentCount} 条公开内容</span>
@@ -89,8 +92,11 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
             </div>
           </header>
 
-          {recentContent.length ? <div className='public-home-content-grid'>
-            {recentContent.map(item => <PublicContentCard compact item={item} key={item.id || `${item.source}:${item.slug}`} />)}
+          {featuredContent ? <div className={`public-home-content-showcase ${secondaryContent.length ? '' : 'is-single'}`}>
+            <PublicContentCard featured item={featuredContent} key={featuredContent.id || `${featuredContent.source}:${featuredContent.slug}`} />
+            {secondaryContent.length ? <div className={`public-home-content-side ${secondaryContent.length < 3 ? 'is-sparse' : ''} ${secondaryContent.length === 1 ? 'has-one' : ''}`}>
+              {secondaryContent.map(item => <PublicContentCard compact item={item} key={item.id || `${item.source}:${item.slug}`} />)}
+            </div> : null}
           </div> : <div className='public-home-content-empty'>公开内容整理中。</div>}
         </section>
 
@@ -100,7 +106,7 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
             <h2>课程、阅读与写作，各自归档，也彼此相连。</h2>
             <div className='public-home-category-list'>
               {['遇事不决', '法与算法', '法律之上', '秘密花园'].map(category => (
-                <Link href={`/content?category=${encodeURIComponent(category)}`} key={category}>
+                <Link href={`/category/${encodeURIComponent(category)}`} key={category}>
                   <span>{category}</span><small>{categories[category] || 0}</small>
                 </Link>
               ))}
@@ -144,7 +150,11 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
           font-size: 11px;
           backdrop-filter: blur(14px);
         }
-        .public-home-content-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
+        .public-home-content-showcase { display:grid; grid-template-columns:minmax(0,1.12fr) minmax(0,1.45fr); gap:14px; align-items:stretch; }
+        .public-home-content-showcase.is-single { grid-template-columns:1fr; }
+        .public-home-content-side { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+        .public-home-content-side.is-sparse { grid-template-columns:1fr; }
+        .public-home-content-side.has-one :global(.public-content-card) { height:100%; }
         .public-home-content-empty { border: 1px dashed rgba(23,35,29,.12); border-radius: 24px; padding: 40px; color: var(--quiet); text-align: center; }
         .public-home-map { align-items: stretch; }
         .public-home-category-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 24px; }
@@ -153,12 +163,13 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
         .public-home-signature { display: flex; flex-direction: column; justify-content: space-between; gap: 20px; }
         .public-home-signature :global(svg) { max-width: 250px; color: rgba(25,59,49,.74); }
         @media (max-width: 980px) {
-          .public-home-content-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+          .public-home-content-showcase { grid-template-columns:1fr; }
+          .public-home-content-side { grid-template-columns:repeat(2,minmax(0,1fr)); }
         }
         @media (max-width: 700px) {
           .public-home-content > header { align-items: flex-start; flex-direction: column; }
           .public-home-content-actions { justify-content: flex-start; }
-          .public-home-content-grid { grid-template-columns: 1fr; }
+          .public-home-content-side { grid-template-columns:1fr; }
         }
       `}</style>
     </main>
@@ -172,7 +183,7 @@ export async function getStaticProps() {
 
   return {
     props: {
-      recentContent: selectRecentPublicContent(items, 6),
+      recentContent: selectRecentPublicContent(items, 5),
       contentCount: items.length,
       categories: categorySummary(items)
     },

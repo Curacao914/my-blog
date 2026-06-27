@@ -10,6 +10,7 @@ import { loadPublicContentIndex } from '@/lib/content/publicIndex'
 import {
   filterPublicContent,
   publicContentCategory,
+  publicContentHref,
   publicContentTags
 } from '@/lib/content/publicContent'
 
@@ -21,22 +22,73 @@ const typeLabels = {
   page: '页面'
 }
 
+function mergeResults(remote = [], local = []) {
+  const merged = new Map()
+  ;[...remote, ...local].forEach(item => {
+    const key = publicContentHref(item) || `${item.source}:${item.id || item.slug}`
+    if (!merged.has(key)) merged.set(key, item)
+  })
+  return [...merged.values()]
+}
+
 export default function PublicSearchPage({ items = [] }) {
   const router = useRouter()
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('全部')
   const [type, setType] = useState('全部')
+  const [remote, setRemote] = useState([])
+  const [searchState, setSearchState] = useState('idle')
+  const [searchMeta, setSearchMeta] = useState({ available: false, total: 0, processingTimeMS: 0 })
 
   useEffect(() => {
     if (!router.isReady) return
-    const value = String(router.query.q || router.query.s || '')
-    setQuery(value)
+    setQuery(String(router.query.q || router.query.s || ''))
   }, [router.isReady, router.query.q, router.query.s])
+
+  useEffect(() => {
+    const keyword = query.trim()
+    if (keyword.length < 2) {
+      setRemote([])
+      setSearchState('idle')
+      setSearchMeta({ available: false, total: 0, processingTimeMS: 0 })
+      return undefined
+    }
+    const controller = new AbortController()
+    const timer = window.setTimeout(async () => {
+      setRemote([])
+      setSearchState('loading')
+      try {
+        const params = new URLSearchParams({ q: keyword, hitsPerPage: '36' })
+        if (category !== '全部') params.set('category', category)
+        if (type !== '全部') params.set('type', type)
+        const response = await fetch(`/api/search?${params.toString()}`, { signal: controller.signal })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data?.error || '搜索失败')
+        setRemote(data.available ? data.hits || [] : [])
+        setSearchMeta({
+          available: Boolean(data.available),
+          total: Number(data.total || 0),
+          processingTimeMS: Number(data.processingTimeMS || 0)
+        })
+        setSearchState(data.available ? 'fulltext' : 'local')
+      } catch (error) {
+        if (error?.name === 'AbortError') return
+        setRemote([])
+        setSearchState('local')
+        setSearchMeta({ available: false, total: 0, processingTimeMS: 0 })
+      }
+    }, 260)
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [query, category, type])
 
   const categories = useMemo(() => [...new Set(items.map(publicContentCategory))].sort((a, b) => a.localeCompare(b, 'zh-CN')), [items])
   const types = useMemo(() => [...new Set(items.map(item => item.type).filter(Boolean))], [items])
   const tags = useMemo(() => [...new Set(items.flatMap(publicContentTags))].sort((a, b) => a.localeCompare(b, 'zh-CN')), [items])
-  const results = useMemo(() => filterPublicContent(items, { query, category, type }), [items, query, category, type])
+  const localResults = useMemo(() => filterPublicContent(items, { query, category, type }), [items, query, category, type])
+  const results = useMemo(() => searchMeta.available ? mergeResults(remote, localResults) : localResults, [remote, localResults, searchMeta.available])
 
   function submit(event) {
     event.preventDefault()
@@ -48,8 +100,17 @@ export default function PublicSearchPage({ items = [] }) {
     setQuery('')
     setCategory('全部')
     setType('全部')
+    setRemote([])
     void router.replace('/search', undefined, { shallow: true })
   }
+
+  const searchLabel = searchState === 'loading'
+    ? '正在检索正文'
+    : searchMeta.available
+      ? `全文搜索 · ${searchMeta.total} 条匹配`
+      : query.trim()
+        ? '标题与标签搜索'
+        : '输入关键词开始搜索'
 
   return <>
     <Head>
@@ -65,20 +126,21 @@ export default function PublicSearchPage({ items = [] }) {
         <PublicHeader active='search' />
 
         <section className='public-search-hero'>
-          <span className='eyebrow'>Unified search</span>
+          <span className='eyebrow'>Search the library</span>
           <h1>搜索</h1>
-          <p>同时检索 Notion 文章与工作台发布内容的标题、摘要、栏目、合集、课程和标签。</p>
+          <p>标题、摘要、栏目与标签会即时筛选；全文索引可用时，也会检索文章与笔记正文。</p>
           <form onSubmit={submit}>
             <input
               autoComplete='off'
               autoFocus
               onChange={event => setQuery(event.target.value)}
-              placeholder='输入标题、课程、栏目或标签'
+              placeholder='输入文章中的一句话、课程、栏目或标签'
               type='search'
               value={query}
             />
             <button type='submit'>搜索</button>
           </form>
+          <small className={`public-search-mode is-${searchState}`}>{searchLabel}{searchMeta.processingTimeMS ? ` · ${searchMeta.processingTimeMS}ms` : ''}</small>
         </section>
 
         <section className='public-search-workspace'>
@@ -100,7 +162,7 @@ export default function PublicSearchPage({ items = [] }) {
             <details>
               <summary>常用标签 <small>{tags.length}</small></summary>
               <div className='tag-cloud'>
-                {tags.slice(0, 24).map(tag => <button type='button' key={tag} onClick={() => setQuery(tag)}>{tag}</button>)}
+                {tags.slice(0, 30).map(tag => <button type='button' key={tag} onClick={() => setQuery(tag)}>{tag}</button>)}
               </div>
             </details>
             <div className='public-search-signature' aria-hidden='true'><DynamicSignature compact /></div>
@@ -123,12 +185,14 @@ export default function PublicSearchPage({ items = [] }) {
       </div>
 
       <style jsx>{`
-        .public-search-hero { max-width: 820px; padding: 72px 0 34px; }
+        .public-search-hero { max-width: 820px; padding: 68px 0 32px; }
         .public-search-hero h1 { margin: 10px 0 12px; font-family: var(--display-serif); font-size: clamp(48px,7vw,78px); font-weight: 600; letter-spacing: -.055em; }
         .public-search-hero p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.8; }
-        .public-search-hero form { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 9px; margin-top: 26px; border: 1px solid rgba(255,255,255,.78); border-radius: 20px; padding: 8px; background: rgba(255,255,255,.58); box-shadow: 0 18px 50px rgba(24,63,50,.08), inset 0 1px 0 rgba(255,255,255,.9); backdrop-filter: blur(22px); }
+        .public-search-hero form { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 9px; margin-top: 24px; border: 1px solid rgba(255,255,255,.78); border-radius: 20px; padding: 8px; background: rgba(255,255,255,.58); box-shadow: 0 18px 50px rgba(24,63,50,.08), inset 0 1px 0 rgba(255,255,255,.9); backdrop-filter: blur(22px); }
         .public-search-hero input { min-width: 0; border: 0; padding: 10px 13px; color: var(--ink); background: transparent; font-size: 15px; outline: none; }
-        .public-search-hero button { border: 0; border-radius: 14px; padding: 0 18px; color: #fffaf0; background: var(--leaf); font-weight: 650; cursor: pointer; }
+        .public-search-hero form button { border: 0; border-radius: 14px; padding: 0 18px; color: #fffaf0; background: var(--leaf); font-weight: 650; cursor: pointer; }
+        .public-search-mode { display:block; min-height:18px; margin:8px 4px 0; color:var(--quiet); font-size:10px; }
+        .public-search-mode.is-fulltext { color:var(--green); }
         .public-search-workspace { display: grid; grid-template-columns: 230px minmax(0,1fr); gap: 22px; align-items: start; padding-bottom: 90px; }
         .public-search-filters,
         .public-search-results { border: 1px solid rgba(255,255,255,.72); border-radius: 24px; background: linear-gradient(145deg,rgba(255,255,255,.64),rgba(239,245,241,.43)); box-shadow: 0 22px 64px rgba(24,63,50,.065), inset 0 1px 0 rgba(255,255,255,.84); backdrop-filter: blur(22px); }
@@ -156,7 +220,7 @@ export default function PublicSearchPage({ items = [] }) {
         }
         @media (max-width: 620px) {
           .public-search-hero form { grid-template-columns: 1fr; }
-          .public-search-hero button { min-height: 42px; }
+          .public-search-hero form button { min-height: 42px; }
           .public-search-grid { grid-template-columns: 1fr; }
         }
       `}</style>

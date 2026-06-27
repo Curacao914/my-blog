@@ -1,36 +1,19 @@
-import BLOG from '@/blog.config'
-import { siteConfig } from '@/lib/config'
-import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
-import { DynamicLayout } from '@/themes/theme'
-import { useRouter } from 'next/router'
+import { PublicDirectoryPage } from '@/components/content/PublicDirectoryPage'
+import { tagDirectory } from '@/lib/content/directory'
+import { loadPublicContentIndex } from '@/lib/content/publicIndex'
 
-/**
- * 标签首页
- * @param {*} props
- * @returns
- */
-const TagIndex = props => {
-  const router = useRouter()
-  const theme = siteConfig('THEME', BLOG.THEME, props.NOTION_CONFIG)
-  return <DynamicLayout theme={theme} layoutName='LayoutTagIndex' {...props} />
+export default function TagIndex({ groups = [] }) {
+  return <PublicDirectoryPage
+    eyebrow='Tags'
+    title='标签'
+    description='标签用于横向连接不同栏目中的共同主题，数量多时按使用频率排列。'
+    groups={groups}
+  />
 }
 
-export async function getStaticProps(req) {
-  const { locale } = req
+TagIndex.layout = 'bare'
 
-  const from = 'tag-index-props'
-  const props = await fetchGlobalAllData({ from, locale })
-  delete props.allPages
-  return {
-    props,
-    revalidate: process.env.EXPORT
-      ? undefined
-      : siteConfig(
-          'NEXT_REVALIDATE_SECOND',
-          BLOG.NEXT_REVALIDATE_SECOND,
-          props.NOTION_CONFIG
-        )
-  }
+export async function getStaticProps() {
+  const { items } = await loadPublicContentIndex({ from: 'public-tag-index' })
+  return { props: { groups: tagDirectory(items) }, revalidate: 1800 }
 }
-
-export default TagIndex

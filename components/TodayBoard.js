@@ -332,9 +332,9 @@ function ItemCard({
   )
 }
 
-export function TodayBoard() {
+export function TodayBoard({ initialView = 'today' }) {
   const [command, setCommand] = useState('')
-  const [view, setView] = useState('today')
+  const [view, setView] = useState(initialView)
   const [items, setItems] = useState([])
   const [editingId, setEditingId] = useState('')
   const [expandedId, setExpandedId] = useState('')

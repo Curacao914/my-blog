@@ -121,9 +121,13 @@ const ContentPage = ({ snapshots, facets, stats }) => {
     if (!router.isReady) return
     const requestedCategory = String(router.query.category || '')
     const requestedQuery = String(router.query.q || '')
-    if (requestedCategory) setCategory(requestedCategory)
-    if (requestedQuery) setQuery(requestedQuery)
-  }, [router.isReady, router.query.category, router.query.q])
+    const requestedTag = String(router.query.tag || '')
+    const requestedType = String(router.query.type || '')
+    setCategory(requestedCategory || '全部')
+    setQuery(requestedQuery)
+    setTag(requestedTag)
+    setType(requestedType || '全部')
+  }, [router.isReady, router.query.category, router.query.q, router.query.tag, router.query.type])
 
   const categoryCounts = useMemo(() => snapshots.reduce((counts, item) => {
     const key = itemCategory(item)
@@ -193,6 +197,13 @@ const ContentPage = ({ snapshots, facets, stats }) => {
             <div><dt>{stats.byType['course-note'] || 0}</dt><dd>份课程笔记</dd></div>
           </dl>
         </section>
+
+        <nav className='content-library-browse-nav' aria-label='内容浏览方式'>
+          <Link href='/archive'>按时间</Link>
+          <Link href='/category'>按栏目</Link>
+          <Link href='/tag'>按标签</Link>
+          <Link href='/search'>全文搜索</Link>
+        </nav>
 
         <section className='content-library-workspace'>
           <aside className='content-library-sidebar' aria-label='内容筛选'>
@@ -344,7 +355,9 @@ const ContentPage = ({ snapshots, facets, stats }) => {
       .content-library-intro dt { color: var(--ink); font-family: var(--display-serif); font-size: 22px; }
       .content-library-intro dd { margin: 0; color: var(--quiet); font-size: 10px; }
 
-      .content-library-workspace { display: grid; grid-template-columns: 250px minmax(0,1fr); gap: 24px; align-items: start; padding: 28px 0 90px; }
+      .content-library-browse-nav { display:flex; flex-wrap:wrap; gap:7px; margin-top:16px; }
+      .content-library-browse-nav a { border:1px solid rgba(17,63,49,.09); border-radius:999px; padding:7px 10px; color:var(--green); background:rgba(255,255,255,.45); font-size:10px; backdrop-filter:blur(12px); }
+      .content-library-workspace { display: grid; grid-template-columns: 250px minmax(0,1fr); gap: 24px; align-items: start; padding: 24px 0 90px; }
       .content-library-sidebar,
       .content-library-stream { border: 1px solid rgba(255,255,255,.7); border-radius: 24px; background: linear-gradient(145deg,rgba(255,255,255,.64),rgba(239,245,241,.42)); box-shadow: 0 22px 64px rgba(24,63,50,.065), inset 0 1px 0 rgba(255,255,255,.82); backdrop-filter: blur(22px) saturate(1.08); }
       .content-library-sidebar { position: sticky; top: 96px; max-height: calc(100dvh - 114px); overflow: auto; padding: 16px; }

@@ -1,65 +1,30 @@
-import BLOG from '@/blog.config'
-import { siteConfig } from '@/lib/config'
-import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
-import { DynamicLayout } from '@/themes/theme'
+import { PublicDirectoryPage } from '@/components/content/PublicDirectoryPage'
+import { loadPublicContentIndex } from '@/lib/content/publicIndex'
+import { publicContentCategory } from '@/lib/content/publicContent'
 
-/**
- * 分类页
- * @param {*} props
- * @returns
- */
-export default function Category(props) {
-  const theme = siteConfig('THEME', BLOG.THEME, props.NOTION_CONFIG)
-  return <DynamicLayout theme={theme} layoutName='LayoutPostList' {...props} />
+export default function CategoryPage({ category = '', items = [] }) {
+  return <PublicDirectoryPage
+    eyebrow='Category'
+    title='栏目'
+    description='同一栏目的文章、课程笔记与项目集中在这里。'
+    selectedLabel={category}
+    items={items}
+  />
 }
 
-export async function getStaticProps({ params: { category }, locale }) {
-  const from = 'category-props'
-  let props = await fetchGlobalAllData({ from, locale })
+CategoryPage.layout = 'bare'
 
-  // 过滤状态
-  props.posts = props.allPages?.filter(
-    page => page.type === 'Post' && page.status === 'Published'
-  )
-  // 处理过滤
-  props.posts = props.posts.filter(
-    post => post && post.category && post.category.includes(category)
-  )
-  // 处理文章页数
-  props.postCount = props.posts.length
-  // 处理分页
-  if (siteConfig('POST_LIST_STYLE') === 'scroll') {
-    // 滚动列表 给前端返回所有数据
-  } else if (siteConfig('POST_LIST_STYLE') === 'page') {
-    props.posts = props.posts?.slice(
-      0,
-      siteConfig('POSTS_PER_PAGE', 12, props?.NOTION_CONFIG)
-    )
-  }
-
-  delete props.allPages
-
-  props = { ...props, category }
-
+export async function getStaticProps({ params }) {
+  const category = String(params?.category || '')
+  const { items } = await loadPublicContentIndex({ from: 'public-category-detail' })
   return {
-    props,
-    revalidate: process.env.EXPORT
-      ? undefined
-      : siteConfig(
-          'NEXT_REVALIDATE_SECOND',
-          BLOG.NEXT_REVALIDATE_SECOND,
-          props.NOTION_CONFIG
-        )
+    props: { category, items: items.filter(item => publicContentCategory(item) === category) },
+    revalidate: 1800
   }
 }
 
 export async function getStaticPaths() {
-  const from = 'category-paths'
-  const { categoryOptions } = await fetchGlobalAllData({ from })
-  return {
-    paths: Object.keys(categoryOptions).map(category => ({
-      params: { category: categoryOptions[category]?.name }
-    })),
-    fallback: true
-  }
+  const { items } = await loadPublicContentIndex({ from: 'public-category-paths' })
+  const categories = [...new Set(items.map(publicContentCategory).filter(Boolean))]
+  return { paths: categories.map(category => ({ params: { category } })), fallback: 'blocking' }
 }

@@ -12,6 +12,9 @@
   "functions": {
     "pages/api/courses/**/*.js": {
       "maxDuration": "max"
+    },
+    "pages/api/content/sync.js": {
+      "maxDuration": "max"
     }
   }
 }

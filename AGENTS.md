@@ -150,12 +150,12 @@ npm run course:worker:cleanup-temp
 
 Work should proceed in this order unless the user changes priorities:
 
-1. Run targeted Jest, production build, and Preview verification for the publishing core and independent course-note reader.
-2. Verify Vercel Git integration so pushes to `codex/homepage-phase1` create the expected Preview instead of redeploying an older commit.
-3. Verify unified homepage/search/RSS/sitemap exposure on Preview.
-4. Optional one-way Notion mirror, while Supabase remains the source of truth.
-5. Production Clerk variables and an explicitly approved merge to `main`.
-6. Daily 09:00 Asia/Shanghai workspace digest email.
+1. Run the full site-audit Jest set and a production build on `codex/homepage-phase1`.
+2. Traverse every route and state listed in `docs/SITE_SURFACE_AUDIT.md` on the latest Preview, including mobile, empty, loading, auth, and failure states.
+3. Verify administrator Notion/content sync and Algolia fallback/full-text modes with real Preview environment variables.
+4. Fix issues found by the route traversal before starting another large feature.
+5. After the surface is stable, continue with the writing editor, validated share links, and deeper settings.
+6. Configure Production Clerk variables and merge to `main` only after explicit approval.
 
 Performance optimization of large shared First Load JS is real debt, but it should not displace correctness, workflow durability, or publication continuity.
 
@@ -219,6 +219,20 @@ The deployed `content_items_source_check` accepts `course-worker`, not `course-w
 - Homepage recent content respects `display.showInRecent`; pinned items sort first.
 - RSS includes only `access.mode = public` items with `allowRss = true`.
 - Sitemap inclusion requires public access, `allowSitemap = true`, and indexing not explicitly disabled.
-- Password-protected content may remain discoverable by metadata but must not enter RSS or sitemap.
+- Password-protected content may remain discoverable by metadata, but it must not enter Algolia, RSS, or sitemap.
 - Publishing or withdrawal must revalidate the homepage, `/content`, `/search`, and the affected new-content detail route.
 - Legacy Notion article routes remain canonical until an explicit migration decision is made.
+
+## Phase Update: Site-wide Surface Audit and Product Consolidation
+
+- `docs/SITE_SURFACE_AUDIT.md` is the route-level product map. Check it before adding a new page shell, search surface, public directory, or workbench module.
+- Public archive, category, and tag pages use the merged public-content index and the shared law-tech visual system. Do not reintroduce a second Notion-only list UI for those routes.
+- Notion article detail routes intentionally keep the mature NotionNext renderer until a block-complete replacement is proven.
+- `/desk/tasks`, `/desk/writing`, and `/desk/system` are real product surfaces, not conceptual `DeskProductPanel` placeholders.
+- Algolia is progressive enhancement. Local merged-index search must remain functional when Algolia is unconfigured or unavailable.
+- Only published content with `access.mode = public` and indexing enabled may enter Algolia. Private, password-protected, withdrawn, and no-index content must be absent.
+- Administrator content sync clears Notion and public-index caches, reloads merged content, reads Notion article bodies for full-text indexing, optionally updates Algolia, prunes stale Notion search records only after a successful Notion read, and revalidates public discovery/detail pages. It runs in a long-duration server function and must remain administrator-only.
+- Public-facing copy describes product behavior rather than vendor configuration. Algolia, Supabase, cache, and synchronization diagnostics belong in `/desk/system`, not in public hero copy.
+- The legacy Notion OAuth route is intentionally disabled. Never restore client-secret exchange, token logging, query-string token transport, or persistence without a reviewed server-side credential design.
+- Legacy pagination and dashboard routes redirect into the current product surfaces. Do not rebuild parallel public or private navigation systems without explicit approval.
+- Share-token rendering remains disabled until server-side token, expiry, revocation, and password checks are implemented.

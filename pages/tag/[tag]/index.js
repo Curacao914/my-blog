@@ -1,78 +1,30 @@
-import BLOG from '@/blog.config'
-import { siteConfig } from '@/lib/config'
-import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
-import { DynamicLayout } from '@/themes/theme'
+import { PublicDirectoryPage } from '@/components/content/PublicDirectoryPage'
+import { loadPublicContentIndex } from '@/lib/content/publicIndex'
+import { publicContentTags } from '@/lib/content/publicContent'
 
-/**
- * 标签下的文章列表
- * @param {*} props
- * @returns
- */
-const Tag = props => {
-  const theme = siteConfig('THEME', BLOG.THEME, props.NOTION_CONFIG)
-  return <DynamicLayout theme={theme} layoutName='LayoutPostList' {...props} />
+export default function TagPage({ tag = '', items = [] }) {
+  return <PublicDirectoryPage
+    eyebrow='Tag'
+    title='标签'
+    description='这个标签连接了不同来源与栏目的内容。'
+    selectedLabel={tag}
+    items={items}
+  />
 }
 
-export async function getStaticProps({ params: { tag }, locale }) {
-  const from = 'tag-props'
-  const props = await fetchGlobalAllData({ from, locale })
+TagPage.layout = 'bare'
 
-  // 过滤状态
-  props.posts = props.allPages
-    ?.filter(page => page.type === 'Post' && page.status === 'Published')
-    .filter(post => post && post?.tags && post?.tags.includes(tag))
-
-  // 处理文章页数
-  props.postCount = props.posts.length
-
-  // 处理分页
-  if (siteConfig('POST_LIST_STYLE') === 'scroll') {
-    // 滚动列表 给前端返回所有数据
-  } else if (siteConfig('POST_LIST_STYLE') === 'page') {
-    props.posts = props.posts?.slice(
-      0,
-      siteConfig('POSTS_PER_PAGE', 12, props?.NOTION_CONFIG)
-    )
-  }
-
-  props.tag = tag
-  delete props.allPages
+export async function getStaticProps({ params }) {
+  const tag = String(params?.tag || '')
+  const { items } = await loadPublicContentIndex({ from: 'public-tag-detail' })
   return {
-    props,
-    revalidate: process.env.EXPORT
-      ? undefined
-      : siteConfig(
-          'NEXT_REVALIDATE_SECOND',
-          BLOG.NEXT_REVALIDATE_SECOND,
-          props.NOTION_CONFIG
-        )
+    props: { tag, items: items.filter(item => publicContentTags(item).includes(tag)) },
+    revalidate: 1800
   }
-}
-
-/**
- * 获取所有的标签
- * @returns
- * @param tags
- */
-function getTagNames(tags) {
-  const tagNames = []
-  tags.forEach(tag => {
-    tagNames.push(tag.name)
-  })
-  return tagNames
 }
 
 export async function getStaticPaths() {
-  const from = 'tag-static-path'
-  const { tagOptions } = await fetchGlobalAllData({ from })
-  const tagNames = getTagNames(tagOptions)
-
-  return {
-    paths: Object.keys(tagNames).map(index => ({
-      params: { tag: tagNames[index] }
-    })),
-    fallback: true
-  }
+  const { items } = await loadPublicContentIndex({ from: 'public-tag-paths' })
+  const tags = [...new Set(items.flatMap(publicContentTags).filter(Boolean))]
+  return { paths: tags.map(tag => ({ params: { tag } })), fallback: 'blocking' }
 }
-
-export default Tag

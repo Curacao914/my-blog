@@ -1,4 +1,7 @@
+import BLOG from '@/blog.config'
+
 import { getDatabaseConfig, getSupabaseRestConfig } from '@/lib/db/client'
+import { hasAlgoliaAdmin, hasAlgoliaSearch } from '@/lib/content/algoliaSearch'
 import { requireAdminRequest } from '@/lib/auth/serverAdmin'
 
 const requiredTables = [
@@ -45,7 +48,10 @@ export default async function handler(req, res) {
     supabaseConfigured: Boolean(
       config.supabaseUrl && config.supabaseServiceRoleKey
     ),
-    storageConfigured: Boolean(config.storageBucket)
+    storageConfigured: Boolean(config.storageBucket),
+    notionConfigured: Boolean(String(BLOG.NOTION_PAGE_ID || '').trim()),
+    algoliaSearchConfigured: hasAlgoliaSearch(),
+    algoliaAdminConfigured: hasAlgoliaAdmin()
   }
 
   if (!config.supabaseUrl || !config.supabaseServiceRoleKey) {

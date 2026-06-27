@@ -1,28 +1,13 @@
 import { requireAdminRequest } from '@/lib/auth/serverAdmin'
 import { getLiveContentIndex } from '@/lib/contentSnapshots'
-import { normalizeNotionContentIndex } from '@/lib/content/notionIndex'
 import { collectContentTaxonomy } from '@/lib/content/taxonomy'
+import { getCachedNotionTaxonomyItems, getNotionTaxonomyItems } from '@/lib/content/notionTaxonomy'
+import { removeAlgoliaContent } from '@/lib/content/algoliaSearch'
 import { revalidatePublicContentSurfaces } from '@/lib/content/revalidation'
-import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
 import {
   listManagedContent,
   withdrawManagedContent
 } from '@/lib/contentManagement'
-
-const NOTION_TAXONOMY_TTL_MS = 10 * 60 * 1000
-let notionTaxonomyCache = { expiresAt: 0, items: [] }
-
-async function getNotionTaxonomyItems() {
-  if (notionTaxonomyCache.expiresAt > Date.now()) return notionTaxonomyCache.items
-
-  const notionData = await fetchGlobalAllData({ from: 'content-manage-taxonomy' })
-  const items = normalizeNotionContentIndex(notionData?.allPages || [])
-  notionTaxonomyCache = {
-    expiresAt: Date.now() + NOTION_TAXONOMY_TTL_MS,
-    items
-  }
-  return items
-}
 
 export default async function handler(req, res) {
   const auth = await requireAdminRequest(req)
@@ -34,7 +19,7 @@ export default async function handler(req, res) {
         listManagedContent(),
         getNotionTaxonomyItems().catch(error => {
           console.warn('[content manage] Notion taxonomy read failed', error)
-          return notionTaxonomyCache.items
+          return getCachedNotionTaxonomyItems()
         })
       ])
       const taxonomy = collectContentTaxonomy([
@@ -50,6 +35,7 @@ export default async function handler(req, res) {
       const action = String(req.body?.action || '')
       if (action !== 'withdraw') throw new Error('Unsupported content action')
       const item = await withdrawManagedContent(String(req.body?.itemId || ''))
+      await removeAlgoliaContent(item).catch(error => console.warn('[content manage] Algolia remove failed', error))
       await revalidatePublicContentSurfaces(res, item.slug, 'content manage')
       return res.status(200).json({ ok: true, item })
     }

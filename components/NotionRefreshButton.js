@@ -26,7 +26,7 @@ export default function NotionRefreshButton() {
     if (state === 'loading' || Date.now() < cooldownUntilRef.current) return
     setState('loading')
     try {
-      const response = await fetch('/api/content/revalidate', {
+      const response = await fetch('/api/content/sync', {
         method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ path: router.asPath })
       })

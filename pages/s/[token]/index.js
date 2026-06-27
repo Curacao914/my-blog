@@ -1,32 +1,14 @@
-import Head from 'next/head'
-import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
+import { PublicStatusPage } from '@/components/law-tech/PublicStatusPage'
 
-export default function SharePage({ token }) {
-  return (
-    <>
-      <Head>
-        <title>分享内容 · law-tech.dev</title>
-      </Head>
-      <main className='public-page'>
-        <div className='shell'>
-          <section className='page-pad'>
-            <span className='eyebrow'>Shared</span>
-            <h1 className='page-title'>分享内容</h1>
-            <p className='lede'>分享令牌：{token}</p>
-          </section>
-        </div>
-      </main>
-      <LawTechDeskStyles />
-    </>
-  )
+export default function SharePage() {
+  return <PublicStatusPage
+    code='Shared link'
+    title='这条分享链接暂时不可用。'
+    description='分享访问仍在整理中。页面不会展示令牌或内部标识；公开内容可以先从内容库进入。'
+    primary={{ label: '查看内容库', href: '/content' }}
+    secondary={{ label: '回到首页', href: '/' }}
+    noIndex
+  />
 }
-
 SharePage.layout = 'bare'
-
-export async function getServerSideProps({ params }) {
-  return {
-    props: {
-      token: params?.token || ''
-    }
-  }
-}
+export async function getServerSideProps() { return { props: {} } }

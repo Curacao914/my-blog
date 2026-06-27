@@ -33,7 +33,8 @@ describe('public content discovery and syndication', () => {
 
   it('replaces the Notion-only search route with unified discovery', () => {
     expect(search).toContain('filterPublicContent')
-    expect(search).toContain('标题、摘要、栏目、合集、课程和标签')
+    expect(search).toContain('/api/search?')
+    expect(search).toContain('全文搜索')
     expect(legacySearch).toContain("`/search?q=${encodeURIComponent(keyword)}`")
     expect(navigation).toContain("key: 'search'")
   })

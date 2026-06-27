@@ -154,3 +154,23 @@ The latest patch fixes the deployed content-library and reader defects reported 
 ## Current Phase Override: Unified Public Discovery and Syndication
 
 The newest phase connects the stable content library back to the whole public site. A shared server-side index merges Notion metadata, live JSON, and Supabase publications. The homepage shows recent content and the four-category library map; `/search` uses the same index; RSS, Atom, JSON Feed, and sitemap exposure respect each publication's access and syndication flags. Publishing and withdrawal must refresh home, content, search, and the affected detail route together. Do not create a second content store or copy Notion bodies merely to support discovery. Full Jest, `npm run build`, and latest Preview verification remain required.
+
+## Current Phase: Site-wide Surface Audit and Product Consolidation
+
+Status: code prepared in the current handoff workspace. `git diff --check` and changed-file TypeScript/JSX parsing pass. Dependency-backed Jest, production build, and Preview route verification remain required.
+
+Implemented scope:
+
+- added `docs/SITE_SURFACE_AUDIT.md` as the route and product-state map;
+- redesigned homepage recent content as one featured item plus four compact items;
+- unified archive, category, and tag pages on the merged Notion/live-JSON/Supabase index and the new public visual shell;
+- redirected legacy pagination, old search pagination, and the old dashboard into current surfaces;
+- standardized 404, 500, generic error, OAuth result, and unfinished share-link states;
+- disabled the unfinished legacy Notion OAuth exchange and removed all secret/token transport from that surface;
+- replaced placeholder Tasks, Writing, and System pages with real task, writing-summary, health, and sync surfaces;
+- added administrator content sync for Notion cache clearing, merged-index refresh, Notion body extraction, public discovery/detail revalidation, optional Algolia synchronization, and guarded stale-Notion-index cleanup;
+- upgraded `/search` to progressive Algolia full-text search with the current local merged-index search as fallback;
+- Notion body text and Supabase Markdown may be included in administrator indexing, while private, password-protected, withdrawn, and indexing-disabled content stay out;
+- publication updates Algolia and withdrawal removes the corresponding object when Algolia is configured.
+
+Preview verification should traverse every route listed in `docs/SITE_SURFACE_AUDIT.md`, not only the pages changed most recently.

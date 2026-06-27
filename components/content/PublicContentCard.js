@@ -5,7 +5,6 @@ import {
   publicContentCollection,
   publicContentDate,
   publicContentHref,
-  publicContentSourceLabel,
   publicContentStableHue,
   publicContentTags,
   publicContentTypeLabel
@@ -22,7 +21,7 @@ function formatDate(value) {
   }).format(date)
 }
 
-export function PublicContentCard({ item, compact = false }) {
+export function PublicContentCard({ item, compact = false, featured = false }) {
   const category = publicContentCategory(item)
   const collection = publicContentCollection(item)
   const tags = publicContentTags(item).slice(0, compact ? 3 : 5)
@@ -33,7 +32,7 @@ export function PublicContentCard({ item, compact = false }) {
 
   return <>
     <Link
-      className={`public-content-card ${compact ? 'is-compact' : ''} ${item?.cover ? 'has-cover' : 'generated-cover'}`}
+      className={`public-content-card ${compact ? 'is-compact' : ''} ${featured ? 'is-featured' : ''} ${item?.cover ? 'has-cover' : 'generated-cover'}`}
     href={publicContentHref(item)}
   >
     <div
@@ -49,7 +48,7 @@ export function PublicContentCard({ item, compact = false }) {
     <div className='public-content-card-body'>
       <div className='public-content-card-meta'>
         <span>{publicContentTypeLabel(item?.type)}</span>
-        <span>{publicContentSourceLabel(item)}</span>
+        <span>{category}</span>
       </div>
       <h3>{item?.title || '未命名内容'}</h3>
       <p>{item?.summary || '暂无摘要。'}</p>
@@ -171,6 +170,12 @@ export function PublicContentCard({ item, compact = false }) {
       .is-compact .public-content-card-body { min-height: 194px; padding: 15px; }
       .is-compact h3 { font-size: 19px; }
       .is-compact p { -webkit-line-clamp: 2; }
+      .is-featured { height: 100%; grid-template-rows: minmax(220px,1.18fr) auto; }
+      .is-featured .public-content-card-cover { min-height: 220px; padding: 25px; }
+      .is-featured .public-content-card-cover strong { font-size: clamp(27px,3vw,40px); }
+      .is-featured .public-content-card-body { min-height: 244px; padding: 23px; }
+      .is-featured h3 { font-size: clamp(25px,3vw,34px); }
+      .is-featured p { font-size: 13px; -webkit-line-clamp: 4; }
     `}</style>
   </>
 }
