@@ -3,6 +3,7 @@
 const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
+const { cleanupExpiredTempDirs } = require('./temp-safety')
 
 function parseArgs(argv) {
   const args = {}
@@ -340,6 +341,7 @@ async function main() {
     return
   }
 
+  cleanupExpiredTempDirs({ ttlMs: Math.max(1, Number(process.env.COURSE_TEMP_TTL_HOURS || 24)) * 60 * 60 * 1000 })
   const bundle = await fetchCourseBundle(args['job-id'])
   const result = await prepareLocalCourse(bundle, {
     outDir: args['out-dir'],

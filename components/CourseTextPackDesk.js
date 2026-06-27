@@ -29,7 +29,7 @@ const ROLE_OPTIONS = [
   ['existing_note', '已有笔记']
 ]
 const KIND_LABELS = { transcript: '课堂转录', deck: '课件', document: '文档', markdown: 'Markdown', note: '已有笔记', ocr: '扫描资料' }
-const AUTO_STATUSES = new Set(['preflight_approved', 'outline_pending', 'outline_generating', 'outline_approved', 'node_planning', 'node_pending', 'node_generating', 'node_review', 'node_revision_required', 'assembly_pending', 'assembling'])
+const AUTO_STATUSES = new Set(['preflight_approved', 'outline_pending', 'outline_generating', 'outline_approved', 'node_planning', 'node_pending', 'node_generating', 'node_review', 'node_revision_required', 'assembly_pending', 'assembling', 'final_revision_required'])
 
 function formatNumber(value) {
   return new Intl.NumberFormat('zh-CN').format(Number(value || 0))
@@ -54,7 +54,7 @@ function humanStatus(status) {
     preflight_required: '等待确认偏好', preflight_approved: '准备生成大纲', outline_pending: '等待生成大纲', outline_generating: '正在生成大纲',
     outline_review: '等待确认大纲', outline_approved: '大纲已确认', node_planning: '正在准备正文', node_pending: '等待整理正文',
     node_generating: '正在整理正文', node_review: '审查处理中', node_revision_required: '修改处理中', node_human_review: '需要人工处理', node_failed: '节点处理失败', assembly_pending: '等待整理全文',
-    assembling: '正在整理全文', final_review: '正在最终检查', final_review_human: '等待最终确认', completed: '已完成', paused: '已暂停', failed: '处理失败', cancelled: '已取消'
+    assembling: '正在整理全文', final_revision_required: '修改最终笔记', final_review: '等待最终确认', final_review_human: '等待最终确认', completed: '已完成', paused: '已暂停', failed: '处理失败', cancelled: '已取消'
   })[status] || '准备中'
 }
 
@@ -323,15 +323,28 @@ function NodeWorkbench({ lesson, taskLeases = [], onAction, busy }) {
 function FinalNoteStage({ lesson, onAction, busy }) {
   const [markdown, setMarkdown] = useState(lesson.finalNote?.markdown || '')
   const [mode, setMode] = useState('preview')
+  const [revisionRequest, setRevisionRequest] = useState('')
   const savedMarkdown = lesson.finalNote?.markdown || ''
   const dirty = markdown !== savedMarkdown
   const charCount = countCourseNoteChars(markdown)
   const awaitingConfirmation = ['final_review', 'final_review_human'].includes(lesson.status)
+  const canRequestRevision = awaitingConfirmation || lesson.status === 'completed'
+  const revising = lesson.status === 'final_revision_required'
 
   useEffect(() => {
     setMarkdown(lesson.finalNote?.markdown || '')
     setMode('preview')
   }, [lesson.key, lesson.finalNote?.markdown])
+
+  async function requestRevision() {
+    const value = revisionRequest.trim()
+    if (!value) return
+    await onAction(
+      { type: 'request-final-revision', lessonKey: lesson.key, request: value },
+      '修改要求已提交，系统只会按你的要求调整最终稿。'
+    )
+    setRevisionRequest('')
+  }
 
   function exportMarkdown() {
     if (typeof window === 'undefined' || !markdown) return
@@ -354,10 +367,12 @@ function FinalNoteStage({ lesson, onAction, busy }) {
     <div className='course-stage-heading'>
       <div>
         <span>最终成果</span>
-        <h3>{lesson.status === 'completed' ? '本课笔记已完成' : '通读并确认最终笔记'}</h3>
+        <h3>{lesson.status === 'completed' ? '本课笔记已完成' : revising ? '正在按要求修改最终笔记' : '通读并确认最终笔记'}</h3>
       </div>
-      <p>{lesson.status === 'completed' ? '仍可继续编辑或导出 Markdown。' : '最终内容由你确认；保存修改后即可完成本课。'}</p>
+      <p>{lesson.status === 'completed' ? '仍可继续编辑或导出 Markdown。' : revising ? '修改完成后会回到你的确认页面。' : '你可以直接修改、提出修改要求，或者确认完成。'}</p>
     </div>
+
+    {revising ? <LoadingLine label='正在按你的意见修改…' detail='不会重新执行整套最终审查' /> : null}
 
     <div className='course-final-toolbar'>
       <div className='course-final-mode' role='tablist' aria-label='最终笔记视图'>
@@ -375,18 +390,29 @@ function FinalNoteStage({ lesson, onAction, busy }) {
       {mode === 'edit' ? <button className='soft-button' type='button' disabled={busy || !markdown.trim() || !dirty} onClick={() => onAction({ type: 'save-final-note', lessonKey: lesson.key, markdown }, '最终笔记修改已保存。', false)}>保存修改</button> : null}
       <button className='soft-button' type='button' onClick={() => navigator.clipboard?.writeText(markdown)}>复制</button>
       <button className='soft-button' data-course-export type='button' onClick={exportMarkdown}>导出 Markdown</button>
-      {awaitingConfirmation ? <button className='soft-button primary' type='button' disabled={busy || dirty} title={dirty ? '请先保存修改' : ''} onClick={() => onAction({ type: 'approve-final-review', lessonKey: lesson.key }, '最终笔记已由你确认。', false)}>确认无误，完成本课</button> : null}
+      {awaitingConfirmation ? <button className='soft-button primary' type='button' disabled={busy || dirty} title={dirty ? '请先保存修改' : ''} onClick={() => onAction({ type: 'approve-final-review', lessonKey: lesson.key }, '最终笔记已由你确认。')}>确认无误，完成本课</button> : null}
     </div>
 
-    {dirty ? <p className='course-final-unsaved'>当前修改尚未保存，保存后才能确认完成。</p> : null}
+    {canRequestRevision ? <details className='course-final-revision-box'>
+      <summary>需要修改</summary>
+      <label>
+        告诉系统具体要改什么
+        <textarea rows={3} value={revisionRequest} onChange={event => setRevisionRequest(event.target.value)} placeholder='例如：第二部分太简略，请补足老师关于数据清洗的论证；其余内容保持不变。' />
+      </label>
+      <div className='course-primary-row'>
+        <button className='soft-button' type='button' disabled={busy || dirty || !revisionRequest.trim()} title={dirty ? '请先保存当前手动修改' : ''} onClick={() => void requestRevision()}>按要求修改</button>
+      </div>
+    </details> : null}
+
+    {dirty ? <p className='course-final-unsaved'>当前修改尚未保存，保存后才能确认或提交修改要求。</p> : null}
     {report ? <details className='course-final-history'><summary>查看历史自动检查结果</summary><ReviewReport report={report} /></details> : null}
   </section>
 }
 
-function CourseWorkbench({ jobId, workflow, capabilities, onAction, onRefresh, onBack, onSupplement }) {
-  const { startTask, pauseTask, taskFor } = useCourseTaskManager()
+function CourseWorkbench({ jobId, workflow, capabilities, onAction, onRefresh, onBack, onSupplement, initialLessonKey = '' }) {
+  const { startTask, pauseTask, dismissTask, taskFor } = useCourseTaskManager()
   const firstIncomplete = workflow.lessons?.find(lesson => lesson.status !== 'completed') || workflow.lessons?.[0]
-  const [activeLessonKey, setActiveLessonKey] = useState(firstIncomplete?.key || '')
+  const [activeLessonKey, setActiveLessonKey] = useState(initialLessonKey || firstIncomplete?.key || '')
   const [courseSpec, setCourseSpec] = useState(workflow.courseSpec || {})
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
@@ -399,6 +425,7 @@ function CourseWorkbench({ jobId, workflow, capabilities, onAction, onRefresh, o
   const errorHistory = getCourseErrorHistory(workflow)
 
   useEffect(() => { if (!workflow.lessons?.some(item => item.key === activeLessonKey)) setActiveLessonKey(firstIncomplete?.key || ''); setCourseSpec(workflow.courseSpec || {}) }, [workflow.updatedAt, activeLessonKey, firstIncomplete?.key])
+  useEffect(() => { if (initialLessonKey && workflow.lessons?.some(item => item.key === initialLessonKey)) setActiveLessonKey(initialLessonKey) }, [initialLessonKey, workflow.updatedAt])
   useEffect(() => { if (task?.workflowVersion) onRefresh(jobId).catch(() => {}) }, [task?.workflowVersion, jobId])
   useEffect(() => {
     if (!lesson || workflow.paused || workflow.status === 'failed' || !capabilities?.courseWriting?.configured) return
@@ -411,6 +438,7 @@ function CourseWorkbench({ jobId, workflow, capabilities, onAction, onRefresh, o
       const next = await onAction(jobId, action)
       setMessage(success || '操作已完成。')
       await onRefresh(jobId)
+      if (next?.status === 'completed') dismissTask(jobId)
       const nextLesson = next?.lessons?.find(item => item.status !== 'completed') || next?.lessons?.[0]
       if (resume && capabilities?.courseWriting?.configured && AUTO_STATUSES.has(nextLesson?.status || next?.status)) startTask(jobId, { courseName: next?.courseSpec?.courseName || workflow.courseSpec?.courseName })
     } catch (error) { setMessage(formatCourseApiError(error, '操作失败')) } finally { setBusy(false) }
@@ -431,13 +459,27 @@ function CourseWorkbench({ jobId, workflow, capabilities, onAction, onRefresh, o
   </section>
 }
 
-function CourseJobRow({ job, active, onOpen, onDelete }) {
+function CourseJobRow({ job, active, onOpen, onDelete, onSupplement }) {
   const runtime = job.runtime_summary || job.preferences?.web_adapter?.runtimeSummary || {}
   const stats = job.preferences?.textpack_stats || {}
   const attentionCount = Number(runtime.counts?.attention || 0)
   const status = runtime.status || job.current_node
-  const pendingHuman = ['preflight_required', 'outline_review', 'node_human_review', 'final_review_human'].includes(status) || attentionCount > 0
-  return <article className={`course-job-row ${active ? 'active' : ''}`}><div><span>{humanStatus(status)}</span><h3>{job.course_name}</h3><p>{job.teacher || '未填写教师'} · {formatNumber(stats.lessonCount)} 课 · {formatNumber(stats.totalChars)} 字</p><small>{pendingHuman ? `${attentionCount || 1} 项等待处理 · ` : ''}{job.updated_at ? new Date(job.updated_at).toLocaleString('zh-CN') : '刚刚更新'}</small></div><div className='course-row-actions'><button className='soft-button primary' type='button' onClick={() => onOpen(job.id)}>继续整理</button><button className='soft-button danger' type='button' onClick={() => onDelete(job.id)}>删除</button></div></article>
+  const pendingHuman = ['preflight_required', 'outline_review', 'node_human_review', 'final_review', 'final_review_human'].includes(status) || attentionCount > 0
+  const completed = status === 'completed'
+  const openLabel = completed ? '查看笔记' : pendingHuman ? '继续确认' : '继续整理'
+  return <article className={`course-job-row ${active ? 'active' : ''}`}>
+    <div>
+      <span>{humanStatus(status)}</span>
+      <h3>{job.course_name}</h3>
+      <p>{job.teacher || '未填写教师'} · {formatNumber(stats.lessonCount)} 课 · {formatNumber(stats.totalChars)} 字</p>
+      <small>{pendingHuman ? `${attentionCount || 1} 项等待处理 · ` : ''}{job.updated_at ? new Date(job.updated_at).toLocaleString('zh-CN') : '刚刚更新'}</small>
+    </div>
+    <div className='course-row-actions'>
+      {completed ? <button className='soft-button' type='button' onClick={() => onSupplement(job.id)}>加课次</button> : null}
+      <button className='soft-button primary' type='button' onClick={() => onOpen(job.id)}>{openLabel}</button>
+      <button className='soft-button danger' type='button' onClick={() => onDelete(job.id)}>删除</button>
+    </div>
+  </article>
 }
 
 function confidenceLabel(value) {
@@ -556,9 +598,12 @@ export function CourseTextPackDesk() {
   useEffect(() => {
     const queryJob = String(router.query?.job || '')
     if (!router.isReady || !queryJob || openedQueryRef.current === queryJob) return
-    openedQueryRef.current = queryJob
-    openJob(queryJob).catch(error => setMessage(formatCourseApiError(error)))
-  }, [router.isReady, router.query?.job])
+    const queryAction = String(router.query?.action || '')
+    const queryKey = `${queryJob}:${queryAction}`
+    if (openedQueryRef.current === queryKey) return
+    openedQueryRef.current = queryKey
+    openJob(queryJob, { supplement: queryAction === 'supplement' }).catch(error => setMessage(formatCourseApiError(error)))
+  }, [router.isReady, router.query?.job, router.query?.action])
 
   function resetImport({ keepCourse = false } = {}) {
     setFiles([]); setRoles({}); setMaterials([]); setGroups([]); setTextPack(null); setImportStep('select'); setStatus('idle'); setMessage(''); setOcrJobs({})
@@ -656,7 +701,7 @@ export function CourseTextPackDesk() {
       setSupplementTarget(null)
     } catch (error) { setStatus('error'); setMessage(formatCourseApiError(error, supplementTarget ? '课程资料补充失败' : '课程资料导入失败')) }
   }
-  async function openJob(jobId) { const data = await requestCourseJson(`/api/courses/jobs/${encodeURIComponent(jobId)}/workflow`, {}, '课程进度读取失败'); setSelectedJobId(jobId); setSelectedWorkflow(data.workflow); setView('workbench') }
+  async function openJob(jobId, options = {}) { const data = await requestCourseJson(`/api/courses/jobs/${encodeURIComponent(jobId)}/workflow`, {}, '课程进度读取失败'); setSelectedJobId(jobId); setSelectedWorkflow(data.workflow); if (options.supplement) beginSupplement(jobId, data.workflow); else setView('workbench') }
   async function runWorkflowAction(jobId, action) { const data = await requestCourseJson(`/api/courses/jobs/${encodeURIComponent(jobId)}/workflow`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(action) }, '课程操作失败'); setSelectedWorkflow(data.workflow); await refreshJobs(); return data.workflow }
   async function handleDelete(jobId) { if (typeof window !== 'undefined' && !window.confirm('删除这门课程的文字资料和整理进度？原始本地文件不会受到影响。')) return; try { await requestCourseJson(`/api/courses/textpack?id=${encodeURIComponent(jobId)}`, { method: 'DELETE' }, '删除失败'); if (selectedJobId === jobId) { setSelectedJobId(''); setSelectedWorkflow(null) }; await refreshJobs() } catch (error) { setMessage(formatCourseApiError(error, '删除失败')) } }
   function beginSupplement(jobId, workflow) {
@@ -677,11 +722,11 @@ export function CourseTextPackDesk() {
     setView('import')
   }
 
-  if (view === 'workbench' && selectedWorkflow) return <CourseWorkbench jobId={selectedJobId} workflow={selectedWorkflow} capabilities={capabilities} onAction={runWorkflowAction} onRefresh={openJob} onBack={() => setView('library')} onSupplement={beginSupplement} />
+  if (view === 'workbench' && selectedWorkflow) return <CourseWorkbench jobId={selectedJobId} workflow={selectedWorkflow} capabilities={capabilities} onAction={runWorkflowAction} onRefresh={openJob} onBack={() => setView('library')} onSupplement={beginSupplement} initialLessonKey={String(router.query?.lesson || '')} />
 
   return <div className='course-workspace compact'>
     <nav className='course-page-switcher'><button type='button' className={view === 'library' ? 'active' : ''} onClick={() => setView('library')}>课程库</button><button type='button' className={view === 'import' ? 'active' : ''} onClick={() => { if (view !== 'import') resetImport(); setView('import') }}>导入资料</button></nav>
-    {view === 'library' ? <section className='course-library-panel'><div className='section-heading compact'><span>课程库</span><h2>已导入课程</h2></div>{jobs.length ? <div className='course-job-list compact-list'>{jobs.map(job => <CourseJobRow key={job.id} job={job} active={selectedJobId === job.id} onOpen={openJob} onDelete={handleDelete} />)}</div> : <div className='course-empty-state'><strong>课程库还是空的</strong><p>从“导入资料”添加课堂转录、课件或已有笔记。</p><button className='soft-button primary' type='button' onClick={() => setView('import')}>导入第一门课程</button></div>}</section> : null}
+    {view === 'library' ? <section className='course-library-panel'><div className='section-heading compact'><span>课程库</span><h2>已导入课程</h2></div>{jobs.length ? <div className='course-job-list compact-list'>{jobs.map(job => <CourseJobRow key={job.id} job={job} active={selectedJobId === job.id} onOpen={openJob} onDelete={handleDelete} onSupplement={jobId => openJob(jobId, { supplement: true })} />)}</div> : <div className='course-empty-state'><strong>课程库还是空的</strong><p>从“导入资料”添加课堂转录、课件或已有笔记。</p><button className='soft-button primary' type='button' onClick={() => setView('import')}>导入第一门课程</button></div>}</section> : null}
     {view === 'import' ? <section className='course-import-shell'>
       <header className='course-import-header'><div><span>{supplementTarget ? '补充课程资料' : '导入课程资料'}</span><h2>{courseName || '新课程'}</h2>{supplementTarget ? <p>新增材料会匹配到已有课次，也可以新建课次。</p> : null}</div><ServiceLights capabilities={capabilities} /></header>
       <nav className='course-import-steps'><button className={importStep === 'select' ? 'active' : ''} type='button' onClick={() => setImportStep('select')}>1 添加资料</button><button className={importStep === 'group' ? 'active' : ''} type='button' disabled={!materials.length} onClick={() => setImportStep('group')}>2 归档材料</button><button className={importStep === 'review' ? 'active' : ''} type='button' disabled={!textPack} onClick={() => setImportStep('review')}>3 确认导入</button></nav>

@@ -61,6 +61,7 @@
     "course:worker:assemble-notes": "node scripts/course-worker/assemble-notes-local.js",
     "course:worker:model-exec": "node scripts/course-worker/model-exec-local.js",
     "course:worker:import-notes": "node scripts/course-worker/import-notes-to-content.js",
+    "course:worker:cleanup-temp": "node scripts/course-worker/cleanup-temp.js",
     "course:worker:report-outlines": "node scripts/course-worker/report-outlines.js",
     "course:worker:report-preprocess": "node scripts/course-worker/report-preprocess.js",
     "tasks:reminders:due": "node scripts/tasks/due-reminders.js",

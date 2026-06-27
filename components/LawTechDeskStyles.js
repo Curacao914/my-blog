@@ -5229,6 +5229,215 @@ html.course-focus-open body { overflow:hidden; }
   }
 }
 
+/* Course final feedback and note library */
+.course-final-revision-box {
+  border: 1px solid rgba(17,63,49,.09);
+  border-radius: 13px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,.42);
+}
+
+.course-final-revision-box > summary {
+  color: var(--leaf);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.course-final-revision-box[open] > summary {
+  margin-bottom: 10px;
+}
+
+.course-final-revision-box label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.course-final-revision-box textarea {
+  width: 100%;
+  min-height: 88px;
+  max-height: 190px;
+  resize: vertical;
+  border: 1px solid rgba(17,63,49,.1);
+  border-radius: 11px;
+  padding: 10px;
+  color: var(--ink);
+  background: rgba(255,255,255,.68);
+  line-height: 1.65;
+}
+
+.note-library-shell {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.note-library-head {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 18px;
+  align-items: end;
+  border: 1px solid rgba(255,255,255,.72);
+  border-radius: 22px;
+  padding: 20px;
+  background: rgba(255,255,255,.5);
+  box-shadow: var(--shadow-sm);
+}
+
+.note-library-head > div > span,
+.note-library-course > header span,
+.note-library-lesson span {
+  color: var(--quiet);
+  font-size: 10px;
+  font-weight: 680;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.note-library-head h2 {
+  margin: 5px 0 7px;
+  font-family: var(--display-serif);
+  font-size: 28px;
+}
+
+.note-library-head p,
+.note-library-course p,
+.note-library-lesson p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.note-library-head dl {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(64px,1fr));
+  gap: 7px;
+  margin: 0;
+}
+
+.note-library-head dl div {
+  display: grid;
+  gap: 2px;
+  min-width: 64px;
+  border-radius: 12px;
+  padding: 9px 11px;
+  background: rgba(220,233,223,.48);
+}
+
+.note-library-head dt {
+  color: var(--quiet);
+  font-size: 10px;
+}
+
+.note-library-head dd {
+  margin: 0;
+  color: var(--leaf);
+  font-size: 18px;
+  font-weight: 740;
+}
+
+.note-library-list {
+  display: grid;
+  gap: 12px;
+}
+
+.note-library-course {
+  border: 1px solid rgba(255,255,255,.72);
+  border-radius: 21px;
+  padding: 15px;
+  background: rgba(255,255,255,.46);
+  box-shadow: var(--shadow-sm);
+}
+
+.note-library-course > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 2px 2px 13px;
+}
+
+.note-library-course h3 {
+  margin: 4px 0 4px;
+  font-family: var(--display-serif);
+  font-size: 22px;
+}
+
+.note-library-lessons {
+  display: grid;
+  gap: 7px;
+}
+
+.note-library-lesson {
+  display: grid;
+  grid-template-columns: 34px minmax(0,1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(17,63,49,.07);
+  border-radius: 14px;
+  padding: 10px;
+  background: rgba(255,255,255,.42);
+}
+
+.note-library-lesson.has-note {
+  background: rgba(232,241,236,.5);
+}
+
+.note-library-order {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  color: var(--leaf);
+  background: rgba(220,233,223,.78);
+  font-size: 12px;
+  font-weight: 740;
+}
+
+.note-library-lesson h4 {
+  margin: 2px 0 3px;
+  font-size: 15px;
+}
+
+.note-library-lesson p {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 12px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.note-library-lesson small {
+  display: block;
+  margin-top: 4px;
+  color: var(--quiet);
+  font-size: 10px;
+}
+
+@media (max-width: 760px) {
+  .note-library-head {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .note-library-course > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .note-library-lesson {
+    grid-template-columns: 30px minmax(0,1fr);
+  }
+
+  .note-library-lesson > .soft-button {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
 }

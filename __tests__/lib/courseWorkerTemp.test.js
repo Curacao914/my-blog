@@ -35,4 +35,18 @@ describe('course worker temp safety', () => {
     expect(() => createJobTempDir('../escape', root)).toThrow(/Unsafe/)
     expect(() => removeJobTempDir('../../escape', root)).toThrow(/Unsafe/)
   })
+
+  it('cleans only expired safe job directories', () => {
+    const { cleanupExpiredTempDirs } = require('../../scripts/course-worker/temp-safety')
+    const oldDir = createJobTempDir('job-old-001', root)
+    const freshDir = createJobTempDir('job-fresh-001', root)
+    const old = new Date(Date.now() - 48 * 60 * 60 * 1000)
+    fs.utimesSync(oldDir, old, old)
+
+    const removed = cleanupExpiredTempDirs({ root, ttlMs: 24 * 60 * 60 * 1000 })
+
+    expect(removed).toHaveLength(1)
+    expect(fs.existsSync(oldDir)).toBe(false)
+    expect(fs.existsSync(freshDir)).toBe(true)
+  })
 })

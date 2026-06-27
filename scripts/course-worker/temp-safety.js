@@ -2,7 +2,7 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 
-const TEMP_ROOT = path.join(os.tmpdir(), 'law-tech-course')
+const TEMP_ROOT = process.env.COURSE_TEMP_ROOT || path.join(os.tmpdir(), 'law-tech-course')
 const JOB_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]{5,80}$/
 
 function assertSafeJobId(jobId) {
