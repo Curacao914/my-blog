@@ -2,6 +2,12 @@
 
 This repository is `Curacao914/my-blog`. It is a NotionNext-based personal site that is being gradually rebuilt into law-tech.dev: a public personal home, a private workspace, and a stable content/workflow layer.
 
+## Read Current State First
+
+- Before changing code, read `PROJECT_STATUS.md` and `NEXT_ASSISTANT_BRIEF.md`.
+- Treat those files as a navigation aid, not as stronger evidence than Git state, current code, test output, deployed behavior, or database state.
+- If the docs are stale, update them in the same coherent change that makes them stale.
+
 ## Long-Term Architecture
 
 - Keep NotionNext as the compatibility layer for existing articles, archive, category, tag, search, RSS, and sitemap routes until replacements are proven.
@@ -33,9 +39,18 @@ This repository is `Curacao914/my-blog`. It is a NotionNext-based personal site 
 
 - Frontend changes must not alter data semantics. Do not change `contentType`, visibility, access, schedule status, importance, urgency, pinning, owner, or source behavior just to make a UI easier.
 - Clerk must not be placed back into Edge middleware casually. It previously caused Vercel `MIDDLEWARE_INVOCATION_FAILED`.
+- Hosted `/desk` pages and private APIs must fail closed when Clerk or the admin allowlist is missing. Local fallback is only for deliberate non-Vercel development.
 - Page-level or API-level auth must be verified as real session verification, not just cookie presence, before being described as secure.
 - Supabase service keys, Clerk secrets, AI API keys, WeChat tokens, Resend keys, and cron tokens must never be committed or printed in docs.
 - All external capture endpoints must return success only after the intended write has succeeded.
+
+## Resource and Workflow Safety
+
+- Do not reintroduce browser-driven high-frequency course polling. The durable workflow is the production execution path; the page is a status and control surface.
+- A course step must be idempotent, bounded, resumable, and persisted before the next step starts.
+- Keep one writer lane, up to two reviewer lanes, and one revision lane unless the user explicitly approves a new concurrency model.
+- Do not put large drafts, transcripts, or source files into workflow metadata or hook payloads. Persist them in the existing data layer and pass identifiers.
+- The user has disabled `rm -rf`. Use the repository's safe clean script or a path-checked Node cleanup instead of asking them to re-enable it.
 
 ## Visual Direction
 
@@ -45,10 +60,10 @@ This repository is `Curacao914/my-blog`. It is a NotionNext-based personal site 
 - The private workspace should be practical first: clear scanning, efficient repeated use, and compact but graceful controls.
 - Do not introduce a large UI library for the current frontend refinement unless the user approves it.
 
-## Current Frontend Direction
+## Current Phase
 
-- Keep the left workspace navigation, but refine it rather than deleting entries without audit.
-- Today is the daily command center, not a dumping ground for every module.
-- Reading should be a reading list plus detail/editor surface.
-- The next frontend-only phase must focus on `DeskShell`, `TodayBoard`, and `ReadingBox` without touching backend, AI, Supabase, WeChat, Clerk, middleware, or schema.
-
+- The course pipeline now uses a durable server workflow and must continue when the browser closes. Deployed end-to-end verification is still required before calling this complete.
+- Notion content uses a six-hour ISR default plus an administrator-only manual refresh button in the header.
+- Today uses `Asia/Shanghai` calendar dates. The main Today view contains today and overdue items; near-future items belong in the subdued `稍后` list.
+- The immediate next phase is Preview verification, resource-usage observation, and the daily 09:00 Asia/Shanghai schedule-and-reading email digest.
+- First Load JS is still large and should be optimized only after the current workflow/auth/refresh phase is verified.
