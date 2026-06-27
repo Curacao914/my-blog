@@ -1,4 +1,4 @@
-import { getNextCourseWorkerTask } from '@/lib/course/workerTasks'
+import { getNextCourseWorkerTask, getNextCourseWorkerTasks } from '@/lib/course/workerTasks'
 
 function workflowWith(status, lessons) {
   return { status, courseSpec: { maxAutoRevisions: 2 }, lessons }
@@ -11,6 +11,49 @@ describe('course worker task planner', () => {
 
     const drafted = { ...baseLesson, status: 'node_review', nodes: [{ ...baseLesson.nodes[0], status: 'node_review', draft: '正文', versions: [{ value: '正文' }], reviewRequired: true }] }
     expect(getNextCourseWorkerTask(workflowWith('node_review', [drafted])).type).toBe('review-node')
+  })
+
+  it('keeps one serial writer while allowing two independent reviews in the same batch', () => {
+    const lesson = {
+      key: 'lesson-01', order: 1, title: '第1课', status: 'node_pending', outline: [], blueprint: {},
+      nodes: [
+        { id: 'node-1', status: 'node_review', draft: '正文1', versions: [{ value: '正文1' }], reviewerReports: [], reviewRequired: true },
+        { id: 'node-2', status: 'node_review', draft: '正文2', versions: [{ value: '正文2' }], reviewerReports: [], reviewRequired: true },
+        { id: 'node-3', status: 'node_pending', versions: [], reviewerReports: [] },
+        { id: 'node-4', status: 'node_pending', versions: [], reviewerReports: [] }
+      ]
+    }
+    const tasks = getNextCourseWorkerTasks(workflowWith('node_pending', [lesson]), { reviewConcurrency: 2, totalConcurrency: 3 })
+    expect(tasks.map(task => task.type)).toEqual(['write-node', 'review-node', 'review-node'])
+    expect(tasks.filter(task => task.type === 'write-node')).toHaveLength(1)
+    expect(tasks.find(task => task.type === 'write-node').node.id).toBe('node-3')
+  })
+
+  it('does not let the serial writer skip an unresolved upstream node while independent reviews keep running', () => {
+    const lesson = {
+      key: 'lesson-01', order: 1, title: '第1课', status: 'node_pending', outline: [], blueprint: {},
+      nodes: [
+        { id: 'node-1', status: 'node_revision_required', draft: '有结构性问题的前文', versions: [{ value: '有结构性问题的前文' }], blocksDownstream: true, revisionCount: 2, humanReviewRequired: true },
+        { id: 'node-2', status: 'node_pending', versions: [], reviewerReports: [] },
+        { id: 'node-3', status: 'node_review', draft: '可独立审查的正文', versions: [{ value: '可独立审查的正文' }], reviewerReports: [], reviewRequired: true },
+        { id: 'node-4', status: 'node_review', draft: '等待前文一致性检查', versions: [{ value: '等待前文一致性检查' }], reviewerReports: [], reviewRequired: true, blockedByNodeIds: ['node-1'] }
+      ]
+    }
+    const tasks = getNextCourseWorkerTasks(workflowWith('node_pending', [lesson]), { reviewConcurrency: 2, totalConcurrency: 3 })
+    expect(tasks.map(task => task.type)).toEqual(['review-node'])
+    expect(tasks[0].node.id).toBe('node-3')
+  })
+
+  it('waits instead of writing a later node when the preceding writer failed before producing a draft', () => {
+    const lesson = {
+      key: 'lesson-01', order: 1, title: '第1课', status: 'node_pending', outline: [], blueprint: {},
+      nodes: [
+        { id: 'node-1', status: 'node_failed', draft: '', versions: [], reviewerReports: [], taskError: { taskType: 'write-node' } },
+        { id: 'node-2', status: 'node_pending', versions: [], reviewerReports: [] }
+      ]
+    }
+    const tasks = getNextCourseWorkerTasks(workflowWith('node_pending', [lesson]))
+    expect(tasks).toEqual([expect.objectContaining({ type: 'idle', reason: 'waiting-node-retry', nodeId: 'node-1' })])
   })
 
   it('uses the first unfinished lesson and stops at human gates', () => {
@@ -30,8 +73,8 @@ describe('course worker task planner', () => {
     const node = { id: 'node-1', status: 'node_revision_required', revisionCount: 1, reviewerReports: [{ value: { decision: 'revise', issues: ['覆盖不足'] } }] }
     const lesson = { key: 'lesson-01', order: 1, status: 'node_revision_required', nodes: [node], outline: [], blueprint: {} }
     expect(getNextCourseWorkerTask(workflowWith('node_revision_required', [lesson])).type).toBe('revise-node')
-    const capped = { ...lesson, nodes: [{ ...node, revisionCount: 2 }] }
-    expect(getNextCourseWorkerTask(workflowWith('node_revision_required', [capped]))).toEqual(expect.objectContaining({ type: 'idle', reason: 'waiting-node-human-review' }))
+    const capped = { ...lesson, status: 'node_human_review', nodes: [{ ...node, status: 'node_human_review', revisionCount: 2 }] }
+    expect(getNextCourseWorkerTask(workflowWith('node_human_review', [capped]))).toEqual(expect.objectContaining({ type: 'idle', reason: 'waiting-node-human-review' }))
   })
 
   it('gives each node enough neighboring context without sending an unbounded chat history', () => {

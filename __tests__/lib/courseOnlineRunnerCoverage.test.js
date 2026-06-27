@@ -1,4 +1,4 @@
-import { findOutlineCoverageGaps, numberTranscript, transcriptLines } from '@/lib/course/onlineRunner'
+import { findOutlineCoverageGaps, numberTranscript, splicePlaceholderContext, transcriptLines } from '@/lib/course/onlineRunner'
 
 describe('course outline source coverage helpers', () => {
   test('numbers normalized transcript lines with stable absolute labels', () => {
@@ -25,5 +25,17 @@ describe('course outline source coverage helpers', () => {
       { lineRange: [80, 200] }
     ]
     expect(findOutlineCoverageGaps(outline, 200)).toEqual([])
+  })
+
+  test('builds splice placeholder context without exposing approved node bodies to the splice model', () => {
+    const context = splicePlaceholderContext({
+      title: '国际法第一课',
+      outline: [{ id: 'o1', title: '国际法的广泛性' }],
+      nodes: [{ id: 'n1', outlineNodeId: 'o1', title: '国际法的广泛性 · 1/1', draft: '这段已批准正文绝不能交给接缝模型改写。' }]
+    })
+    expect(context).toContain('{{COURSE_OVERVIEW}}')
+    expect(context).toContain('{{H1_SUMMARY:o1}}')
+    expect(context).toContain('国际法的广泛性 · 1/1')
+    expect(context).not.toContain('这段已批准正文绝不能交给接缝模型改写。')
   })
 })

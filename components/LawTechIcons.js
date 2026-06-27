@@ -11,6 +11,7 @@ const paths = {
   home: <><path d='m3 11 9-8 9 8'/><path d='M5 10v11h14V10M9 21v-7h6v7'/></>,
   content: <><rect x='4' y='3' width='16' height='18' rx='3'/><path d='M8 8h8M8 12h8M8 16h5'/></>,
   search: <><circle cx='11' cy='11' r='6'/><path d='m16 16 5 5'/></>,
+  menu: <><path d='M4 7h16M4 12h16M4 17h16'/></>,
   collapse: <><path d='m14 6-6 6 6 6'/></>,
   expand: <><path d='m10 6 6 6-6 6'/></>,
   spark: <><path d='m12 2 1.3 4.7L18 8l-4.7 1.3L12 14l-1.3-4.7L6 8l4.7-1.3z'/><path d='m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z'/></>

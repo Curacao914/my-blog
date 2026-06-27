@@ -5,13 +5,38 @@ import { LawTechIcon } from '@/components/LawTechIcons'
 
 const COLLAPSE_KEY = 'law-tech-desk-sidebar-collapsed'
 
+function DeskNavigation({ active, onNavigate }) {
+  return <nav className='desk-nav' aria-label='工作台导航'>
+    {deskNav.map(group => (
+      <div className='desk-nav-group' key={group.group}>
+        <p>{group.group}</p>
+        {group.items.map(item => (
+          <Link key={item.key} href={item.href} aria-current={active === item.key ? 'page' : undefined} title={item.label} onClick={onNavigate}>
+            <LawTechIcon name={item.key} size={18} />
+            <span>{item.label}</span>
+            {active === item.key ? <i aria-hidden='true' /> : null}
+          </Link>
+        ))}
+      </div>
+    ))}
+  </nav>
+}
+
 export function DeskShell({ active = 'today', title, kicker, children }) {
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const activeItem = deskNav.flatMap(group => group.items).find(item => item.key === active)
 
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(COLLAPSE_KEY) === '1')
   }, [])
+
+  useEffect(() => {
+    if (!mobileOpen) return undefined
+    const onKeyDown = event => { if (event.key === 'Escape') setMobileOpen(false) }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [mobileOpen])
 
   function toggleSidebar() {
     setCollapsed(value => {
@@ -35,20 +60,7 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
             <LawTechIcon name={collapsed ? 'expand' : 'collapse'} size={16} />
           </button>
         </div>
-        <nav className='desk-nav' aria-label='工作台导航'>
-          {deskNav.map(group => (
-            <div className='desk-nav-group' key={group.group}>
-              <p>{group.group}</p>
-              {group.items.map(item => (
-                <Link key={item.key} href={item.href} aria-current={active === item.key ? 'page' : undefined} title={item.label}>
-                  <LawTechIcon name={item.key} size={18} />
-                  <span>{item.label}</span>
-                  {active === item.key ? <i aria-hidden='true' /> : null}
-                </Link>
-              ))}
-            </div>
-          ))}
-        </nav>
+        <DeskNavigation active={active} />
         <div className='desk-sidebar-foot'>
           <span><i /> 私人工作区</span>
           <small>数据与灵感，慢慢长成体系。</small>
@@ -58,6 +70,9 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
       <main className='desk-main'>
         <header className='desk-topbar'>
           <div className='desk-route'>
+            <button className='desk-mobile-menu-button' type='button' aria-label='打开工作台导航' aria-expanded={mobileOpen} onClick={() => setMobileOpen(true)}>
+              <LawTechIcon name='menu' size={18} />
+            </button>
             <span className='desk-route-icon'><LawTechIcon name={active} size={17} /></span>
             <div>
               <span className='eyebrow'>{kicker}</span>
@@ -70,17 +85,14 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
           </div>
         </header>
 
-        <details className='desk-mobile-nav'>
-          <summary><LawTechIcon name={active} size={17} /><span>{activeItem?.label || title}</span><b>切换</b></summary>
-          <nav aria-label='移动端工作台导航'>
-            {deskNav.flatMap(group => group.items.map(item => (
-              <Link key={item.key} href={item.href} aria-current={active === item.key ? 'page' : undefined}>
-                <LawTechIcon name={item.key} size={17} />
-                {item.label}
-              </Link>
-            )))}
-          </nav>
-        </details>
+        <div className={`desk-mobile-drawer-shell ${mobileOpen ? 'is-open' : ''}`} aria-hidden={!mobileOpen}>
+          <button className='desk-mobile-drawer-backdrop' type='button' aria-label='关闭工作台导航' onClick={() => setMobileOpen(false)} />
+          <aside className='desk-mobile-drawer' aria-label='移动端工作台导航'>
+            <header><div><span className='brand-mark'>C</span><strong>私人工作区</strong></div><button type='button' aria-label='关闭导航' onClick={() => setMobileOpen(false)}>×</button></header>
+            <DeskNavigation active={active} onNavigate={() => setMobileOpen(false)} />
+            <footer><i /> 数据与灵感，慢慢长成体系。</footer>
+          </aside>
+        </div>
 
         <section className={`desk-page desk-page-${active}`}>
           <div className='desk-page-content'>{children}</div>

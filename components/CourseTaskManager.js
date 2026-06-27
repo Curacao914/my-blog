@@ -11,7 +11,7 @@ const AUTO_STATUSES = new Set([
   'node_pending', 'node_generating', 'node_review', 'node_revision_required', 'assembly_pending',
   'assembling', 'final_review'
 ])
-const HUMAN_STATUSES = new Set(['preflight_required', 'outline_review', 'final_review_human'])
+const HUMAN_STATUSES = new Set(['preflight_required', 'outline_review', 'node_human_review', 'final_review_human'])
 const TERMINAL_STATUSES = new Set(['completed', 'cancelled'])
 const MAX_RECONNECT_ATTEMPTS = 5
 
@@ -30,7 +30,7 @@ function labelForWorkflow(workflow) {
     preflight_required: '等待设置偏好', outline_pending: '正在生成大纲', outline_generating: '正在生成大纲',
     outline_review: '大纲待确认', outline_approved: '正在准备正文', node_planning: '正在准备正文',
     node_pending: '正在整理正文', node_generating: '正在整理正文', node_review: '正在审查正文',
-    node_revision_required: '正在修改正文', assembly_pending: '正在整理全文', assembling: '正在整理全文',
+    node_revision_required: '正在修改正文', node_human_review: '有节点需要处理', assembly_pending: '正在整理全文', assembling: '正在整理全文',
     final_review: '正在最终检查', final_review_human: '最终笔记待确认', completed: '课程整理完成',
     failed: '课程处理失败', paused: '课程已暂停', cancelled: '课程已取消'
   }
@@ -157,6 +157,7 @@ export function CourseTaskProvider({ children }) {
         progress: Number(workflow?.progress || 0),
         active: state === 'running',
         error: '',
+        lastError: result.partialFailures?.length ? `${result.partialFailures.length} 个节点任务将自动重试` : '',
         retryCount: 0,
         completedStep: result.completedStep || ''
       })
@@ -244,7 +245,7 @@ export function CourseTaskProvider({ children }) {
     {showGlobalTask ? <div className={`course-global-task is-${visibleTask.state}`} role='status'>
       <button type='button' onClick={() => router.push(`/desk/courses?job=${encodeURIComponent(visibleTask.jobId)}`)}>
         <i aria-hidden='true' />
-        <span><b>{visibleTask.courseName || '课程整理'}</b><small>{visibleTask.error || visibleTask.label || '处理中'}{visibleTask.state === 'running' ? ` · ${visibleTask.progress || 0}%` : ''}</small></span>
+        <span><b>{visibleTask.courseName || '课程整理'}</b><small>{visibleTask.error || visibleTask.label || '处理中'}</small></span>
       </button>
       {visibleTask.state !== 'running' ? <button className='course-global-task-close' type='button' aria-label='关闭提示' onClick={() => dismissTask(visibleTask.jobId)}>×</button> : null}
     </div> : null}

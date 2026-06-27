@@ -47,6 +47,80 @@ describe('CourseTextPackDesk', () => {
     expect(screen.queryByRole('button', { name: '保存并审查' })).not.toBeInTheDocument()
   })
 
+  it('shows automatic node approval, readable version content and only asks humans for exceptional nodes', async () => {
+    const nodeWorkflow = {
+      ...workflow,
+      status: 'node_human_review',
+      courseSpec: { ...workflow.courseSpec, reviewConcurrency: 2 },
+      lessons: [{
+        ...workflow.lessons[0],
+        status: 'node_human_review',
+        nodes: [
+          {
+            id: 'node-1', title: '课程介绍与基本安排 · 1/2', status: 'node_approved', lineRange: [1, 1], slideRange: [1, 1],
+            draft: '已经通过审查的正文。', versions: [{ version: 1, at: '2026-06-27T01:00:00.000Z', value: '已经通过审查的正文。', source: 'writer' }],
+            reviewerReports: [{ value: { reviewedDraftVersion: 1, decision: 'approve', coverage: 90, grounding: 90, logic: 90, detail: 90, sourceCoverage: 90, issues: [] } }]
+          },
+          {
+            id: 'node-2', title: '教师观点辨析', status: 'node_human_review', lineRange: [2, 2], slideRange: [1, 1],
+            draft: '需要人工判断的正文。', versions: [{ version: 1, at: '2026-06-27T01:05:00.000Z', value: '需要人工判断的正文。', source: 'writer' }],
+            reviewerReports: [{ value: { reviewedDraftVersion: 1, decision: 'human_review', coverage: 88, grounding: 88, logic: 88, detail: 88, sourceCoverage: 88, issues: [{ severity: 'important', requiresHuman: true, message: '课堂转录与课件表述冲突。' }] } }]
+          }
+        ]
+      }]
+    }
+    fetch.mockImplementation((url, options = {}) => {
+      if (String(url).includes('/api/courses/capabilities')) return response({ ok: true, courseWriting: { configured: false, models: {} }, onlineOcr: { configured: true } })
+      if (String(url).includes('/api/courses/jobs/job-1/workflow')) return response({ ok: true, workflow: nodeWorkflow, job: { id: 'job-1' } })
+      if (String(url).includes('/api/courses/textpack') && !options.method) return response({ ok: true, jobs: [{ id: 'job-1', course_name: '证据法', teacher: '张老师', preferences: { textpack_stats: { lessonCount: 1, totalChars: 120 } }, preprocess_result: { workflow: nodeWorkflow } }] })
+      return response({ ok: true })
+    })
+
+    render(<CourseTextPackDesk />)
+    await waitFor(() => expect(screen.getAllByText('证据法').length).toBeGreaterThan(0))
+    fireEvent.click(screen.getByRole('button', { name: '继续整理' }))
+    await waitFor(() => expect(screen.getByText('逐节点整理')).toBeInTheDocument())
+
+    expect(screen.queryByRole('button', { name: '确认本节点' })).not.toBeInTheDocument()
+    expect(screen.getAllByText('已通过').length).toBeGreaterThan(0)
+    fireEvent.click(screen.getByRole('button', { name: /版本 1/ }))
+    expect(screen.getByText('已经通过审查的正文。')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /教师观点辨析/ }))
+    fireEvent.click(screen.getByRole('button', { name: /审查 1/ }))
+    expect(screen.getByRole('button', { name: '人工确认通过' })).toBeDisabled()
+    expect(screen.getByText('课堂转录与课件表述冲突。')).toBeInTheDocument()
+  })
+
+  it('makes a rejected node visibly automatic instead of showing an unexplained confirmation form', async () => {
+    const revisionWorkflow = {
+      ...workflow,
+      status: 'node_revision_required',
+      lessons: [{
+        ...workflow.lessons[0],
+        status: 'node_revision_required',
+        nodes: [{
+          id: 'node-revise', title: '国际法的主体', status: 'node_revision_required', lineRange: [1, 2], slideRange: [1, 1],
+          draft: '存在实质问题的正文。', versions: [{ version: 1, value: '存在实质问题的正文。', source: 'writer' }],
+          reviewerReports: [{ value: { reviewedDraftVersion: 1, decision: 'revise', coverage: 82, grounding: 80, logic: 84, detail: 80, sourceCoverage: 80, issues: [{ severity: 'blocking', message: '教师观点被实质曲解。' }] } }]
+        }]
+      }]
+    }
+    fetch.mockImplementation((url, options = {}) => {
+      if (String(url).includes('/api/courses/capabilities')) return response({ ok: true, courseWriting: { configured: false, models: {} }, onlineOcr: { configured: true } })
+      if (String(url).includes('/api/courses/jobs/job-1/workflow')) return response({ ok: true, workflow: revisionWorkflow, job: { id: 'job-1' } })
+      if (String(url).includes('/api/courses/textpack') && !options.method) return response({ ok: true, jobs: [{ id: 'job-1', course_name: '证据法', preprocess_result: { workflow: revisionWorkflow } }] })
+      return response({ ok: true })
+    })
+
+    render(<CourseTextPackDesk />)
+    await waitFor(() => expect(screen.getAllByText('证据法').length).toBeGreaterThan(0))
+    fireEvent.click(screen.getByRole('button', { name: '继续整理' }))
+    await waitFor(() => expect(screen.getByText('审查发现实质问题，本节点已自动进入修改队列；其他节点仍会继续处理。')).toBeInTheDocument())
+    expect(screen.getByText('补充修改要求（可选）')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '确认本节点' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '人工确认通过' })).not.toBeInTheDocument()
+  })
+
   it('appends repeated file selections and drag-and-drop files without replacing earlier choices', async () => {
     const { container } = render(<CourseTextPackDesk />)
     await waitFor(() => expect(screen.getByRole('button', { name: '导入资料' })).toBeInTheDocument())

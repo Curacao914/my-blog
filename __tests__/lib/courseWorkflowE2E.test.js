@@ -1,6 +1,5 @@
 import {
   applyNodeReview,
-  approveNode,
   approveOutline,
   assembleFinalNote,
   completeFinalReview,
@@ -43,7 +42,7 @@ describe('deterministic course workflow end to end', () => {
     expect(task.type).toBe('review-node')
     action = await executeTask(task, { deterministic: true })
     workflow = applyNodeReview(workflow, action.lessonKey, action.nodeId, action.reviewerReport)
-    workflow = approveNode(workflow, action.lessonKey, action.nodeId)
+    expect(workflow.lessons[0].nodes[0].status).toBe('node_approved')
 
     task = getNextCourseWorkerTask(workflow)
     expect(task.type).toBe('assemble')

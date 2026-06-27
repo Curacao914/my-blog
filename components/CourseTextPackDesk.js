@@ -51,9 +51,33 @@ function humanStatus(status) {
   return ({
     preflight_required: '等待确认偏好', preflight_approved: '准备生成大纲', outline_pending: '等待生成大纲', outline_generating: '正在生成大纲',
     outline_review: '等待确认大纲', outline_approved: '大纲已确认', node_planning: '正在准备正文', node_pending: '等待整理正文',
-    node_generating: '正在整理正文', node_review: '正在审查正文', node_revision_required: '正在修改正文', assembly_pending: '等待整理全文',
+    node_generating: '正在整理正文', node_review: '审查处理中', node_revision_required: '修改处理中', node_human_review: '需要人工处理', node_failed: '节点处理失败', assembly_pending: '等待整理全文',
     assembling: '正在整理全文', final_review: '正在最终检查', final_review_human: '等待最终确认', completed: '已完成', paused: '已暂停', failed: '处理失败', cancelled: '已取消'
   })[status] || '准备中'
+}
+
+
+
+function nodeStatusLabel(node, activeLease) {
+  if (activeLease?.taskType === 'write-node') return '写作中'
+  if (activeLease?.taskType === 'review-node') return '审查中'
+  if (activeLease?.taskType === 'revise-node') return '修改中'
+  if ((node?.blockedByNodeIds || []).length) return '等待前文修订'
+  return ({
+    node_pending: '等待写作',
+    node_review: '等待审查',
+    node_revision_required: '等待修改',
+    node_human_review: '需处理',
+    node_failed: '失败',
+    node_approved: '已通过'
+  })[node?.status] || humanStatus(node?.status)
+}
+
+function nodeStatusGroup(node, activeLease) {
+  if (activeLease) return 'active'
+  if (['node_human_review', 'node_failed'].includes(node?.status)) return 'attention'
+  if (node?.status === 'node_approved') return 'approved'
+  return 'waiting'
 }
 
 function latestReview(node) {
@@ -89,7 +113,8 @@ function CoursePreferences({ value, onChange, onSave, busy }) {
       <label>课堂口语<select value={value.preserveOralStyle || 'clean'} onChange={event => onChange({ ...value, preserveOralStyle: event.target.value })}><option value='clean'>整理为书面表达</option><option value='selective'>保留关键原话</option><option value='preserve'>尽量保留</option></select></label>
       <label>法条处理<select value={value.statuteMode || 'explain-when-mentioned'} onChange={event => onChange({ ...value, statuteMode: event.target.value })}><option value='explain-when-mentioned'>出现时展开</option><option value='table'>集中整理</option><option value='minimal'>仅保留引用</option></select></label>
       <label>案例处理<select value={value.caseMode || 'extract-facts-issue-rule'} onChange={event => onChange({ ...value, caseMode: event.target.value })}><option value='extract-facts-issue-rule'>完整整理</option><option value='brief'>简要提及</option></select></label>
-      <label>自动审查<select value={String(value.qualityThreshold || 75)} onChange={event => onChange({ ...value, qualityThreshold: Number(event.target.value) })}><option value='70'>适中</option><option value='75'>严格</option><option value='85'>很严格</option></select></label>
+      <label>自动审查<select value={String(value.qualityThreshold || 75)} onChange={event => onChange({ ...value, qualityThreshold: Number(event.target.value) })}><option value='70'>宽松</option><option value='75'>适中</option><option value='85'>严格</option></select></label>
+      <label>审查并发<select value={String(value.reviewConcurrency || 2)} onChange={event => onChange({ ...value, reviewConcurrency: Number(event.target.value) })}><option value='1'>1 个节点</option><option value='2'>2 个节点</option><option value='3'>3 个节点</option></select></label>
     </div>
     <label className='course-wide-label'>补充要求<textarea value={value.fixedStyle || ''} onChange={event => onChange({ ...value, fixedStyle: event.target.value })} placeholder='例如：老师的个人观点单独标记；案例必须保留事实、争点、结论和论证意义。' /></label>
     <div className='course-primary-row'><button className='soft-button primary' type='button' disabled={busy} onClick={onSave}>{busy ? '正在保存…' : '保存偏好并继续'}</button></div>
@@ -119,20 +144,45 @@ function OutlineEditor({ lesson, onSave, onApprove, busy, onlineBusy }) {
   </section>
 }
 
-function ReviewReport({ report }) {
-  if (!report) return <p className='empty-copy'>正文生成后会进行独立检查。</p>
-  const scores = [['覆盖', report.coverage], ['依据', report.grounding], ['逻辑', report.logic], ['细节', report.detail], ['来源', report.sourceCoverage]]
-  return <div className={`course-review-report decision-${report.decision || 'pending'}`}><header><strong>{reviewDecisionLabel(report.decision)}</strong><span>审查结果</span></header><div className='course-review-scores'>{scores.map(([label, value]) => <div key={label}><span>{label}</span><b>{Number(value || 0)}</b></div>)}</div>{report.issues?.length ? <ul>{report.issues.map((issue, index) => <li key={index}>{typeof issue === 'string' ? issue : issue.message || issue.detail || issue.type}</li>)}</ul> : <p>没有发现需要补充的问题。</p>}</div>
+function ReviewIssueGroup({ title, issues, tone }) {
+  if (!issues.length) return null
+  return <section className={`course-review-issues is-${tone}`}><h5>{title}</h5><ul>{issues.map((issue, index) => <li key={issue.id || index}><span>{issue.message || issue.detail || issue.type}</span>{issue.sourceRange ? <small>{issue.sourceRange}</small> : null}</li>)}</ul></section>
 }
 
-function NodeWorkbench({ lesson, onAction, busy, onlineBusy }) {
+function ReviewReport({ report }) {
+  if (!report) return <p className='empty-copy'>正文生成后会自动进行独立检查。</p>
+  const scores = [['覆盖', report.coverage], ['依据', report.grounding], ['逻辑', report.logic], ['细节', report.detail], ['来源', report.sourceCoverage]]
+  const issues = (report.issues || []).map(issue => typeof issue === 'string' ? { message: issue, severity: 'important' } : issue)
+  const blocking = issues.filter(issue => issue.severity === 'blocking')
+  const important = issues.filter(issue => issue.severity === 'important' || !issue.severity)
+  const suggestions = issues.filter(issue => issue.severity === 'suggestion')
+  return <div className={`course-review-report decision-${report.decision || 'pending'}`}>
+    <header><div><strong>{reviewDecisionLabel(report.decision)}</strong><span>审查结果</span></div>{report.summary ? <p>{report.summary}</p> : null}</header>
+    <div className='course-review-scores'>{scores.map(([label, value]) => <div key={label}><span>{label}</span><b>{Number(value || 0)}</b></div>)}</div>
+    <ReviewIssueGroup title='必须修正' issues={blocking} tone='blocking' />
+    <ReviewIssueGroup title='注意事项' issues={important} tone='important' />
+    <ReviewIssueGroup title='优化建议' issues={suggestions} tone='suggestion' />
+    {!issues.length ? <p className='course-review-clear'>没有发现影响准确性或学习效果的问题。</p> : null}
+  </div>
+}
+
+function NodeWorkbench({ lesson, taskLeases = [], onAction, busy }) {
   const nodes = lesson.nodes || []
   const [selectedId, setSelectedId] = useState(nodes[0]?.id || '')
+  const [filter, setFilter] = useState('all')
   const selected = nodes.find(node => node.id === selectedId) || nodes[0]
   const [draft, setDraft] = useState(selected?.draft || '')
   const [request, setRequest] = useState('')
   const [humanReason, setHumanReason] = useState('')
   const [activePane, setActivePane] = useState('draft')
+  const leaseByNode = useMemo(() => new Map((taskLeases || []).filter(lease => lease.nodeId).map(lease => [lease.nodeId, lease])), [taskLeases])
+  const counts = useMemo(() => nodes.reduce((value, node) => {
+    const group = nodeStatusGroup(node, leaseByNode.get(node.id))
+    value[group] += 1
+    return value
+  }, { active: 0, attention: 0, approved: 0, waiting: 0 }), [nodes, leaseByNode])
+  const visibleNodes = filter === 'all' ? nodes : nodes.filter(node => nodeStatusGroup(node, leaseByNode.get(node.id)) === filter)
+  const visibleNodeIds = visibleNodes.map(node => node.id).join('|')
 
   useEffect(() => {
     const next = nodes.find(node => node.id === selectedId) || nodes[0]
@@ -140,34 +190,52 @@ function NodeWorkbench({ lesson, onAction, busy, onlineBusy }) {
     setDraft(next?.draft || '')
     setRequest('')
     setHumanReason('')
-    setActivePane('draft')
-  }, [lesson.key, selectedId, selected?.draft, nodes.length])
+    setActivePane(['node_revision_required', 'node_human_review', 'node_failed'].includes(next?.status) ? 'review' : 'draft')
+  }, [lesson.key, selectedId, selected?.draft, selected?.status, nodes.length])
 
-  if (!nodes.length) return <section className='course-stage-card'><LoadingLine label={onlineBusy ? '正在准备正文…' : '等待准备正文'} /></section>
+  useEffect(() => {
+    if (visibleNodes.length && !visibleNodes.some(node => node.id === selectedId)) setSelectedId(visibleNodes[0].id)
+  }, [filter, selectedId, visibleNodeIds])
+
+  if (!nodes.length) return <section className='course-stage-card'><LoadingLine label='正在准备正文…' /></section>
 
   const report = latestReview(selected)
   const reviewIsCurrent = Number(report?.reviewedDraftVersion || 0) === Number(selected?.versions?.length || 0)
-  const canApprove = report?.decision === 'approve' && reviewIsCurrent
-  const needsHuman = report?.decision === 'human_review' && reviewIsCurrent
-  const needsRevision = selected?.status === 'node_revision_required' || report?.decision === 'revise'
+  const needsHuman = selected?.status === 'node_human_review' && reviewIsCurrent
+  const needsRevision = selected?.status === 'node_revision_required'
+  const failed = selected?.status === 'node_failed'
+  const selectedLease = leaseByNode.get(selected?.id)
   const panes = [
     ['draft', '正文'],
     ['review', `审查${report?.issues?.length ? ` ${report.issues.length}` : ''}`],
     ['source', '来源'],
     ['versions', `版本 ${selected?.versions?.length || 0}`]
   ]
+  const filters = [
+    ['all', '全部', nodes.length],
+    ['active', '处理中', counts.active],
+    ['attention', '需处理', counts.attention],
+    ['waiting', '等待', counts.waiting],
+    ['approved', '已通过', counts.approved]
+  ]
 
   return <section className='course-stage-card course-node-workbench'>
     <div className='course-stage-heading compact'>
       <div><span>正文与审查</span><h3>逐节点整理</h3></div>
-      <p>{onlineBusy ? '正在处理…' : `${nodes.filter(node => node.status === 'node_approved').length}/${nodes.length} 已确认`}</p>
+      <p>正文按顺序生成，独立审查与局部修订在后台衔接。</p>
     </div>
+    <div className='course-node-filters' aria-label='节点筛选'>{filters.map(([key, label, count]) => <button key={key} type='button' className={filter === key ? 'active' : ''} onClick={() => setFilter(key)} disabled={key !== 'all' && !count}>{label}<b>{count}</b></button>)}</div>
     <div className='course-node-layout'>
       <nav className='course-node-nav' aria-label='正文节点'>
-        {nodes.map((node, index) => <button key={node.id} type='button' className={node.id === selected?.id ? 'active' : ''} onClick={() => setSelectedId(node.id)}>
-          <i>{index + 1}</i>
-          <span><b>{node.title}</b><small>{humanStatus(node.status)}</small></span>
-        </button>)}
+        {visibleNodes.map(node => {
+          const lease = leaseByNode.get(node.id)
+          const group = nodeStatusGroup(node, lease)
+          const index = nodes.findIndex(item => item.id === node.id)
+          return <button key={node.id} type='button' className={`${node.id === selected?.id ? 'active' : ''} status-${group}`} onClick={() => setSelectedId(node.id)}>
+            <i>{index + 1}</i>
+            <span><b>{node.title}</b><small>{nodeStatusLabel(node, lease)}</small></span>
+          </button>
+        })}
       </nav>
 
       {selected ? <div className='course-node-editor'>
@@ -176,7 +244,7 @@ function NodeWorkbench({ lesson, onAction, busy, onlineBusy }) {
             <span>转录 {selected.lineRange?.join('–')} 行 · 课件 {selected.slideRange?.join('–')} 页</span>
             <h4>{selected.title}</h4>
           </div>
-          <strong>{humanStatus(selected.status)}</strong>
+          <strong className={`status-${nodeStatusGroup(selected, selectedLease)}`}>{nodeStatusLabel(selected, selectedLease)}</strong>
         </header>
 
         <nav className='course-editor-tabs' aria-label='节点工作区'>
@@ -184,30 +252,30 @@ function NodeWorkbench({ lesson, onAction, busy, onlineBusy }) {
         </nav>
 
         <div className='course-editor-pane'>
-          {onlineBusy ? <LoadingLine label='正在处理…' /> : null}
-
           {activePane === 'draft' ? <div className='course-draft-pane'>
             <label>节点正文<textarea value={draft} onChange={event => setDraft(event.target.value)} placeholder='正文会自动生成，也可以在这里修改。' /></label>
             <footer className='course-editor-footer'>
-              <span>{draft.length.toLocaleString('zh-CN')} 字 · {reviewIsCurrent ? '审查与当前版本一致' : report ? '修改后需要重新审查' : '等待审查'}</span>
-              <div className='course-primary-row'>
-                <button className='soft-button' type='button' disabled={busy || !draft.trim()} onClick={() => onAction({ type: 'save-node-draft', lessonKey: lesson.key, nodeId: selected.id, markdown: draft }, '节点草稿已保存。')}>保存草稿</button>
-                {canApprove ? <button className='soft-button primary' type='button' disabled={busy} onClick={() => onAction({ type: 'approve-node', lessonKey: lesson.key, nodeId: selected.id }, '节点已确认。')}>确认本节点</button> : null}
-              </div>
+              <span>{draft.length.toLocaleString('zh-CN')} 字 · {selected.status === 'node_approved' ? '已通过审查' : reviewIsCurrent ? '审查与当前版本一致' : report ? '修改后会重新审查' : '等待审查'}</span>
+              <div className='course-primary-row'><button className='soft-button' type='button' disabled={busy || !draft.trim()} onClick={() => onAction({ type: 'save-node-draft', lessonKey: lesson.key, nodeId: selected.id, markdown: draft }, '节点草稿已保存。')}>保存草稿</button></div>
             </footer>
           </div> : null}
 
           {activePane === 'review' ? <div className='course-review-pane'>
-            {!reviewIsCurrent && report ? <p className='empty-copy'>正文已修改，等待重新检查。</p> : <ReviewReport report={report} />}
-            {needsRevision ? <div className='course-feedback-box'>
-              <label>补充修改要求<textarea value={request} onChange={event => setRequest(event.target.value)} placeholder='指出需要补充、删改或重新核对的内容。' /></label>
-              <button className='soft-button primary' type='button' disabled={busy || !request.trim()} onClick={() => onAction({ type: 'request-node-revision', lessonKey: lesson.key, nodeId: selected.id, request }, '修改要求已提交。')}>提交局部修改</button>
+            <div className='course-review-scroll'>
+              {!reviewIsCurrent && report ? <p className='empty-copy'>正文已修改，系统会根据当前版本重新检查。</p> : <ReviewReport report={report} />}
+              {needsRevision ? <p className='course-auto-action'>审查发现实质问题，本节点已自动进入修改队列；其他节点仍会继续处理。</p> : null}
+              {(selected.blockedByNodeIds || []).length ? <p className='course-auto-action'>前文存在可能影响本节点的实质修改；前文通过后，本节点会自动重新检查一致性。</p> : null}
+              {failed ? <div className='course-node-error'><strong>节点处理失败</strong><p>{selected.taskError?.message || '自动重试仍未成功，请重新加入队列。'}</p></div> : null}
+            </div>
+            {(needsRevision || needsHuman || failed) ? <div className='course-review-actions'>
+              {needsRevision ? <details className='course-optional-revision'><summary>补充修改要求（可选）</summary><label>需要额外提醒系统什么？<textarea value={request} onChange={event => setRequest(event.target.value)} placeholder='审查结论已经自动传给修订模型；这里只填写你想额外补充的要求。' /></label><div className='course-primary-row'><button className='soft-button' type='button' disabled={busy || !request.trim()} onClick={() => onAction({ type: 'request-node-revision', lessonKey: lesson.key, nodeId: selected.id, request }, '补充修改要求已加入。')}>加入本次修改</button></div></details> : null}
+              {needsHuman ? <label>人工判断说明或修改要求<textarea value={humanReason} onChange={event => setHumanReason(event.target.value)} placeholder='说明为何接受当前版本，或填写希望系统如何修改。' /></label> : null}
+              {(needsHuman || failed) ? <div className='course-primary-row'>
+                {needsHuman && humanReason.trim() ? <button className='soft-button' type='button' disabled={busy} onClick={() => onAction({ type: 'request-node-revision', lessonKey: lesson.key, nodeId: selected.id, request: humanReason }, '节点已进入修改队列。')}>按说明修改</button> : null}
+                {needsHuman ? <button className='soft-button primary' type='button' disabled={busy || !humanReason.trim()} onClick={() => onAction({ type: 'approve-node-human', lessonKey: lesson.key, nodeId: selected.id, reason: humanReason }, '节点已由你确认。')}>人工确认通过</button> : null}
+                {failed ? <button className='soft-button primary' type='button' disabled={busy} onClick={() => onAction({ type: 'retry-node', lessonKey: lesson.key, nodeId: selected.id }, '节点已重新加入处理队列。')}>重试此节点</button> : null}
+              </div> : null}
             </div> : null}
-            {needsHuman ? <div className='course-feedback-box'>
-              <label>人工判断说明<textarea value={humanReason} onChange={event => setHumanReason(event.target.value)} placeholder='说明接受当前版本的理由。' /></label>
-              <button className='soft-button primary' type='button' disabled={busy || !humanReason.trim()} onClick={() => onAction({ type: 'approve-node-human', lessonKey: lesson.key, nodeId: selected.id, reason: humanReason }, '节点已由你确认。')}>人工确认本节点</button>
-            </div> : null}
-            {!needsRevision && !needsHuman && canApprove ? <div className='course-primary-row'><button className='soft-button primary' type='button' disabled={busy} onClick={() => onAction({ type: 'approve-node', lessonKey: lesson.key, nodeId: selected.id }, '节点已确认。')}>确认本节点</button></div> : null}
           </div> : null}
 
           {activePane === 'source' ? <div className='course-source-pane'>
@@ -216,13 +284,17 @@ function NodeWorkbench({ lesson, onAction, busy, onlineBusy }) {
           </div> : null}
 
           {activePane === 'versions' ? <div className='course-version-pane'>
-            {(selected.versions || []).length ? [...selected.versions].reverse().map((version, index) => <article key={version.id || index}>
-              <div><strong>版本 {(selected.versions || []).length - index}</strong><span>{version.createdAt ? new Date(version.createdAt).toLocaleString('zh-CN') : '已保存'}</span></div>
-              <p>{String(version.markdown || version.draft || '').slice(0, 260) || '该版本没有可显示的摘要。'}</p>
-            </article>) : <p className='empty-copy'>当前还没有历史版本。</p>}
+            {(selected.versions || []).length ? [...selected.versions].reverse().map((version, index) => {
+              const value = String(version.value || version.markdown || version.draft || '')
+              return <article key={version.id || version.version || index}>
+                <div><strong>版本 {version.version || (selected.versions || []).length - index}</strong><span>{version.at || version.createdAt ? new Date(version.at || version.createdAt).toLocaleString('zh-CN') : '已保存'} · {({ writer: '首次生成', revision: '自动修订', user: '人工修改' })[version.source] || '已保存'}</span></div>
+                <p>{version.summary || (value ? `正文预览：${value.slice(0, 260)}` : '此版本未保存正文预览。')}</p>
+                {value ? <details><summary>查看这一版</summary><pre>{value}</pre></details> : null}
+              </article>
+            }) : <p className='empty-copy'>当前还没有历史版本。</p>}
           </div> : null}
         </div>
-      </div> : null}
+      </div> : <div className='course-empty-state'><strong>当前筛选下没有节点</strong><p>切换到“全部”查看完整列表。</p></div>}
     </div>
   </section>
 }
@@ -278,12 +350,12 @@ function CourseWorkbench({ jobId, workflow, capabilities, onAction, onRefresh, o
   let stageContent
   if (ui.stage === 'preferences') stageContent = <CoursePreferences value={courseSpec} onChange={setCourseSpec} onSave={() => run({ type: 'save-course-spec', courseSpec }, '偏好已保存。')} busy={busy} />
   else if (ui.stage === 'outline') stageContent = <OutlineEditor lesson={lesson} busy={busy} onlineBusy={onlineBusy} onSave={outline => run({ type: 'edit-outline', lessonKey: lesson.key, outline }, '大纲修改已保存。', false)} onApprove={async outline => { await run({ type: 'edit-outline', lessonKey: lesson.key, outline }, '大纲修改已保存。', false); await run({ type: 'approve-outline', lessonKey: lesson.key }, '大纲已批准。') }} />
-  else if (ui.stage === 'writing' || ui.stage === 'review') stageContent = <NodeWorkbench lesson={lesson} onAction={run} busy={busy} onlineBusy={onlineBusy} />
+  else if (ui.stage === 'writing' || ui.stage === 'review') stageContent = <NodeWorkbench lesson={lesson} taskLeases={workflow.taskLeases || []} onAction={run} busy={busy} />
   else if (ui.stage === 'assemble' || ui.stage === 'completed') stageContent = <FinalNoteStage lesson={lesson} onAction={run} busy={busy} onlineBusy={onlineBusy} />
   else stageContent = <section className='course-stage-card'><div className='course-waiting-card'><strong>课程资料已准备</strong><p>从当前主操作继续。</p></div></section>
 
   return <section className='course-detail-shell'>
-    <header className='course-detail-topbar'><button className='course-back-button' type='button' onClick={onBack}>← 课程库</button><div><span>课程整理</span><h2>{workflow.courseSpec?.courseName || '课程工作台'}</h2><p>{workflow.courseSpec?.teacher || '未填写教师'} · {ui.stageLabel}</p></div><div className='course-progress-box'><strong>{workflow.progress || 0}%</strong><span>{onlineBusy ? humanStatus(lesson.status || workflow.status) : ui.stageLabel}</span></div><ServiceLights capabilities={capabilities} /><div className='course-row-actions'><button className='soft-button' type='button' onClick={() => onSupplement(jobId, workflow)}>补充资料</button>{workflow.status === 'failed' ? <button className='soft-button primary' type='button' disabled={busy} onClick={() => run({ type: 'retry' }, '正在重试。')}>重试</button> : null}{capabilities?.courseWriting?.configured && AUTO_STATUSES.has(lesson.status || workflow.status) ? <button className='soft-button primary' type='button' disabled={onlineBusy || busy} onClick={() => startTask(jobId, { courseName: workflow.courseSpec?.courseName })}>{onlineBusy ? '处理中…' : '继续处理'}</button> : null}{ui.canPause ? <button className='soft-button' type='button' disabled={busy} onClick={() => { pauseTask(jobId); run({ type: 'pause' }, '已暂停后续处理。', false) }}>暂停</button> : null}{ui.canResume ? <button className='soft-button' type='button' disabled={busy} onClick={() => run({ type: 'resume' }, '已恢复处理。')}>恢复</button> : null}</div></header>
+    <header className='course-detail-topbar'><button className='course-back-button' type='button' onClick={onBack}>← 课程库</button><div><span>课程整理</span><h2>{workflow.courseSpec?.courseName || '课程工作台'}</h2><p>{workflow.courseSpec?.teacher || '未填写教师'}</p></div><ServiceLights capabilities={capabilities} /><div className='course-row-actions'><button className='soft-button' type='button' onClick={() => onSupplement(jobId, workflow)}>补充资料</button>{workflow.status === 'failed' ? <button className='soft-button primary' type='button' disabled={busy} onClick={() => run({ type: 'retry' }, '正在重试。')}>重试</button> : null}{capabilities?.courseWriting?.configured && AUTO_STATUSES.has(lesson.status || workflow.status) ? <button className='soft-button primary' type='button' disabled={onlineBusy || busy} onClick={() => startTask(jobId, { courseName: workflow.courseSpec?.courseName })}>{onlineBusy ? '处理中…' : '继续处理'}</button> : null}{ui.canPause ? <button className='soft-button' type='button' disabled={busy} onClick={() => { pauseTask(jobId); run({ type: 'pause' }, '已暂停领取新任务。', false) }}>暂停</button> : null}{ui.canResume ? <button className='soft-button' type='button' disabled={busy} onClick={() => run({ type: 'resume' }, '已恢复处理。')}>恢复</button> : null}</div></header>
     <ProgressStepper ui={ui} />
     <div className='course-workbench-grid'><aside className='course-lesson-rail'><h3>课次</h3>{(workflow.lessons || []).map(item => <button key={item.key} type='button' className={item.key === lesson.key ? 'active' : ''} onClick={() => setActiveLessonKey(item.key)}><b>{item.title}</b><span>{humanStatus(item.status)}</span></button>)}</aside><main className='course-stage-stack'>{stageContent}{message ? <p className={`status-line ${/失败|错误|不能|缺少|HTTP/.test(message) ? 'error' : ''}`}>{message}</p> : null}{currentErrorMessage ? <details className='course-diagnostics' open><summary>处理失败</summary><p>{currentErrorMessage}</p></details> : null}{errorHistory.length ? <details className='course-diagnostics'><summary>历史诊断（{errorHistory.length}）</summary>{errorHistory.map(error => <p key={error.id}>{formatCourseWorkflowError(error)}{error.resolvedAt ? ' · 已结束' : ''}</p>)}</details> : null}</main></div>
   </section>
@@ -292,8 +364,9 @@ function CourseWorkbench({ jobId, workflow, capabilities, onAction, onRefresh, o
 function CourseJobRow({ job, active, onOpen, onDelete }) {
   const workflow = job.preprocess_result?.workflow || {}
   const stats = job.preferences?.textpack_stats || {}
-  const pendingHuman = ['preflight_required', 'outline_review', 'node_review', 'node_revision_required', 'final_review_human'].includes(workflow.status)
-  return <article className={`course-job-row ${active ? 'active' : ''}`}><div><span>{humanStatus(workflow.status || job.current_node)}</span><h3>{job.course_name}</h3><p>{job.teacher || '未填写教师'} · {formatNumber(stats.lessonCount)} 课 · {formatNumber(stats.totalChars)} 字</p><small>进度 {workflow.progress || 0}%{pendingHuman ? ' · 等待你的确认' : ''} · {job.updated_at ? new Date(job.updated_at).toLocaleString('zh-CN') : '刚刚更新'}</small></div><div className='course-row-actions'><button className='soft-button primary' type='button' onClick={() => onOpen(job.id)}>继续整理</button><button className='soft-button danger' type='button' onClick={() => onDelete(job.id)}>删除</button></div></article>
+  const attentionCount = (workflow.lessons || []).flatMap(lesson => lesson.nodes || []).filter(node => ['node_human_review', 'node_failed'].includes(node.status)).length
+  const pendingHuman = ['preflight_required', 'outline_review', 'node_human_review', 'final_review_human'].includes(workflow.status) || attentionCount > 0
+  return <article className={`course-job-row ${active ? 'active' : ''}`}><div><span>{humanStatus(workflow.status || job.current_node)}</span><h3>{job.course_name}</h3><p>{job.teacher || '未填写教师'} · {formatNumber(stats.lessonCount)} 课 · {formatNumber(stats.totalChars)} 字</p><small>{pendingHuman ? `${attentionCount || 1} 项等待处理 · ` : ''}{job.updated_at ? new Date(job.updated_at).toLocaleString('zh-CN') : '刚刚更新'}</small></div><div className='course-row-actions'><button className='soft-button primary' type='button' onClick={() => onOpen(job.id)}>继续整理</button><button className='soft-button danger' type='button' onClick={() => onDelete(job.id)}>删除</button></div></article>
 }
 
 function confidenceLabel(value) {
