@@ -167,3 +167,11 @@ Performance optimization of large shared First Load JS is real debt, but it shou
 - Permanent deletion must never automatically regenerate or spend model credits. Regeneration is a separate explicit user action.
 - This phase supersedes the earlier note that lesson-level deletion was still pending.
 - After local and Preview verification, the next product phase is course-note publishing into Supabase content records and `/content`.
+
+## Content Taxonomy and Publishing Invariant
+
+- `遇事不决` is the user's law-note category, named after the joke “遇事不决，北大法学”. Do not infer that it is a miscellaneous or technical-troubleshooting category from the literal wording.
+- The public hierarchy is `栏目 → 合集 → 内容`. For course notes, the default is `遇事不决 → 课程名 → 单课笔记`.
+- Folder depth may remain technically recursive, but the product UI should encourage one collection layer rather than arbitrary nesting.
+- New course-note publishing writes to Supabase content tables; legacy live JSON / Notion-derived snapshots remain readable and must be merged rather than hidden.
+- A database item with the same slug takes precedence over the legacy snapshot, while unrelated legacy content remains visible.

@@ -166,7 +166,7 @@ function buildSnapshot(courseDir, noteFile, options) {
     status: options.status || 'draft',
     summary: lesson.title || `${courseName} 第${lessonOrder}课课程笔记`,
     tags: ['课程笔记', courseName].filter(Boolean),
-    category: options.category || '法律之上',
+    category: options.category || '遇事不决',
     date: lesson.date || undefined,
     updatedAt: now,
     source: 'course-worker',
@@ -180,7 +180,7 @@ function buildSnapshot(courseDir, noteFile, options) {
       allowSitemap: Boolean(options.public)
     },
     display: {
-      category: options.category || '法律之上',
+      category: options.category || '遇事不决',
       tags: ['课程笔记', courseName].filter(Boolean),
       pinned: false,
       showInRecent: Boolean(options.public)
@@ -192,7 +192,7 @@ function buildSnapshot(courseDir, noteFile, options) {
       date: lesson.date || undefined
     },
     folder: {
-      path: ['课程笔记', courseName, `第${lessonOrder}课`]
+      path: [options.category || '遇事不决', courseName]
     },
     checksum: ''
   }
@@ -347,7 +347,7 @@ function printHelp() {
       '  --lessons 1,2              Import selected lessons',
       '  --status draft|published   Default: draft',
       '  --public                   Mark imported notes public; default is private',
-      '  --category <name>          Default: 法律之上',
+      '  --category <name>          Default: 遇事不决',
       '  --slug-prefix <prefix>     Default: courses/<course-slug>',
       '',
       'This imports output/notes/第N课.md into content_items/content_versions.',

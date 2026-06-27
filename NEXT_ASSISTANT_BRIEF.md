@@ -128,3 +128,7 @@ Never include nonexistent test paths in `git add`. A failed pathspec aborts the 
 ## Latest Phase Override: Lesson Note Lifecycle
 
 The latest patch adds a recoverable lesson-note trash flow. Soft deletion retains the final note and versions. Permanent deletion requires typing `永久删除`, clears only the final-note layer, preserves source material, outline, approved nodes and node reviews, and leaves regeneration as a separate explicit action. After verification, the next phase is course-note publishing into Supabase content records and `/content`.
+
+## Current Phase Override: Course Publishing Core
+
+The current large phase connects completed course notes to the publishing desk and Supabase content records. Course notes default to `遇事不决 → 课程名 → 单课笔记`. The phrase `遇事不决` is intentionally the user's law-note category (“遇事不决，北大法学”), not a miscellaneous category. The public content index must merge database content with legacy live JSON / Notion-derived snapshots instead of replacing one source with the other.

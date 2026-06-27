@@ -363,7 +363,7 @@ function RemovedNoteStage({ lesson, onAction, busy }) {
   </section>
 }
 
-function FinalNoteStage({ lesson, onAction, busy }) {
+function FinalNoteStage({ jobId, lesson, onAction, busy }) {
   const [markdown, setMarkdown] = useState(lesson.finalNote?.markdown || '')
   const [mode, setMode] = useState('preview')
   const [revisionRequest, setRevisionRequest] = useState('')
@@ -433,6 +433,7 @@ function FinalNoteStage({ lesson, onAction, busy }) {
       {mode === 'edit' ? <button className='soft-button' type='button' disabled={busy || !markdown.trim() || !dirty} onClick={() => onAction({ type: 'save-final-note', lessonKey: lesson.key, markdown }, '最终笔记修改已保存。', false)}>保存修改</button> : null}
       <button className='soft-button' type='button' onClick={() => navigator.clipboard?.writeText(markdown)}>复制</button>
       <button className='soft-button' data-course-export type='button' onClick={exportMarkdown}>导出 Markdown</button>
+      <a className='soft-button' href={`/desk/publish?job=${encodeURIComponent(jobId)}&lesson=${encodeURIComponent(lesson.key)}`}>转入发布</a>
       {awaitingConfirmation ? <button className='soft-button primary' type='button' disabled={busy || dirty} title={dirty ? '请先保存修改' : ''} onClick={() => onAction({ type: 'approve-final-review', lessonKey: lesson.key }, '最终笔记已由你确认。')}>确认无误，完成本课</button> : null}
     </div>
 
@@ -447,6 +448,11 @@ function FinalNoteStage({ lesson, onAction, busy }) {
       </div>
     </details> : null}
 
+    {lesson.publication ? <p className='course-publication-line'>
+      {lesson.publication.status === 'published' ? '已发布' : '发布草稿'}
+      {lesson.publication.stale ? ' · 当前笔记有更新，尚未同步' : ''}
+      {lesson.publication.slug ? <> · <a href={`/content/${lesson.publication.slug}`}>查看内容页</a></> : null}
+    </p> : null}
     {dirty ? <p className='course-final-unsaved'>当前修改尚未保存，保存后才能确认或提交修改要求。</p> : null}
     {report ? <details className='course-final-history'><summary>查看历史自动检查结果</summary><ReviewReport report={report} /></details> : null}
   </section>
@@ -492,7 +498,7 @@ function CourseWorkbench({ jobId, workflow, capabilities, onAction, onRefresh, o
   if (ui.stage === 'preferences') stageContent = <CoursePreferences value={courseSpec} onChange={setCourseSpec} onSave={() => run({ type: 'save-course-spec', courseSpec }, '偏好已保存。')} busy={busy} />
   else if (ui.stage === 'outline') stageContent = <OutlineEditor lesson={lesson} busy={busy} onlineBusy={onlineBusy} onSave={outline => run({ type: 'edit-outline', lessonKey: lesson.key, outline }, '大纲修改已保存。', false)} onApprove={async outline => { await run({ type: 'edit-outline', lessonKey: lesson.key, outline }, '大纲修改已保存。', false); await run({ type: 'approve-outline', lessonKey: lesson.key }, '大纲已批准。') }} />
   else if (ui.stage === 'writing' || ui.stage === 'review') stageContent = <NodeWorkbench lesson={lesson} taskLeases={workflow.taskLeases || []} onAction={run} busy={busy} />
-  else if (ui.stage === 'assemble' || ui.stage === 'completed') stageContent = <FinalNoteStage lesson={lesson} onAction={run} busy={busy} onlineBusy={onlineBusy} />
+  else if (ui.stage === 'assemble' || ui.stage === 'completed') stageContent = <FinalNoteStage jobId={jobId} lesson={lesson} onAction={run} busy={busy} onlineBusy={onlineBusy} />
   else stageContent = <section className='course-stage-card'><div className='course-waiting-card'><strong>课程资料已准备</strong><p>从当前主操作继续。</p></div></section>
 
   return <section className='course-detail-shell'>

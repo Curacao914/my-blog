@@ -8,6 +8,7 @@ import {
   listPublishedContentMetadata,
   toSnapshotLikeContent
 } from '@/lib/contentRepository'
+import { mergeContentPaths } from '@/lib/contentHierarchy'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -465,29 +466,20 @@ const ContentDetailPage = ({ content }) => {
 ContentDetailPage.layout = 'bare'
 
 export async function getStaticPaths() {
+  const livePaths = getLiveContentPaths()
+  let databaseItems = []
+
   try {
     const rows = await listPublishedContentMetadata()
-    const paths = rows
+    databaseItems = rows
       .map(row => toSnapshotLikeContent(row))
       .filter(item => item.access?.mode !== 'private')
-      .map(item => ({
-        params: {
-          slug: item.slug.split('/')
-        }
-      }))
-
-    if (paths.length > 0) {
-      return {
-        paths,
-        fallback: 'blocking'
-      }
-    }
   } catch (error) {
-    console.warn('[content detail] database paths failed, fallback to live JSON', error)
+    console.warn('[content detail] database paths failed; keeping live JSON paths', error)
   }
 
   return {
-    paths: getLiveContentPaths(),
+    paths: mergeContentPaths(livePaths, databaseItems),
     fallback: 'blocking'
   }
 }

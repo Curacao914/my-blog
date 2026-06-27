@@ -244,3 +244,20 @@ The note library now supports:
 - explicit regeneration from approved nodes, with no automatic model spending after deletion.
 
 This supersedes the earlier statement that lesson-level deletion was not implemented. The next product phase after verification is course final note publishing into Supabase content records and `/content`.
+
+## Current Large Phase: Course Publishing Core
+
+Status: patch prepared; local tests, build, and Preview verification are required.
+
+Scope included in this phase:
+
+- completed course note → publishing desk;
+- title, summary, category, collection, tags, slug, access and indexing settings;
+- draft save, publish, update and withdraw;
+- source linkage back to the course lesson;
+- stale publication indicator after the course final note changes;
+- public grouping by `栏目 → 合集 → 内容`;
+- database + legacy live JSON compatibility with slug-level deduplication;
+- default course-note hierarchy `遇事不决 → 课程名 → 单课笔记`.
+
+The next phase after verification is broader Notion-source normalization and unified homepage/search/RSS exposure.

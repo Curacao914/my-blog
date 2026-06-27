@@ -7,6 +7,7 @@ import {
   listPublishedContentMetadata,
   toSnapshotLikeContent
 } from '@/lib/contentRepository'
+import { groupContentByCollection, mergeContentIndexes } from '@/lib/contentHierarchy'
 import Head from 'next/head'
 import Link from 'next/link'
 import { PublicHeader } from '@/components/law-tech/PublicHeader'
@@ -62,6 +63,7 @@ function renderFolderTree(folders) {
 
 const ContentPage = ({ snapshots, facets, stats }) => {
   const folders = facets.folders.length ? facets.folders : fallbackFolders
+  const collections = groupContentByCollection(snapshots)
 
   return (
     <>
@@ -130,55 +132,38 @@ const ContentPage = ({ snapshots, facets, stats }) => {
                 </div>
 
                 <div className='cards'>
-                  {snapshots.map(item => (
-                    <Link
-                      className='content-card'
-                      href={`/content/${item.slug}`}
-                      key={item.id}>
-                      <div className='card-meta'>
-                        <span>{typeLabels[item.type] || item.type}</span>
-                        <span>{item.display?.category || item.category}</span>
-                        <span>{accessLabels[item.access?.mode] || '公开'}</span>
+                  {collections.map(collection => (
+                    <section className='collection-group' key={collection.key}>
+                      <header>
+                        <span>{collection.category}</span>
+                        <h3>{collection.collection || '独立内容'}</h3>
+                        <small>{collection.items.length} 条</small>
+                      </header>
+                      <div className='collection-items'>
+                        {collection.items.map(item => (
+                          <Link className='content-card' href={`/content/${item.slug}`} key={item.id || item.slug}>
+                            <div className='card-meta'>
+                              <span>{typeLabels[item.type] || item.type}</span>
+                              <span>{item.course?.lesson || item.display?.category || item.category}</span>
+                              <span>{accessLabels[item.access?.mode] || '公开'}</span>
+                            </div>
+                            <h3>{item.title}</h3>
+                            <p>{item.summary || '还没有摘要。'}</p>
+                            {item.course && <dl className='course-meta'>
+                              {item.course.name && <><dt>课程</dt><dd>{item.course.name}</dd></>}
+                              {item.course.lesson && <><dt>课次</dt><dd>{item.course.lesson}</dd></>}
+                              {item.course.teacher && <><dt>教师</dt><dd>{item.course.teacher}</dd></>}
+                            </dl>}
+                            <div className='card-foot'>
+                              <span>{formatDate(item.date || item.updatedAt)}</span>
+                              <span>{item.folder?.path?.join(' / ') || '未归档'}</span>
+                            </div>
+                          </Link>
+                        ))}
                       </div>
-                      <h3>{item.title}</h3>
-                      <p>{item.summary || '还没有摘要。'}</p>
-
-                      {item.course && (
-                        <dl className='course-meta'>
-                          {item.course.name && (
-                            <>
-                              <dt>课程</dt>
-                              <dd>{item.course.name}</dd>
-                            </>
-                          )}
-                          {item.course.lesson && (
-                            <>
-                              <dt>课次</dt>
-                              <dd>{item.course.lesson}</dd>
-                            </>
-                          )}
-                          {item.course.teacher && (
-                            <>
-                              <dt>教师</dt>
-                              <dd>{item.course.teacher}</dd>
-                            </>
-                          )}
-                        </dl>
-                      )}
-
-                      <div className='card-foot'>
-                        <span>{formatDate(item.date || item.updatedAt)}</span>
-                        <span>{item.folder?.path?.join(' / ') || '未归档'}</span>
-                      </div>
-                    </Link>
+                    </section>
                   ))}
-
-                  {snapshots.length === 0 && (
-                    <div className='empty'>
-                      <h3>这里暂时还空着。</h3>
-                      <p>等有内容公开后，会出现在这里。</p>
-                    </div>
-                  )}
+                  {snapshots.length === 0 && <div className='empty'><h3>这里暂时还空着。</h3><p>等有内容公开后，会出现在这里。</p></div>}
                 </div>
               </section>
             </section>
@@ -432,6 +417,45 @@ const ContentPage = ({ snapshots, facets, stats }) => {
 
         .cards {
           display: grid;
+          gap: 18px;
+        }
+
+        .collection-group {
+          display: grid;
+          gap: 10px;
+        }
+
+        .collection-group > header {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          align-items: end;
+          gap: 3px 12px;
+          padding: 4px 2px;
+        }
+
+        .collection-group > header span {
+          grid-column: 1 / -1;
+          color: var(--quiet);
+          font-size: 11px;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+        }
+
+        .collection-group > header h3 {
+          font-size: 20px;
+        }
+
+        .collection-group > header small {
+          color: var(--quiet);
+        }
+
+        .collection-items {
+          display: grid;
+          gap: 12px;
+        }
+
+        .cards {
+          display: grid;
           gap: 14px;
           padding-top: 18px;
         }
@@ -567,10 +591,8 @@ export async function getStaticProps() {
       .map(row => toSnapshotLikeContent(row))
       .filter(item => item.access?.mode !== 'private')
 
-    if (databaseSnapshots.length > 0) {
-      snapshots = databaseSnapshots
-      source = 'database'
-    }
+    snapshots = mergeContentIndexes(snapshots, databaseSnapshots)
+    if (databaseSnapshots.length > 0) source = 'database+live-json'
   } catch (error) {
     console.warn('[content] database read failed, fallback to live JSON', error)
   }
