@@ -175,6 +175,7 @@ function NodeWorkbench({ lesson, taskLeases = [], onAction, busy }) {
   const [request, setRequest] = useState('')
   const [humanReason, setHumanReason] = useState('')
   const [activePane, setActivePane] = useState('draft')
+  const [focusMode, setFocusMode] = useState(false)
   const leaseByNode = useMemo(() => new Map((taskLeases || []).filter(lease => lease.nodeId).map(lease => [lease.nodeId, lease])), [taskLeases])
   const counts = useMemo(() => nodes.reduce((value, node) => {
     const group = nodeStatusGroup(node, leaseByNode.get(node.id))
@@ -196,6 +197,21 @@ function NodeWorkbench({ lesson, taskLeases = [], onAction, busy }) {
   useEffect(() => {
     if (visibleNodes.length && !visibleNodes.some(node => node.id === selectedId)) setSelectedId(visibleNodes[0].id)
   }, [filter, selectedId, visibleNodeIds])
+
+  useEffect(() => setFocusMode(false), [lesson.key, selectedId])
+
+  useEffect(() => {
+    if (!focusMode || typeof document === 'undefined') return undefined
+    const onKeyDown = event => {
+      if (event.key === 'Escape') setFocusMode(false)
+    }
+    document.documentElement.classList.add('course-focus-open')
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.documentElement.classList.remove('course-focus-open')
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [focusMode])
 
   if (!nodes.length) return <section className='course-stage-card'><LoadingLine label='正在准备正文…' /></section>
 
@@ -238,7 +254,7 @@ function NodeWorkbench({ lesson, taskLeases = [], onAction, busy }) {
         })}
       </nav>
 
-      {selected ? <div className='course-node-editor'>
+      {selected ? <>{focusMode ? <button className='course-focus-backdrop' type='button' aria-label='退出专注查看' onClick={() => setFocusMode(false)} /> : null}<div className={`course-node-editor${focusMode ? ' is-focus-mode' : ''}`}>
         <header className='course-node-editor-head'>
           <div>
             <span>转录 {selected.lineRange?.join('–')} 行 · 课件 {selected.slideRange?.join('–')} 页</span>
@@ -247,9 +263,12 @@ function NodeWorkbench({ lesson, taskLeases = [], onAction, busy }) {
           <strong className={`status-${nodeStatusGroup(selected, selectedLease)}`}>{nodeStatusLabel(selected, selectedLease)}</strong>
         </header>
 
-        <nav className='course-editor-tabs' aria-label='节点工作区'>
-          {panes.map(([key, label]) => <button key={key} type='button' aria-pressed={activePane === key} onClick={() => setActivePane(key)}>{label}</button>)}
-        </nav>
+        <div className='course-editor-toolbar'>
+          <nav className='course-editor-tabs' aria-label='节点工作区'>
+            {panes.map(([key, label]) => <button key={key} type='button' aria-pressed={activePane === key} onClick={() => setActivePane(key)}>{label}</button>)}
+          </nav>
+          <button className='course-focus-toggle' type='button' aria-pressed={focusMode} onClick={() => setFocusMode(value => !value)}>{focusMode ? '退出专注' : '专注查看'}</button>
+        </div>
 
         <div className='course-editor-pane'>
           {activePane === 'draft' ? <div className='course-draft-pane'>
@@ -268,8 +287,8 @@ function NodeWorkbench({ lesson, taskLeases = [], onAction, busy }) {
               {failed ? <div className='course-node-error'><strong>节点处理失败</strong><p>{selected.taskError?.message || '自动重试仍未成功，请重新加入队列。'}</p></div> : null}
             </div>
             {(needsRevision || needsHuman || failed) ? <div className='course-review-actions'>
-              {needsRevision ? <details className='course-optional-revision'><summary>补充修改要求（可选）</summary><label>需要额外提醒系统什么？<textarea value={request} onChange={event => setRequest(event.target.value)} placeholder='审查结论已经自动传给修订模型；这里只填写你想额外补充的要求。' /></label><div className='course-primary-row'><button className='soft-button' type='button' disabled={busy || !request.trim()} onClick={() => onAction({ type: 'request-node-revision', lessonKey: lesson.key, nodeId: selected.id, request }, '补充修改要求已加入。')}>加入本次修改</button></div></details> : null}
-              {needsHuman ? <label>人工判断说明或修改要求<textarea value={humanReason} onChange={event => setHumanReason(event.target.value)} placeholder='说明为何接受当前版本，或填写希望系统如何修改。' /></label> : null}
+              {needsRevision ? <details className='course-optional-revision'><summary>补充修改要求（可选）</summary><label>需要额外提醒系统什么？<textarea rows={3} value={request} onChange={event => setRequest(event.target.value)} placeholder='审查结论已经自动传给修订模型；这里只填写你想额外补充的要求。' /></label><div className='course-primary-row'><button className='soft-button' type='button' disabled={busy || !request.trim()} onClick={() => onAction({ type: 'request-node-revision', lessonKey: lesson.key, nodeId: selected.id, request }, '补充修改要求已加入。')}>加入本次修改</button></div></details> : null}
+              {needsHuman ? <label>人工判断说明或修改要求<textarea rows={3} value={humanReason} onChange={event => setHumanReason(event.target.value)} placeholder='说明为何接受当前版本，或填写希望系统如何修改。' /></label> : null}
               {(needsHuman || failed) ? <div className='course-primary-row'>
                 {needsHuman && humanReason.trim() ? <button className='soft-button' type='button' disabled={busy} onClick={() => onAction({ type: 'request-node-revision', lessonKey: lesson.key, nodeId: selected.id, request: humanReason }, '节点已进入修改队列。')}>按说明修改</button> : null}
                 {needsHuman ? <button className='soft-button primary' type='button' disabled={busy || !humanReason.trim()} onClick={() => onAction({ type: 'approve-node-human', lessonKey: lesson.key, nodeId: selected.id, reason: humanReason }, '节点已由你确认。')}>人工确认通过</button> : null}
@@ -294,7 +313,7 @@ function NodeWorkbench({ lesson, taskLeases = [], onAction, busy }) {
             }) : <p className='empty-copy'>当前还没有历史版本。</p>}
           </div> : null}
         </div>
-      </div> : <div className='course-empty-state'><strong>当前筛选下没有节点</strong><p>切换到“全部”查看完整列表。</p></div>}
+      </div></> : <div className='course-empty-state'><strong>当前筛选下没有节点</strong><p>切换到“全部”查看完整列表。</p></div>}
     </div>
   </section>
 }

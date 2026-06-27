@@ -5044,6 +5044,55 @@ button, a, input, textarea, select, summary {
   }
 }
 
+/* Course review focus and readability */
+html.course-focus-open,
+html.course-focus-open body { overflow:hidden; }
+
+.course-node-nav button { height:auto; min-height:76px; align-items:start; }
+.course-node-nav button > span { min-width:0; align-self:stretch; }
+.course-node-nav b { -webkit-line-clamp:3; }
+.course-node-nav small { display:block; line-height:1.35; white-space:normal; }
+
+.course-editor-toolbar { display:flex; align-items:center; gap:8px; min-width:0; }
+.course-editor-toolbar .course-editor-tabs { flex:1 1 auto; min-width:0; }
+.course-focus-toggle {
+  flex:0 0 auto; min-height:31px; border:1px solid rgba(17,63,49,.1); border-radius:10px;
+  padding:0 11px; color:var(--leaf); background:rgba(255,255,255,.52);
+  font-size:11px; font-weight:700; cursor:pointer;
+}
+.course-focus-toggle:hover,
+.course-focus-toggle[aria-pressed='true'] { background:rgba(220,233,223,.78); }
+
+.course-focus-backdrop {
+  position:fixed; inset:0; z-index:180; border:0;
+  background:rgba(12,31,25,.34); backdrop-filter:blur(8px);
+}
+.course-node-editor.is-focus-mode {
+  position:fixed; inset:clamp(10px,2vw,28px); z-index:181;
+  width:auto; max-width:none; height:auto; min-height:0;
+  border:1px solid rgba(255,255,255,.8); border-radius:22px; padding:16px; overflow:hidden;
+  background:rgba(248,250,246,.97); box-shadow:0 30px 100px rgba(10,34,26,.28);
+  backdrop-filter:blur(26px);
+}
+
+.course-review-pane { grid-template-rows:minmax(190px,1fr) auto; }
+.course-review-scroll { scrollbar-gutter:stable; }
+.course-review-actions { max-height:min(38vh,280px); overflow:auto; scrollbar-gutter:stable; }
+.course-review-actions textarea { min-height:86px; max-height:170px; }
+.course-review-report > header p { max-height:8em; overflow:auto; scrollbar-gutter:stable; }
+
+.course-node-editor.is-focus-mode .course-review-pane { grid-template-rows:minmax(320px,1fr) auto; }
+.course-node-editor.is-focus-mode .course-review-actions { max-height:min(34vh,340px); }
+.course-node-editor.is-focus-mode .course-review-report > header p { max-height:none; overflow:visible; }
+.course-node-editor.is-focus-mode .course-review-scroll { padding-right:10px; }
+
+@media (max-width:680px) {
+  .course-editor-toolbar { align-items:stretch; }
+  .course-focus-toggle { padding:0 8px; }
+  .course-node-editor.is-focus-mode { inset:6px; border-radius:16px; padding:10px; }
+  .course-node-editor.is-focus-mode .course-review-pane { grid-template-rows:minmax(260px,1fr) auto; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
 }

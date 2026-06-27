@@ -1,4 +1,4 @@
-import { getAdminCandidate, requireAdminRequest } from '@/lib/auth/serverAdmin'
+import { requireAdminRequest } from '@/lib/auth/serverAdmin'
 import {
   deleteTextPackCourseJob,
   importCourseTextPack,
@@ -13,8 +13,7 @@ async function getOwnerProfile(req) {
     return { ok: false, status: auth.status, error: auth.error }
   }
 
-  const candidate = await getAdminCandidate(req)
-  const { profile } = await ensureProfile({ clerkUserId: candidate.userId || 'local-dev' })
+  const { profile } = await ensureProfile({ clerkUserId: auth.userId || 'local-dev' })
   return { ok: true, ownerId: profile.id }
 }
 
