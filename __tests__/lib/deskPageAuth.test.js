@@ -1,5 +1,3 @@
-import { buildClerkProps } from '@clerk/nextjs/server'
-
 import { requireDeskPage } from '@/lib/auth/deskPage'
 import { hasAdminAllowlist, isAdminUser } from '@/lib/auth/admin'
 import {
@@ -8,10 +6,6 @@ import {
   isClerkConfigured,
   isHostedEnvironment
 } from '@/lib/auth/serverAdmin'
-
-jest.mock('@clerk/nextjs/server', () => ({
-  buildClerkProps: jest.fn()
-}))
 
 jest.mock('@/lib/auth/admin', () => ({
   hasAdminAllowlist: jest.fn(),
@@ -33,9 +27,6 @@ describe('desk page authentication', () => {
     isClerkConfigured.mockReturnValue(true)
     isHostedEnvironment.mockReturnValue(true)
     hasAdminAllowlist.mockReturnValue(true)
-    buildClerkProps.mockReturnValue({
-      __clerk_ssr_state: { sessionId: 'session-test' }
-    })
   })
 
   it('fails closed on hosted deployments when Clerk is missing', async () => {
@@ -48,7 +39,8 @@ describe('desk page authentication', () => {
   it('redirects a hosted unauthenticated visitor to sign in', async () => {
     getAdminCandidate.mockResolvedValue({
       userId: null,
-      user: { id: null, email: '' }
+      user: { id: null, email: '' },
+      authStatus: 'signed-out'
     })
 
     const result = await requireDeskPage()(ctx)
@@ -59,15 +51,33 @@ describe('desk page authentication', () => {
     expect(result.redirect.permanent).toBe(false)
   })
 
-  it('passes Clerk SSR state for an authenticated allowlisted administrator', async () => {
-    const user = { id: 'user-admin', email: 'admin@example.com' }
-    getAdminCandidate.mockResolvedValue({ userId: user.id, user })
-    isAdminUser.mockReturnValue(true)
+  it('follows a Clerk handshake redirect before evaluating the allowlist', async () => {
+    getAdminCandidate.mockResolvedValue({
+      userId: null,
+      user: { id: null, email: '' },
+      authStatus: 'handshake',
+      authRedirectUrl: 'https://clerk.example/handshake'
+    })
 
     await expect(requireDeskPage()(ctx)).resolves.toEqual({
-      props: { __clerk_ssr_state: { sessionId: 'session-test' } }
+      redirect: {
+        destination: 'https://clerk.example/handshake',
+        permanent: false
+      }
     })
-    expect(buildClerkProps).toHaveBeenCalledWith(ctx.req)
+    expect(isAdminUser).not.toHaveBeenCalled()
+  })
+
+  it('allows an authenticated allowlisted administrator', async () => {
+    const user = { id: 'user-admin', email: 'admin@example.com' }
+    getAdminCandidate.mockResolvedValue({
+      userId: user.id,
+      user,
+      authStatus: 'signed-in'
+    })
+    isAdminUser.mockReturnValue(true)
+
+    await expect(requireDeskPage()(ctx)).resolves.toEqual({ props: {} })
     expect(isAdminUser).toHaveBeenCalledWith(user)
   })
 })

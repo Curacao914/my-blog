@@ -1,18 +1,7 @@
 import { useRouter } from 'next/router'
 import { useEffect, useRef, useState } from 'react'
 
-const SESSION_CACHE_KEY = 'law-tech.admin-session.v1'
-const SESSION_CACHE_MS = 10 * 60 * 1000
 const COOLDOWN_MS = 30 * 1000
-
-function cachedAdminState() {
-  if (typeof window === 'undefined') return null
-  try {
-    const cached = JSON.parse(window.sessionStorage.getItem(SESSION_CACHE_KEY) || 'null')
-    if (!cached || Date.now() - Number(cached.checkedAt || 0) > SESSION_CACHE_MS) return null
-    return Boolean(cached.admin)
-  } catch { return null }
-}
 
 export default function NotionRefreshButton() {
   const router = useRouter()
@@ -22,16 +11,14 @@ export default function NotionRefreshButton() {
 
   useEffect(() => {
     let cancelled = false
-    const cached = cachedAdminState()
-    if (cached !== null) { setIsAdmin(cached); return () => { cancelled = true } }
     fetch('/api/admin/session', { credentials: 'same-origin' })
       .then(response => response.ok ? response.json() : { admin: false })
       .then(data => {
-        if (cancelled) return
-        const admin = Boolean(data?.admin)
-        setIsAdmin(admin)
-        window.sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify({ admin, checkedAt: Date.now() }))
-      }).catch(() => {})
+        if (!cancelled) setIsAdmin(Boolean(data?.admin))
+      })
+      .catch(() => {
+        if (!cancelled) setIsAdmin(false)
+      })
     return () => { cancelled = true }
   }, [])
 
