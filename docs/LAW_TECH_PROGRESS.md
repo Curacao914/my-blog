@@ -271,3 +271,17 @@ The deployed `content_items_source_check` accepts `course-worker`, not `course-w
 - 管理员同步会清除 Notion 与统一内容索引缓存、重新拉取内容、提取 Notion 正文、刷新公开目录与详情页，并在配置存在时同步 Algolia；只有 Notion 成功读取后才清理失效的旧 Notion 索引。
 - `/search` 在 Algolia 可用时检索正文，在不可用时继续使用现有标题、摘要、栏目、合集、课程和标签索引。
 - 私密、密码、禁止索引和撤回内容不会进入 Algolia；Notion 正文与工作台 Markdown 只在管理员索引流程中读取。
+
+
+## 当前追加：工作台身份卡与邮件提醒
+
+状态：整站前端已由用户完成第一轮 Preview 人工检查，未发现明显阻断性问题；零散视觉细节留待后续集中处理。本阶段代码仍需本地 Jest、生产构建、数据库迁移和 Preview 邮件实测。
+
+- 工作台左上角不再展示无信息增量的 `C / law-tech / PERSONAL WORKSPACE`，改用既有像素林克头像、浏览器本地日期时间、固定文案“看到我记得喝口水”和今日/待办/草稿计数。
+- 身份卡不接入天气；这是明确的产品选择，不是尚未完成的占位。
+- 新增 `reminder_preferences`，保存管理员自己的接收邮箱以及每日安排、未来 24 小时提醒、周一回顾开关。
+- `/desk/system` 可以保存提醒设置并发送测试邮件；邮箱和密钥不会进入公开页面。
+- `/api/reminders/run` 按 owner 隔离数据，把日程、待读、到期提醒和周一回顾合并为每人每次至多一封邮件。
+- Vercel Cron 设为每天 `01:00 UTC`，对应北京时间上午 9 点；Preview 只能手动验收，自动触发要等代码进入 Production。
+- 部署步骤、环境变量和 curl 验收命令见 `docs/REMINDER_EMAIL_SETUP.md`。
+- 提醒阶段验收后，下一项大型功能是 Writing Studio，其后为安全分享链接和更深的系统设置。

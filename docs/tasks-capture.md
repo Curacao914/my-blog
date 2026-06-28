@@ -121,6 +121,24 @@ JSON 示例：
 
 ## 提醒队列
 
+### 当前工作台邮件提醒（主路径）
+
+Today / Tasks 的真实数据源是 `schedule_items`。保存日程后，`syncRemindersForScheduleItems` 会把明确的提醒时间同步到 `reminders`，事件记录写入 `reminder_events`。管理员自己的邮箱和周期偏好保存在 `reminder_preferences`。
+
+生产调度由：
+
+```text
+GET /api/reminders/run
+Authorization: Bearer <CRON_SECRET>
+```
+
+触发。`vercel.json` 使用 `0 1 * * *`，即北京时间上午 9 点左右。它把每日安排、未来 24 小时提醒和可选周一回顾合并成每个 owner 每次至多一封邮件。详细部署和验收见 `docs/REMINDER_EMAIL_SETUP.md`。
+
+`/desk/system` 提供保存设置与发送测试邮件。Preview 不会自动运行 Vercel Cron，应使用测试按钮和手动 runner 验收；自动执行要等代码进入 Production。
+
+### 旧 `tasks` 表提醒工具（兼容保留）
+
+
 `tasks` 表现在有两个提醒字段：
 
 - `remind_at`：应该提醒的时间，由自然语言解析或手动编辑生成。

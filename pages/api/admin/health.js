@@ -12,6 +12,10 @@ const requiredTables = [
   { name: 'content_assets', probeColumn: 'id' },
   { name: 'share_links', probeColumn: 'id' },
   { name: 'tasks', probeColumn: 'id' },
+  { name: 'schedule_items', probeColumn: 'id' },
+  { name: 'reminders', probeColumn: 'id' },
+  { name: 'reminder_events', probeColumn: 'id' },
+  { name: 'reminder_preferences', probeColumn: 'owner_id' },
   { name: 'course_jobs', probeColumn: 'id' },
   { name: 'course_assets', probeColumn: 'id' }
 ]
@@ -51,7 +55,10 @@ export default async function handler(req, res) {
     storageConfigured: Boolean(config.storageBucket),
     notionConfigured: Boolean(String(BLOG.NOTION_PAGE_ID || '').trim()),
     algoliaSearchConfigured: hasAlgoliaSearch(),
-    algoliaAdminConfigured: hasAlgoliaAdmin()
+    algoliaAdminConfigured: hasAlgoliaAdmin(),
+    resendConfigured: Boolean(process.env.RESEND_API_KEY),
+    reminderSenderConfigured: Boolean(process.env.REMINDER_FROM),
+    reminderCronConfigured: Boolean(process.env.CRON_SECRET)
   }
 
   if (!config.supabaseUrl || !config.supabaseServiceRoleKey) {

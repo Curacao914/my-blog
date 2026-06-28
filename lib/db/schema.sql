@@ -445,6 +445,21 @@ create table if not exists reminder_events (
   created_at timestamptz not null default now()
 );
 
+create table if not exists reminder_preferences (
+  owner_id uuid primary key references profiles(id) on delete cascade,
+  email text,
+  daily_digest_enabled boolean not null default true,
+  weekly_digest_enabled boolean not null default false,
+  due_reminders_enabled boolean not null default true,
+  timezone text not null default 'Asia/Shanghai',
+  daily_time text not null default '09:00',
+  weekly_day integer not null default 1 check (weekly_day between 0 and 6),
+  last_daily_sent_on date,
+  last_weekly_sent_on date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists audit_logs (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid references profiles(id) on delete set null,
@@ -469,3 +484,4 @@ create index if not exists idx_publishables_visibility on publishables(visibilit
 create index if not exists idx_reminders_owner_status_time on reminders(owner_id, status, remind_at);
 create index if not exists idx_reminders_schedule_item on reminders(schedule_item_id, status);
 create index if not exists idx_reminder_events_reminder_time on reminder_events(reminder_id, created_at desc);
+create index if not exists idx_reminder_preferences_daily on reminder_preferences(daily_digest_enabled, weekly_digest_enabled);

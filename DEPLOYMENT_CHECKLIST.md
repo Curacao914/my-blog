@@ -71,3 +71,16 @@ Capture Vercel Usage before and 12–24 hours after testing:
 - [ ] ISR Reads and Writes.
 
 Expected pattern: resource use should correlate with real course steps, not with an open or forgotten browser tab.
+
+## Workbench identity and email reminders
+
+- [ ] Pixel Link avatar, browser-local date/time and `看到我记得喝口水` render in expanded, collapsed and mobile navigation.
+- [ ] `/api/desk/status` rejects signed-out requests and returns real Today / active / draft counts for the owner.
+- [ ] `lib/db/migrations/20260628_reminder_preferences.sql` has been applied to the target Supabase project.
+- [ ] Preview has `RESEND_API_KEY`, `REMINDER_FROM`, and `CRON_SECRET` for manual verification.
+- [ ] `REMINDER_FROM` uses a verified Resend domain before Production rollout.
+- [ ] `/desk/system` can save the recipient and reminder toggles.
+- [ ] “发送测试邮件” reaches the typed address without exposing the address or key in a public page.
+- [ ] Manual authenticated `/api/reminders/run` returns one owner-isolated digest result.
+- [ ] Re-running the same fixed local date does not resend the daily digest.
+- [ ] Production Cron is not claimed verified while the feature exists only on a Preview branch.

@@ -148,14 +148,16 @@ npm run course:worker:cleanup-temp
 
 ## Current Next Work
 
+The user completed an initial manual Preview traversal of the site-wide surface phase and reported no obvious frontend blocker. Smaller visual issues are intentionally deferred into a later polish batch.
+
 Work should proceed in this order unless the user changes priorities:
 
-1. Run the full site-audit Jest set and a production build on `codex/homepage-phase1`.
-2. Traverse every route and state listed in `docs/SITE_SURFACE_AUDIT.md` on the latest Preview, including mobile, empty, loading, auth, and failure states.
-3. Verify administrator Notion/content sync and Algolia fallback/full-text modes with real Preview environment variables.
-4. Fix issues found by the route traversal before starting another large feature.
-5. After the surface is stable, continue with the writing editor, validated share links, and deeper settings.
-6. Configure Production Clerk variables and merge to `main` only after explicit approval.
+1. Apply `20260628_reminder_preferences.sql`, configure Resend and `CRON_SECRET`, then verify the test-email and manual reminder-run paths on Preview.
+2. Verify the new workbench identity card on desktop, collapsed sidebar, and mobile drawer. Its second line is intentionally fixed to `看到我记得喝口水`; do not replace it with weather.
+3. Record whether Algolia and administrator content sync are configured or merely code-ready; neither may be described as production-verified without a real run.
+4. Continue with Writing Studio: durable drafts, editing, source-material links, autosave/versioning, and transfer into the existing publishing desk.
+5. Then implement validated share links/password access and deeper System settings.
+6. Configure Production Clerk/reminder variables and merge to `main` only after explicit approval and a rollback plan.
 
 Performance optimization of large shared First Load JS is real debt, but it should not displace correctness, workflow durability, or publication continuity.
 
@@ -226,6 +228,7 @@ The deployed `content_items_source_check` accepts `course-worker`, not `course-w
 ## Phase Update: Site-wide Surface Audit and Product Consolidation
 
 - `docs/SITE_SURFACE_AUDIT.md` is the route-level product map. Check it before adding a new page shell, search surface, public directory, or workbench module.
+- Minor visual issues accepted for later batching belong in `docs/DEFERRED_POLISH.md`; data loss, auth, save, navigation blockers, and major performance regressions must not be deferred there.
 - Public archive, category, and tag pages use the merged public-content index and the shared law-tech visual system. Do not reintroduce a second Notion-only list UI for those routes.
 - Notion article detail routes intentionally keep the mature NotionNext renderer until a block-complete replacement is proven.
 - `/desk/tasks`, `/desk/writing`, and `/desk/system` are real product surfaces, not conceptual `DeskProductPanel` placeholders.
@@ -236,3 +239,15 @@ The deployed `content_items_source_check` accepts `course-worker`, not `course-w
 - The legacy Notion OAuth route is intentionally disabled. Never restore client-secret exchange, token logging, query-string token transport, or persistence without a reviewed server-side credential design.
 - Legacy pagination and dashboard routes redirect into the current product surfaces. Do not rebuild parallel public or private navigation systems without explicit approval.
 - Share-token rendering remains disabled until server-side token, expiry, revocation, and password checks are implemented.
+
+
+## Phase Update: Workbench Identity and Email Reminders
+
+- The ornamental `C / law-tech / PERSONAL WORKSPACE` sidebar block is retired. The workbench identity card uses `/curacao-avatar.png`, browser-local date/time, the fixed hydration line `看到我记得喝口水`, and compact Today / active / draft counts.
+- Do not add weather to the identity card. The user explicitly preferred the hydration line over weather data.
+- Status counts come from authenticated `schedule_items` and `notes`; the frontend may cache them briefly but must not substitute sample values.
+- Reminder preferences are private, administrator-only data in `reminder_preferences`. The first version fixes timezone to `Asia/Shanghai`, daily time to 09:00, and weekly review day to Monday.
+- Vercel Cron runs `/api/reminders/run` at `0 1 * * *` UTC. Automatic execution belongs to Production; Preview validation uses test email and an authenticated manual runner call.
+- `CRON_SECRET`, Resend keys, sender identity, and saved recipient addresses are server-only. Never expose them through public props, client configuration, logs, URLs, or diagnostics payloads.
+- Daily digest, next-24-hour reminders, and Monday review are combined into at most one email per owner per run. Private, unrelated owners must never be combined in one message.
+- This phase requires `lib/db/migrations/20260628_reminder_preferences.sql`; code presence alone is not deployment completion. Follow `docs/REMINDER_EMAIL_SETUP.md`.

@@ -4254,10 +4254,21 @@ button, a, input, textarea, select, summary {
   border-bottom: 1px solid rgba(17,63,49,.08);
 }
 
-.desk-brand-row .brand { min-width: 0; gap: 10px; }
-.desk-brand-row .brand-mark { flex: 0 0 38px; width: 38px; height: 38px; font-family: var(--display-serif); font-size: 17px; }
-.brand-copy { display:grid; min-width:0; font-size:15px; line-height:1.1; }
-.brand-copy small { margin-top:4px; overflow:hidden; color:var(--muted); font-size:8px; font-weight:600; letter-spacing:.12em; text-overflow:ellipsis; text-transform:uppercase; white-space:nowrap; }
+.desk-identity-card { display:grid; grid-template-columns:50px minmax(0,1fr); align-items:center; gap:10px; min-width:0; flex:1; }
+.desk-identity-avatar { display:grid; place-items:center; width:50px; height:50px; flex:0 0 50px; border:1px solid rgba(17,63,49,.1); border-radius:17px; overflow:hidden; background:linear-gradient(145deg,rgba(236,241,229,.95),rgba(211,227,214,.72)); box-shadow:0 10px 24px rgba(17,63,49,.1), inset 0 1px 0 rgba(255,255,255,.8); }
+.desk-identity-avatar img { width:100%; height:100%; object-fit:cover; image-rendering:auto; transform:scale(1.08); }
+.desk-identity-copy { display:grid; gap:4px; min-width:0; }
+.desk-identity-clock { display:flex; align-items:baseline; justify-content:space-between; gap:8px; min-width:0; }
+.desk-identity-clock strong { overflow:hidden; color:var(--ink); font-family:var(--display-serif); font-size:11px; font-weight:680; text-overflow:ellipsis; white-space:nowrap; }
+.desk-identity-clock time { color:var(--leaf); font-size:10px; font-variant-numeric:tabular-nums; font-weight:720; white-space:nowrap; }
+.desk-identity-copy p { margin:0; overflow:hidden; color:var(--muted); font-size:10px; line-height:1.35; text-overflow:ellipsis; white-space:nowrap; }
+.desk-identity-chips { display:flex; flex-wrap:wrap; gap:4px; margin-top:2px; }
+.desk-identity-chips span { display:inline-flex; align-items:center; gap:3px; border:1px solid rgba(17,63,49,.07); border-radius:999px; padding:3px 6px; color:var(--quiet); background:rgba(255,255,255,.42); font-size:8px; }
+.desk-identity-chips b { color:var(--leaf); font-size:9px; font-variant-numeric:tabular-nums; }
+.desk-identity-card.is-collapsed { display:block; flex:0 0 auto; }
+.desk-identity-card.is-collapsed .desk-identity-avatar { width:42px; height:42px; border-radius:14px; }
+.desk-identity-card.is-compact { grid-template-columns:42px minmax(0,1fr); gap:9px; }
+.desk-identity-card.is-compact .desk-identity-avatar { width:42px; height:42px; border-radius:14px; }
 
 .desk-collapse-button {
   display: grid;
@@ -4323,7 +4334,7 @@ button, a, input, textarea, select, summary {
 .desk-sidebar-foot > span { display:flex; align-items:center; gap:9px; color:var(--ink-soft); font-size:11px; font-weight:650; }
 .desk-sidebar-foot small { color:var(--muted); font-family:var(--display-serif); font-size:11px; line-height:1.55; }
 
-.desk-sidebar-collapsed .brand-copy,
+.desk-sidebar-collapsed .desk-identity-copy,
 .desk-sidebar-collapsed .desk-nav a span,
 .desk-sidebar-collapsed .desk-nav a i,
 .desk-sidebar-collapsed .desk-nav-group p,
@@ -4875,6 +4886,7 @@ button, a, input, textarea, select, summary {
   .desk-mobile-drawer-shell.is-open .desk-mobile-drawer { transform:translateX(0); }
   .desk-mobile-drawer > header { display:flex; align-items:center; justify-content:space-between; padding:3px 3px 12px; }
   .desk-mobile-drawer > header > div { display:flex; align-items:center; gap:9px; }
+  .desk-mobile-drawer .desk-identity-card { flex:1; min-width:0; }
   .desk-mobile-drawer > header button { width:34px; height:34px; border:0; border-radius:10px; background:rgba(17,63,49,.06); font-size:22px; }
   .desk-mobile-drawer .desk-nav { overflow:auto; padding:2px; }
   .desk-mobile-drawer .desk-nav-group p { display:block; }
@@ -6867,7 +6879,7 @@ html.course-focus-open body { overflow:hidden; }
 .writing-desk-list p { display:-webkit-box; overflow:hidden; margin:5px 0 0; color:var(--muted); font-size:10px; line-height:1.55; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 .writing-desk-list small { flex:0 0 auto; color:var(--quiet); font-size:9px; }
 .writing-desk-empty { margin:0; padding:30px 10px; color:var(--quiet); text-align:center; }
-.system-desk-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.system-desk-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
 .system-desk-grid article { display:flex; min-height:220px; flex-direction:column; }
 .system-desk-grid article > p { color:var(--muted); font-size:12px; line-height:1.75; }
 .system-desk-grid article > small { margin-top:auto; color:var(--quiet); font-size:10px; line-height:1.6; }
@@ -6881,6 +6893,34 @@ html.course-focus-open body { overflow:hidden; }
 .system-connection-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:3px; }
 .system-connection-list .system-state-pill { margin-top:7px; }
 .system-desk-grid button { align-self:flex-start; margin-top:12px; border:0; border-radius:999px; padding:7px 10px; color:var(--green); background:rgba(220,233,223,.65); cursor:pointer; }
+.reminder-settings-card { min-height:280px !important; }
+.reminder-settings-card > header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+.reminder-settings-card > header em { border:1px solid rgba(17,63,49,.08); border-radius:999px; padding:5px 8px; color:var(--quiet); background:rgba(255,255,255,.48); font-size:9px; font-style:normal; }
+.reminder-settings-card form { display:grid; gap:12px; margin-top:14px; }
+.reminder-channel-status { display:flex; flex-wrap:wrap; gap:5px; margin-top:10px; }
+.reminder-channel-status span { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:4px 7px; color:var(--quiet); background:rgba(239,220,208,.48); font-size:8px; }
+.reminder-channel-status span::before { content:''; width:5px; height:5px; border-radius:50%; background:#c89045; }
+.reminder-channel-status span.is-ok { color:var(--leaf); background:rgba(220,233,223,.58); }
+.reminder-channel-status span.is-ok::before { background:#2f7a5d; }
+.reminder-email-field { display:grid; gap:6px; }
+.reminder-email-field > span { color:var(--quiet); font-size:10px; }
+.reminder-email-field input { width:100%; min-height:42px; border:1px solid rgba(17,63,49,.1); border-radius:13px; padding:0 12px; color:var(--ink); background:rgba(255,255,255,.58); outline:none; transition:border-color .18s ease,box-shadow .18s ease,background .18s ease; }
+.reminder-email-field input:focus { border-color:rgba(24,63,50,.28); background:rgba(255,255,255,.82); box-shadow:0 0 0 4px rgba(24,63,50,.07); }
+.reminder-toggle-list { display:flex; flex-wrap:wrap; gap:7px; }
+.reminder-toggle { display:inline-flex; align-items:center; gap:7px; border:1px solid rgba(17,63,49,.08); border-radius:999px; padding:6px 9px 6px 7px; color:var(--muted); background:rgba(255,255,255,.42); cursor:pointer; }
+.reminder-toggle input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+.reminder-toggle > span { position:relative; width:28px; height:16px; border-radius:999px; background:rgba(105,117,111,.24); transition:background .18s ease; }
+.reminder-toggle > span i { position:absolute; left:2px; top:2px; width:12px; height:12px; border-radius:50%; background:#fff; box-shadow:0 2px 6px rgba(17,63,49,.16); transition:transform .18s var(--ease); }
+.reminder-toggle input:checked + span { background:var(--leaf); }
+.reminder-toggle input:checked + span i { transform:translateX(12px); }
+.reminder-toggle b { font-size:10px; font-weight:620; }
+.reminder-settings-actions { display:flex; flex-wrap:wrap; gap:7px; }
+.reminder-settings-actions button { margin-top:0; }
+.reminder-settings-actions button.is-primary { color:#fffaf0; background:var(--leaf); box-shadow:0 8px 18px rgba(24,63,50,.16); }
+.reminder-settings-actions button:disabled { cursor:not-allowed; opacity:.5; }
+.reminder-settings-message { margin:0 !important; border-radius:11px; padding:8px 10px; color:var(--leaf) !important; background:rgba(220,233,223,.55); font-size:10px !important; }
+.reminder-settings-message.is-error { color:#8a4b35 !important; background:rgba(239,220,208,.62); }
+.reminder-settings-card form > small { margin-top:0 !important; color:var(--quiet); font-size:9px; line-height:1.6; }
 @media (max-width:900px) {
   .writing-desk-grid,
   .system-desk-grid { grid-template-columns:1fr; }

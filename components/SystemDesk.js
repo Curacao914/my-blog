@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { AdminContentSync } from '@/components/law-tech/AdminContentSync'
+import { ReminderSettings } from '@/components/ReminderSettings'
 
 function StatePill({ ok, children }) {
   return <span className={`system-state-pill ${ok ? 'is-ok' : 'is-warn'}`}><i />{children}</span>
@@ -48,10 +49,15 @@ export function SystemDesk() {
         <p>管理员同步会清除内容索引缓存、重新读取 Notion、更新公开页面，并在配置完成时同步 Algolia 全文索引。</p>
         <small>普通访客不会看到同步按钮。</small>
       </article>
+      <ReminderSettings
+        cronConfigured={Boolean(health?.reminderCronConfigured)}
+        emailConfigured={Boolean(health?.resendConfigured)}
+        senderConfigured={Boolean(health?.reminderSenderConfigured)}
+      />
       <article>
         <header><span>Safety</span><h3>权限边界</h3></header>
-        <p>工作台页面、内容管理和同步接口都要求管理员会话；公开页面只读取明确发布的内容。</p>
-        <small>私密与密码内容不会进入全文索引。</small>
+        <p>工作台页面、内容管理、提醒设置和同步接口都要求管理员会话；公开页面只读取明确发布的内容。</p>
+        <small>私密与密码内容不会进入全文索引，邮箱配置也不会出现在公开页面。</small>
       </article>
     </section>
   </div>

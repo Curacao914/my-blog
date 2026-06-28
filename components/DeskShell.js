@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { deskNav } from '@/lib/domain/navigation'
 import { LawTechIcon } from '@/components/LawTechIcons'
+import { DeskIdentityCard } from '@/components/DeskIdentityCard'
 
 const COLLAPSE_KEY = 'law-tech-desk-sidebar-collapsed'
 
@@ -52,10 +53,7 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
       <div className='desk-ambient desk-ambient-two' aria-hidden='true' />
       <aside className='desk-sidebar'>
         <div className='desk-brand-row'>
-          <Link className='brand' href='/' aria-label='law-tech 首页'>
-            <span className='brand-mark'>C</span>
-            <span className='brand-copy'>law-tech<small>personal workspace</small></span>
-          </Link>
+          <DeskIdentityCard collapsed={collapsed} />
           <button className='desk-collapse-button' type='button' onClick={toggleSidebar} aria-label={collapsed ? '展开侧栏' : '收起侧栏'}>
             <LawTechIcon name={collapsed ? 'expand' : 'collapse'} size={16} />
           </button>
@@ -88,7 +86,7 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
         <div className={`desk-mobile-drawer-shell ${mobileOpen ? 'is-open' : ''}`} aria-hidden={!mobileOpen}>
           <button className='desk-mobile-drawer-backdrop' type='button' aria-label='关闭工作台导航' onClick={() => setMobileOpen(false)} />
           <aside className='desk-mobile-drawer' aria-label='移动端工作台导航'>
-            <header><div><span className='brand-mark'>C</span><strong>私人工作区</strong></div><button type='button' aria-label='关闭导航' onClick={() => setMobileOpen(false)}>×</button></header>
+            <header><DeskIdentityCard compact /><button type='button' aria-label='关闭导航' onClick={() => setMobileOpen(false)}>×</button></header>
             <DeskNavigation active={active} onNavigate={() => setMobileOpen(false)} />
             <footer><i /> 数据与灵感，慢慢长成体系。</footer>
           </aside>

@@ -208,14 +208,16 @@ WeChat/OpenClaw:
 
 Reminder/Resend/Cron:
 
-- `REMINDER_RUN_TOKEN`: token for `/api/reminders/run`.
-- `TASK_REMINDER_TOKEN`: legacy reminder token and fallback.
-- `CRON_SECRET`: accepted by reminder runner.
+- `CRON_SECRET`: preferred Vercel Cron bearer secret; server-only and at least 16 random bytes.
 - `RESEND_API_KEY`: Resend email API key.
-- `REMINDER_FROM`: reminder email sender.
-- `REMINDER_TO`: reminder email recipient.
+- `REMINDER_FROM`: verified sender, for example `Law-Tech <reminders@law-tech.dev>`.
+- `REMINDER_RUN_TOKEN`: optional manual/external scheduler token.
+- `TASK_REMINDER_TOKEN`: legacy reminder token and fallback.
+- `REMINDER_TO`: optional legacy recipient fallback; new user settings live in `reminder_preferences`.
 
-Local audit of `.env.local` found these configured locally: Supabase, database URL, Clerk keys and redirects, task/wechat tokens, WeChat owner, and schedule AI variables. `RESEND_*`, `REMINDER_*`, and `CRON_SECRET` were not present in the local `.env.local` audit output. Vercel Preview env configuration was not inspected via Vercel dashboard or CLI in this handoff.
+The current reminder implementation uses `schedule_items`, `reminders`, `reminder_events`, and the new `reminder_preferences` table. `/desk/system` saves private settings and sends a test email. `/api/reminders/run` creates one owner-isolated digest containing daily work, pending next-24-hour reminders, reading, and optional Monday review. Vercel schedule is `0 1 * * *` UTC. Production Cron does not run on a Preview deployment; follow `docs/REMINDER_EMAIL_SETUP.md` for manual Preview verification.
+
+Local environment presence remains unverified in this handoff. Do not infer delivery readiness from source code or `vercel.json` alone.
 
 ## 5. Capability Status
 
@@ -239,7 +241,7 @@ Local audit of `.env.local` found these configured locally: Supabase, database U
 | Clerk page permissions | Not proven strict | Anonymous Preview `/desk/today` returned 200. Current code checks cookies only when Clerk env exists. |
 | API permissions for schedule/notes | Not proven strict | Anonymous Preview `/api/schedule/items` and `/api/notes` returned 200. |
 | Capture API token permission | Code exists; route reachable | `/api/schedule/capture` checks bearer token for POST. Anonymous GET returns 405. |
-| Reminder/Cron | Route exists; unauthorized verified | `/api/reminders/run` returned 401 without token. No email send test run here. |
+| Reminder/Cron | Code prepared; live send unverified | Owner-isolated digest, private preferences, Resend test route and production Cron are implemented. Migration, secrets, verified sender, Preview manual run and eventual Production execution are still required. |
 | NoteDraft | Local integration verified + unit/component tested | `/api/notes` supports quick notes and reading drafts. Fresh local API verification created/patched/archived a quick note and created/found an idempotent reading draft. |
 | Publishing/content access system | Partial code/docs | Content snapshot docs and content pages exist; full DB-backed publish/access workflow unfinished. |
 | Blog fusion | Partial | New public pages coexist with NotionNext routes. Full gradual Notion independence unfinished. |
@@ -380,3 +382,12 @@ Suggested first checks:
 - Online processing uses `POST /api/courses/jobs/:id/run-next`, one model step per request. It reuses repository leases, idempotency, owner checks, structured output validation, Writer/Reviewer separation, revision limits, and final-review routing.
 - Today excludes reading records in every schedule view. Focus cards include completion and edit controls. Reading Box owns reading materials and can explicitly create a linked schedule action via “安排阅读”.
 - Relevant tests include OCR session signing, online-runner ownership/one-step execution, repeated file selection/drop, multi-lesson grouping, Today/Reading separation, and deterministic course workflow gates.
+
+
+## 2026-06-28 Workbench Identity and Reminder Update
+
+- The sidebar header uses `/curacao-avatar.png`, browser-local date/time, `看到我记得喝口水`, and authenticated status chips. Weather is intentionally absent.
+- Apply `lib/db/migrations/20260628_reminder_preferences.sql` before opening reminder settings against a live database.
+- New APIs: `/api/desk/status`, `/api/reminders/preferences`, `/api/reminders/test`; `/api/reminders/run` is now the owner-isolated digest runner.
+- Required live checks are documented in `docs/REMINDER_EMAIL_SETUP.md`.
+- After reminder verification, the next large phase is Writing Studio; secure sharing and deeper settings follow.

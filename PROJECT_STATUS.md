@@ -335,7 +335,7 @@ The next phase after verification is optional one-way Notion mirroring or broade
 
 ## Current Phase: Site-wide Surface Audit and Product Consolidation
 
-Status: implementation prepared; static syntax parsing and `git diff --check` pass. Local Jest, `npm run build`, and Preview traversal remain required.
+Status: implementation, local checks, build, and initial manual Preview traversal completed. The user reported no obvious frontend blocker; smaller visual issues are deferred for a later consolidated polish pass.
 
 Main changes:
 
@@ -347,4 +347,22 @@ Main changes:
 - explicit shutdown of the unfinished OAuth exchange and removal of token-display UI;
 - legacy routes redirected instead of maintaining parallel themes and workspaces.
 
-The next step is a complete Preview walkthrough across public, workbench, auth, error, mobile, empty, and failure states. Do not begin another large feature before this traversal is recorded.
+The route traversal is recorded as initially accepted. Outstanding environment checks remain Algolia full-text mode, administrator content sync, and production-only scheduled email execution.
+
+
+## Current Phase: Workbench Identity and Scheduled Email
+
+Status: implementation prepared in the handoff workspace. The patch still requires dependency-backed Jest, `npm run build`, Supabase migration, Preview test email, and an authenticated manual runner call.
+
+Implemented scope:
+
+- the sidebar identity block now uses the existing pixel Link avatar rather than an ornamental initial;
+- browser-local date/time and the exact hydration line `看到我记得喝口水` replace `law-tech / PERSONAL WORKSPACE`;
+- authenticated status counts summarize today's actions, all active actions, and non-archived note drafts;
+- `/desk/system` owns private email preference controls and test delivery;
+- `reminder_preferences` stores one owner's recipient and daily / next-24-hour / Monday-review switches;
+- `/api/reminders/run` accepts Vercel `CRON_SECRET`, groups data by owner, sends one digest per owner, records reminder outcomes, and prevents same-date daily/weekly repeats;
+- the production schedule is `0 1 * * *` UTC, approximately 09:00 Asia/Shanghai;
+- `docs/REMINDER_EMAIL_SETUP.md` is the deployment and verification source of truth.
+
+The next major product phase after reminder verification is Writing Studio. Secure share links and deeper System settings remain after it. Automatic Cron delivery cannot be marked verified until this code is in Vercel Production.

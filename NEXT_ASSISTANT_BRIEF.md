@@ -95,12 +95,16 @@ Still unverified:
 
 ## Next planned product work
 
-1. Lesson-note soft delete, restore, and permanent delete rules.
-2. Course note publishing into Supabase content records and `/content`.
-3. Optional one-way Notion synchronization.
-4. Unified legacy-blog and new-content index.
-5. Explicitly approved Production rollout.
-6. Daily 09:00 Asia/Shanghai schedule-and-reading digest.
+Completed or code-complete foundations: lesson-note lifecycle, course-note publishing, unified public index, site-wide surface consolidation, and the first 09:00 Asia/Shanghai email-digest implementation.
+
+Current order:
+
+1. Apply and Preview-verify the reminder preference migration, Resend test email, and authenticated manual runner.
+2. Build Writing Studio on the existing content/version model.
+3. Complete validated share links and password access.
+4. Deepen System settings and diagnostics.
+5. Optionally evaluate one-way Notion synchronization.
+6. Prepare an explicitly approved Production rollout and rollback plan.
 
 ## End every coding response with a complete handoff
 
@@ -155,9 +159,9 @@ The latest patch fixes the deployed content-library and reader defects reported 
 
 The newest phase connects the stable content library back to the whole public site. A shared server-side index merges Notion metadata, live JSON, and Supabase publications. The homepage shows recent content and the four-category library map; `/search` uses the same index; RSS, Atom, JSON Feed, and sitemap exposure respect each publication's access and syndication flags. Publishing and withdrawal must refresh home, content, search, and the affected detail route together. Do not create a second content store or copy Notion bodies merely to support discovery. Full Jest, `npm run build`, and latest Preview verification remain required.
 
-## Current Phase: Site-wide Surface Audit and Product Consolidation
+## Previous Phase: Site-wide Surface Audit and Product Consolidation
 
-Status: code prepared in the current handoff workspace. `git diff --check` and changed-file TypeScript/JSX parsing pass. Dependency-backed Jest, production build, and Preview route verification remain required.
+Status: implementation and local checks completed; the user finished a first manual Preview traversal and reported no obvious frontend blocker. Smaller visual issues are intentionally deferred.
 
 Implemented scope:
 
@@ -173,4 +177,15 @@ Implemented scope:
 - Notion body text and Supabase Markdown may be included in administrator indexing, while private, password-protected, withdrawn, and indexing-disabled content stay out;
 - publication updates Algolia and withdrawal removes the corresponding object when Algolia is configured.
 
-Preview verification should traverse every route listed in `docs/SITE_SURFACE_AUDIT.md`, not only the pages changed most recently.
+Future regressions should still be checked against every route listed in `docs/SITE_SURFACE_AUDIT.md`, not only the page changed most recently.
+
+
+## Current Phase: Workbench Identity and Email Reminders
+
+The workbench sidebar header now has product meaning: the existing pixel Link avatar, browser-local date/time, the exact line `看到我记得喝口水`, and authenticated counts for today, active tasks, and drafts. Weather is intentionally excluded.
+
+The first reminder release adds administrator-only preferences, Resend test mail, a daily digest runner, next-24-hour reminder inclusion, and an optional Monday review. Preferences live in `reminder_preferences`; apply `lib/db/migrations/20260628_reminder_preferences.sql` before testing. The first release intentionally fixes `Asia/Shanghai`, 09:00, and Monday rather than pretending arbitrary schedules are already supported.
+
+Vercel Cron is configured at `0 1 * * *` UTC. It runs only on Production deployments; Preview requires an authenticated manual call. Required production secrets are `RESEND_API_KEY`, a verified `REMINDER_FROM`, and `CRON_SECRET`. See `docs/REMINDER_EMAIL_SETUP.md`.
+
+After this phase is Preview-verified, the next large feature is Writing Studio, followed by secure sharing/password access and deeper settings.
