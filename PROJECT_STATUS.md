@@ -433,3 +433,11 @@ Status: implementation prepared on `codex/homepage-phase1`, awaiting local Jest/
 - Explanatory product copy was removed from public pages and settings; durable copy rules were added to `docs/product-constraints.md` and static tests.
 - Writing Studio phase 1 now provides a real Markdown editor, draft library, search, preview, manual save, autosave, keyboard save and archive.
 - Real two-account isolation testing is recorded as passed. No merge to `main` is authorized by this status update.
+
+## 2026-06-28 Homepage and Writing Publication Correction
+
+Preview review rejected the personal-advertising masthead and low-density latest-content layout. The homepage now leads with a real featured publication, generated cover fallback, search, production tool links, category counts and compact recent-content cards. The public header uses its left area for Home plus live content/update metadata. Writing Studio now keeps save feedback transient and opens an in-place publication dialog backed by owner-scoped `manual` content records. Writing drafts and course notes share `/api/content/summary` for optional editable AI summaries. No database migration is required.
+
+## 2026-06-28 One-command delivery workflow
+
+AI-assisted multi-file changes now use a one-command delivery package. The package applies idempotently, resumes known half-applied changes after a failed test, rejects unrelated local edits, cleans generated test reports, runs focused Jest and the production build, precisely stages files, commits and pushes only the development branch. The durable contract is documented in `docs/ASSISTED_CHANGE_WORKFLOW.md`.

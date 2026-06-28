@@ -5,12 +5,12 @@ import { WorkspaceAccountMenu } from '@/components/WorkspaceAccountMenu'
 import { publicNav } from '@/lib/domain/navigation'
 import { AdminContentSync } from '@/components/law-tech/AdminContentSync'
 
-export function PublicHeader({ active = '' }) {
+export function PublicHeader({ active = '', summary = '' }) {
   return <>
     <header className='public-header'>
-      <Link className='public-brand' href='/' aria-label='返回首页'>
-        <span className='brand-mark'>C</span>
-        <span><strong>Curacao</strong><small>law-tech.dev</small></span>
+      <Link className='public-home-link' href='/' aria-label='返回首页'>
+        <span className='public-home-icon'><LawTechIcon name='home' size={16} /></span>
+        <span><strong>首页</strong><small>{summary || 'law-tech.dev'}</small></span>
       </Link>
 
       <nav className='public-nav' aria-label='公开导航'>
@@ -37,33 +37,31 @@ export function PublicHeader({ active = '' }) {
         position: relative;
         z-index: 40;
         display: grid;
-        grid-template-columns: minmax(170px, 1fr) auto minmax(170px, 1fr);
+        grid-template-columns: minmax(210px, 1fr) auto minmax(210px, 1fr);
         align-items: center;
         gap: 18px;
         min-height: 66px;
         border-bottom: 1px solid rgba(17,63,49,.09);
       }
-      .public-brand {
+      .public-home-link {
         display: inline-flex;
         align-items: center;
         justify-self: start;
         gap: 10px;
         min-width: 0;
       }
-      .public-brand > span:last-child { display: grid; line-height: 1.05; }
-      .public-brand strong { font-size: 15px; font-weight: 720; }
-      .public-brand small { margin-top: 4px; color: var(--quiet); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; }
-      .brand-mark {
+      .public-home-link > span:last-child { display: grid; min-width: 0; line-height: 1.05; }
+      .public-home-link strong { font-size: 13px; font-weight: 700; }
+      .public-home-link small { overflow: hidden; margin-top: 4px; color: var(--quiet); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+      .public-home-icon {
         display: grid;
         place-items: center;
         width: 34px;
         height: 34px;
+        border: 1px solid rgba(17,63,49,.09);
         border-radius: 12px;
-        color: #fff8e8;
-        background: var(--leaf);
-        font-family: var(--display-serif);
-        font-size: 17px;
-        font-weight: 700;
+        color: var(--leaf);
+        background: rgba(255,255,255,.58);
       }
       .public-nav {
         display: flex;
@@ -114,7 +112,7 @@ export function PublicHeader({ active = '' }) {
         .public-header-actions { grid-column: 2; grid-row: 1; }
       }
       @media (max-width: 520px) {
-        .public-brand small { display: none; }
+        .public-home-link small { max-width: 130px; }
         .public-nav a { padding: 7px 9px; }
       }
     `}</style>

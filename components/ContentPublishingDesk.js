@@ -149,6 +149,7 @@ export function ContentPublishingDesk() {
   const [mode, setMode] = useState('settings')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [summaryBusy, setSummaryBusy] = useState(false)
   const [canPublish, setCanPublish] = useState(false)
 
   async function loadIndex() {
@@ -227,6 +228,27 @@ export function ContentPublishingDesk() {
     })
   }
 
+  async function generateSummary() {
+    if (!source?.bodyMarkdown) return
+    setSummaryBusy(true)
+    setMessage('')
+    try {
+      const response = await fetch('/api/content/summary', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title: form.title || source.lessonTitle, markdown: source.bodyMarkdown })
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || '摘要生成失败')
+      update('summary', data.summary)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '摘要生成失败')
+    } finally {
+      setSummaryBusy(false)
+    }
+  }
+
   async function save(action) {
     if (!source) return
     setBusy(true)
@@ -290,7 +312,10 @@ export function ContentPublishingDesk() {
 
         {mode === 'settings' ? <div className='publishing-form'>
           <label>标题<input value={form.title} onChange={event => update('title', event.target.value)} /></label>
-          <label className='wide'>摘要<textarea rows={3} value={form.summary} onChange={event => update('summary', event.target.value)} /></label>
+          <div className='publishing-summary-field wide'>
+            <div><span>摘要</span><button disabled={busy || summaryBusy} type='button' onClick={generateSummary}>{summaryBusy ? '生成中…' : 'AI 生成'}</button></div>
+            <textarea rows={3} value={form.summary} onChange={event => update('summary', event.target.value)} />
+          </div>
           <label className='wide'>封面图片<input value={form.cover || ''} onChange={event => update('cover', event.target.value)} placeholder='粘贴图片 URL；留空则使用自动生成封面' /></label>
           <EditableChoice label='栏目' value={form.category} onChange={value => update('category', value)} options={categoryOptions} placeholder='选择或新建栏目' />
           <EditableChoice label='合集' value={form.collection} onChange={value => update('collection', value)} options={collectionOptions} placeholder='选择或新建合集' />
@@ -371,5 +396,11 @@ export function ContentPublishingDesk() {
         })}
       </div>
     </section>
+    <style jsx>{`
+      .publishing-summary-field { display:grid; gap:6px; }
+      .publishing-summary-field > div { display:flex; align-items:center; justify-content:space-between; gap:12px; color:var(--muted); font-size:10px; }
+      .publishing-summary-field textarea { width:100%; border:1px solid rgba(17,63,49,.1); border-radius:12px; padding:10px 11px; color:var(--ink); background:rgba(255,255,255,.58); outline:none; resize:vertical; line-height:1.65; }
+      .publishing-summary-field button { border:0; border-radius:999px; padding:5px 9px; color:var(--leaf); background:rgba(220,233,223,.66); cursor:pointer; font-size:10px; }
+    `}</style>
   </section>
 }

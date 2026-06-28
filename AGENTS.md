@@ -291,3 +291,20 @@ The deployed `content_items_source_check` accepts `course-worker`, not `course-w
 ## Durable frontend copy rule
 
 User-facing pages must not explain their own architecture. Prefer labels, values, status and actions. Move storage, encryption, isolation, deployment and implementation explanations to docs/tests. Avoid generic slogans and three-part marketing copy. Homepage space is earned by useful information, not decorative scale. Any new public or workbench copy must pass `__tests__/components/ProductCopy.test.js`.
+
+## Homepage and publication guardrails
+
+- Never use the public homepage as a personal resume billboard. Real content and useful actions come first.
+- Preview-only hosts must not swallow production-only OCR or citation routes; use absolute `https://law-tech.dev/...` links.
+- Writing publication belongs inside Writing Studio. Do not redirect a writing note to the course-only publication picker.
+- Saved-state copy is transient UI feedback, not a permanent primary button label.
+- AI-generated summaries must remain editable and must never publish automatically.
+
+## One-command change delivery
+
+- For multi-file changes, default to a self-contained package with an idempotent patcher and `apply-test-push.sh`.
+- The user should need to run one command after extraction, not relay a sequence of Git, Jest and build commands.
+- The script must accept known half-applied files from a previous failed run, while stopping on unrelated local changes.
+- It must clean known generated reports, run diff checks, focused tests and the production build, stage only an explicit allowlist, then commit and push `codex/homepage-phase1`.
+- Any failure must stop before commit and push. Never touch `main`, never use `git add .`, never use `--no-verify`, and never read or print `.env*` secrets.
+- The durable workflow specification is `docs/ASSISTED_CHANGE_WORKFLOW.md`.

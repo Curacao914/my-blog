@@ -26,12 +26,13 @@ describe('public content discovery and syndication', () => {
 
   it('turns the homepage into a useful discovery surface', () => {
     expect(home).toContain('最近更新')
-    expect(home).toContain('home-updates-grid')
-    expect(home).toContain('home-category-grid')
+    expect(home).toContain('home-dashboard')
+    expect(home).toContain('home-update-list')
+    expect(home).toContain('home-category-summary')
     expect(home).toContain("['遇事不决', '法与算法', '法律之上', '秘密花园']")
     expect(home).toContain("action='/search'")
-    expect(home).not.toContain('public-portrait-card')
-    expect(home).not.toContain('Library map')
+    expect(home).toContain('https://law-tech.dev/ocr/')
+    expect(home).toContain('https://law-tech.dev/citation/')
   })
 
   it('replaces the Notion-only search route with unified discovery', () => {

@@ -1,8 +1,8 @@
-import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { MarkdownDocument } from '@/components/content/MarkdownDocument'
 import { LawTechIcon } from '@/components/LawTechIcons'
+import { WritingPublishDialog } from '@/components/WritingPublishDialog'
 
 function noteBody(note = {}) {
   return note.body_markdown || note.bodyMarkdown || ''
@@ -61,6 +61,7 @@ export function WritingDesk() {
   const [dirty, setDirty] = useState(false)
   const [saveState, setSaveState] = useState('idle')
   const [message, setMessage] = useState('')
+  const [publishNote, setPublishNote] = useState(null)
   const saveLock = useRef(false)
 
   const activeNote = useMemo(
@@ -179,10 +180,15 @@ export function WritingDesk() {
       setDirty(false)
       setSaveState('saved')
       if (!quiet) setMessage('已保存')
-      window.setTimeout(() => setSaveState('idle'), 1800)
+      window.setTimeout(() => {
+        setSaveState('idle')
+        setMessage(current => current === '已保存' ? '' : current)
+      }, 1800)
+      return saved
     } catch (error) {
       setSaveState('error')
       setMessage(error instanceof Error ? error.message : '保存失败')
+      return null
     } finally {
       saveLock.current = false
     }
@@ -223,6 +229,13 @@ export function WritingDesk() {
     setSaveState('idle')
   }
 
+  async function openPublishSettings() {
+    let note = activeNote
+    if (activeId === 'new' || dirty) note = await saveDraft()
+    if (!note) return
+    setPublishNote({ ...note, body_markdown: note.body_markdown || body, title: note.title || title })
+  }
+
   if (state === 'loading') {
     return <div className='desk-loading-state'><i /><span>正在读取草稿…</span></div>
   }
@@ -236,10 +249,10 @@ export function WritingDesk() {
         <div><span>Writing Studio</span><h2>写作</h2></div>
         <div className='writing-studio-actions'>
           <button type='button' onClick={newDraft}><LawTechIcon name='writing' size={14} />新建</button>
-          <button className='is-primary' disabled={saveState === 'saving'} type='button' onClick={() => saveDraft()}>
-            {saveState === 'saving' ? '保存中' : dirty ? '保存' : '已保存'}
+          <button className='is-primary' disabled={saveState === 'saving' || (!dirty && activeId !== 'new')} type='button' onClick={() => saveDraft()}>
+            {saveState === 'saving' ? '保存中' : '保存'}
           </button>
-          <Link href='/desk/publish'>发布设置</Link>
+          <button type='button' disabled={!body.trim() || saveState === 'saving'} onClick={openPublishSettings}>发布设置</button>
         </div>
       </header>
 
@@ -290,6 +303,8 @@ export function WritingDesk() {
         </section>
       </div>
     </div>
+
+    {publishNote ? <WritingPublishDialog note={publishNote} onClose={() => setPublishNote(null)} /> : null}
 
     <style jsx>{`
       .writing-studio { display:grid; gap:14px; min-height:calc(100dvh - 150px); }

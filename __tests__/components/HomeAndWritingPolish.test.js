@@ -7,37 +7,50 @@ describe('homepage and writing studio polish', () => {
   const home = read('pages/index.js')
   const header = read('components/law-tech/PublicHeader.js')
   const writing = read('components/WritingDesk.js')
+  const publishing = read('components/WritingPublishDialog.js')
   const tools = read('pages/tools/index.js')
+  const publicationApi = read('pages/api/writing/publication.js')
+  const summaryApi = read('pages/api/content/summary.js')
 
-  it('uses the homepage for content, search and working links instead of a poster composition', () => {
-    expect(home).toContain('home-command')
-    expect(home).toContain('home-updates-grid')
-    expect(home).toContain('home-category-grid')
-    expect(home).toContain('Writing Studio')
-    expect(home).not.toContain('public-portrait-card')
-    expect(home).not.toContain('public-entry-grid')
-    expect(home).not.toContain('这里放写完的东西')
-    expect(home).not.toContain('Library map')
+  it('uses real content rather than personal advertising as the homepage focal point', () => {
+    expect(home).toContain('FeaturedContent')
+    expect(home).toContain('home-feature')
+    expect(home).toContain('home-update-list')
+    expect(home).toContain('home-category-summary')
+    expect(home).not.toContain('郭鑫 / Curacao')
+    expect(home).not.toContain('北京大学法学院')
+    expect(home).not.toContain('意义有什么意义')
   })
 
-  it('keeps the public header balanced and groups account actions together', () => {
-    expect(header).toContain('grid-template-columns: minmax(170px, 1fr) auto minmax(170px, 1fr)')
-    expect(header).toContain('public-header-actions')
-    expect(header).toContain('AdminContentSync')
-    expect(header).toContain('WorkspaceAccountMenu')
+  it('turns the left header area into a useful home and update summary', () => {
+    expect(header).toContain('public-home-link')
+    expect(header).toContain("name='home'")
+    expect(header).toContain("summary || 'law-tech.dev'")
+    expect(header).not.toContain("className='brand-mark'")
   })
 
-  it('ships an editable Markdown writing surface with preview and autosave', () => {
-    expect(writing).toContain('writing-studio-editor')
-    expect(writing).toContain('MarkdownDocument')
-    expect(writing).toContain('1100')
-    expect(writing).toContain("event.key.toLowerCase() === 's'")
-    expect(writing).toContain('发布设置')
+  it('always sends public tools to the production domain from Preview', () => {
+    expect(home).toContain('https://law-tech.dev/ocr/')
+    expect(home).toContain('https://law-tech.dev/citation/')
+    expect(tools).toContain('https://law-tech.dev/ocr/')
+    expect(tools).toContain('https://law-tech.dev/citation/')
   })
 
-  it('keeps public tool copy functional and short', () => {
-    expect(tools).toContain('<h1>工具</h1>')
-    expect(tools).not.toContain('不做工具箱大全')
-    expect(tools).not.toContain('少而顺手的小工具')
+  it('keeps save status transient and opens publication settings in place', () => {
+    expect(writing).toContain('WritingPublishDialog')
+    expect(writing).toContain('openPublishSettings')
+    expect(writing).toContain("saveState === 'saving' ? '保存中' : '保存'")
+    expect(writing).toContain("current === '已保存' ? '' : current")
+    expect(writing).not.toContain("<Link href='/desk/publish'>发布设置</Link>")
+  })
+
+  it('publishes writing drafts with metadata and offers AI summaries', () => {
+    expect(publishing).toContain('封面图片 URL')
+    expect(publishing).toContain('AI 生成')
+    expect(publishing).toContain('/api/writing/publication')
+    expect(publicationApi).toContain("source: 'manual'")
+    expect(publicationApi).toContain("permission: 'writing'")
+    expect(summaryApi).toContain('resolveUserAiConfig')
+    expect(summaryApi).toContain('70—130 字')
   })
 })

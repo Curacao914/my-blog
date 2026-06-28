@@ -6,8 +6,8 @@ import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
 import { LawTechIcon } from '@/components/LawTechIcons'
 
 const tools = [
-  { name: 'OCR', href: '/ocr/', icon: 'materials', meta: '图片、扫描件、PDF', tone: 'blue' },
-  { name: '引注', href: '/citation/', icon: 'writing', meta: '论文、作业、读书笔记', tone: 'honey' },
+  { name: 'OCR', href: 'https://law-tech.dev/ocr/', icon: 'materials', meta: '图片、扫描件、PDF', tone: 'blue', external: true },
+  { name: '引注', href: 'https://law-tech.dev/citation/', icon: 'writing', meta: '论文、作业、读书笔记', tone: 'honey', external: true },
   { name: '课程整理', href: '/desk/courses', icon: 'courses', meta: '私人工作台', tone: 'leaf' }
 ]
 
@@ -23,7 +23,7 @@ export default function ToolsPage() {
           <h1>工具</h1>
         </section>
         <section className='public-tool-grid' aria-label='工具列表'>
-          {tools.map(tool => <Link className={`public-tool-card tone-${tool.tone}`} href={tool.href} key={tool.name}>
+          {tools.map(tool => <Link className={`public-tool-card tone-${tool.tone}`} href={tool.href} key={tool.name} rel={tool.external ? 'noreferrer' : undefined}>
             <header><span className='public-entry-icon'><LawTechIcon name={tool.icon} size={22} /></span></header>
             <div><h2>{tool.name}</h2><p>{tool.meta}</p></div>
             <b>打开 <span>↗</span></b>

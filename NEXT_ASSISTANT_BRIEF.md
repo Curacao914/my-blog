@@ -222,3 +222,11 @@ The current phase introduces a last-known-good relay for legacy Notion articles.
 ## Handoff: frontend refinement and Writing Studio
 
 The next assistant should start from the frontend-polish commit on `codex/homepage-phase1`. Verify immediate sign-out rendering, desktop/mobile homepage density, public header alignment, compact search layout, absence of explanatory copy, and Writing Studio save/autosave/preview/archive under both real accounts. Keep `main` untouched. After Preview passes, the next Writing Studio increment may add explicit article projects, version history and publication handoff without weakening owner isolation.
+
+## Current UI correction: content-first home and writing publication
+
+The personal profile masthead was removed after Preview review. Do not restore name, school, degree or slogan advertising to the homepage. The first viewport must be content-first. OCR and citation links are absolute production URLs because those tools are not deployed on Preview. Writing Studio owns an in-place publication dialog and stores publications as `content_items.source = manual` with the writing note id as `source_id`. AI summary generation is shared by writing and course publication forms and remains user-editable.
+
+## Delivery convention: one command
+
+For future multi-file work, deliver an idempotent patch package with `apply-test-push.sh`. It should resume from known files left by a failed previous run, reject unrelated local changes, run focused Jest plus `npm run build`, precisely stage the allowlist, commit and push only `codex/homepage-phase1`. Do not make the user relay a long series of terminal commands. See `docs/ASSISTED_CHANGE_WORKFLOW.md`.
