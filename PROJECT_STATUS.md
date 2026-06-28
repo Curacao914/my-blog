@@ -416,3 +416,9 @@ Required next verification:
 3. save a nickname and hosted avatar URL, refresh, and confirm both the sidebar and account popover update;
 4. verify an invalid or non-HTTP avatar URL is rejected;
 5. complete the real two-account isolation matrix before inviting real users or starting Writing Studio.
+
+## Current Phase: Notion Last-Known-Good Relay
+
+Status: code prepared for local Jest/build, Supabase migration, Preview environment configuration and fault-injection verification.
+
+The relay stores page metadata and record maps as deduplicated Supabase snapshots, mirrors temporary Notion images to Cloudflare R2, and uses one active batch pointer. Promotion occurs only after the complete staging batch succeeds. Old article routes prefer the active batch and fall back to live Notion before the first successful relay sync. Binary assets remain outside Supabase. Deployment source of truth: `docs/R2_NOTION_RELAY.md`.

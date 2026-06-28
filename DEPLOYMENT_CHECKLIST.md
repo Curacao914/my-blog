@@ -119,3 +119,15 @@ Expected pattern: resource use should correlate with real course steps, not with
 - [ ] Site maintenance exposes health/recheck/sync only and never returns deployment secret values.
 - [ ] Desktop and mobile workbench navigation include an explicit low-key Home link.
 - [ ] Real two-account isolation matrix passes before Writing Studio or real invitations.
+
+## Notion relay / R2
+
+- [ ] Apply `lib/db/migrations/20260628_notion_relay.sql`.
+- [ ] Add Preview-only relay and R2 variables from `docs/R2_NOTION_RELAY.md`.
+- [ ] Use the `notion-relay` credential in Vercel; never use the PicGo credential.
+- [ ] Redeploy Preview after adding variables.
+- [ ] Run administrator content sync and confirm an active batch exists.
+- [ ] Confirm Notion-hosted images load from `assets.law-tech.dev/notion/`.
+- [ ] Remove one R2 secret temporarily, run sync and confirm the previous active batch remains usable.
+- [ ] Restore the secret and promote a new successful batch.
+- [ ] Do not enable Production or merge `main` without explicit approval and a rollback plan.

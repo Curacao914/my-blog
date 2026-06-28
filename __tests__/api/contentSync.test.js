@@ -6,6 +6,7 @@ import { syncAlgoliaContent } from '@/lib/content/algoliaSearch'
 import { clearPublicContentIndexCache, loadPublicContentIndex } from '@/lib/content/publicIndex'
 import { clearNotionTaxonomyCache } from '@/lib/content/notionTaxonomy'
 import { enrichNotionSearchBodies } from '@/lib/content/notionSearch'
+import { syncNotionRelay } from '@/lib/content/notionRelaySync'
 
 jest.mock('@/blog.config', () => ({ NOTION_PAGE_ID: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' }))
 jest.mock('@/lib/auth/serverAdmin', () => ({ requireAdminRequest: jest.fn() }))
@@ -17,6 +18,7 @@ jest.mock('@/lib/content/publicIndex', () => ({
 }))
 jest.mock('@/lib/content/notionTaxonomy', () => ({ clearNotionTaxonomyCache: jest.fn() }))
 jest.mock('@/lib/content/notionSearch', () => ({ enrichNotionSearchBodies: jest.fn() }))
+jest.mock('@/lib/content/notionRelaySync', () => ({ syncNotionRelay: jest.fn() }))
 
 function createRes() {
   return {
@@ -44,6 +46,12 @@ describe('/api/content/sync', () => {
     loadPublicContentIndex.mockResolvedValue({ items: [item], source: 'notion+database' })
     enrichNotionSearchBodies.mockResolvedValue({ items: [item], total: 1, enriched: 1, failed: 0 })
     syncAlgoliaContent.mockResolvedValue({ available: true, synced: 1 })
+    syncNotionRelay.mockResolvedValue({
+      enabled: true,
+      promoted: true,
+      pages: 1,
+      mirroredImages: 2
+    })
   })
 
   it('fails closed before touching content for a non-admin request', async () => {
@@ -52,6 +60,7 @@ describe('/api/content/sync', () => {
     await handler({ method: 'POST', body: { path: '/content' } }, res)
 
     expect(res.statusCode).toBe(401)
+    expect(syncNotionRelay).not.toHaveBeenCalled()
     expect(loadPublicContentIndex).not.toHaveBeenCalled()
     expect(res.revalidate).not.toHaveBeenCalled()
   })
@@ -65,6 +74,7 @@ describe('/api/content/sync', () => {
     expect(delCacheData).toHaveBeenCalled()
     expect(clearPublicContentIndexCache).toHaveBeenCalled()
     expect(clearNotionTaxonomyCache).toHaveBeenCalled()
+    expect(syncNotionRelay).toHaveBeenCalled()
     expect(loadPublicContentIndex).toHaveBeenCalledWith(expect.objectContaining({ bypassCache: true, includeBody: true }))
     expect(enrichNotionSearchBodies).toHaveBeenCalled()
     expect(syncAlgoliaContent).toHaveBeenCalledWith([item], { pruneNotion: true })
@@ -73,6 +83,7 @@ describe('/api/content/sync', () => {
     expect(res.revalidate).toHaveBeenCalledWith('/zh-CN/tag/%E5%85%AC%E6%B3%95')
     expect(res.body.ok).toBe(true)
     expect(res.body.contentCount).toBe(1)
+    expect(res.body.relay.promoted).toBe(true)
   })
 
   it('does not prune Notion search records when the Notion source could not be reloaded', async () => {

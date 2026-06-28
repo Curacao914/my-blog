@@ -305,3 +305,7 @@ The deployed `content_items_source_check` accepts `course-worker`, not `course-w
 ## 2026-06-28：工作台抛光与个人资料设置
 
 在多用户迁移完成后，根据 Preview 反馈完成一轮收口：移除 Today 中重复且被遮挡的逾期事项横条；统一 Writing、Publishing、课程与设置页的操作按钮布局；将成员权限改为符合现有视觉语言的紧凑开关；账号页增加昵称和远程头像 URL 的自助编辑；站点维护页明确部署级 Secret 只读并保留重新检测、内容同步等安全动作；桌面和移动工作台补充明确但克制的返回首页入口。该轮不新增数据库迁移或环境变量。下一步是使用真实第二 Clerk 账号完成隔离矩阵，通过后再进入 Writing Studio。
+
+## 2026-06-28：Notion 最后正常版本中继与 R2 图床
+
+旧 Notion 文章新增稳定中继：管理员同步时读取公开页面，保存按 checksum 去重的正文与 record map 快照，并将 Notion 临时图片、页面封面镜像到 `assets.law-tech.dev/notion/`。所有页面成功后才在 Supabase 事务中切换 active batch；任一页面或关键图片失败时，线上继续使用上一批。图片二进制不进入 Supabase Storage。日常 PicGo 与网站自动中继分别使用 `picgo-upload`、`notion-relay` 两套 bucket 级凭据。部署、环境变量、迁移与故障演练见 `docs/R2_NOTION_RELAY.md`。本阶段完成 Preview 容灾验证后，继续真实双账号隔离矩阵，再进入 Writing Studio。

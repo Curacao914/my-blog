@@ -276,3 +276,14 @@ The deployed `content_items_source_check` accepts `course-worker`, not `course-w
 - Site-level Supabase, Notion, Algolia and Cron secrets remain deployment-managed. `/desk/system` may show status, recheck connections, and perform reviewed maintenance actions, but must not expose or edit deployment secrets in browser forms.
 - The workbench sidebar includes a quiet, explicit return-to-home link. Do not rely on an avatar click as the only undisclosed route back to the public site.
 - After this polish phase, the only blocking next step is the real two-account isolation matrix in `docs/MULTI_USER_WORKSPACE.md`. Writing Studio starts only after that matrix passes.
+
+## Phase Update: Notion Last-Known-Good Relay and R2 Assets
+
+- Legacy Notion article routes prefer the active Supabase relay batch and fall back to live Notion only when no valid snapshot exists.
+- A relay sync is staged completely before `promote_notion_relay_batch` atomically changes the active pointer. Failed batches never replace the last good batch.
+- Notion-hosted article images and page covers are mirrored to Cloudflare R2 under content-hash keys. External stable HTTPS images remain external.
+- R2 stores binary assets; Supabase stores page snapshots, checksums, active/previous batch pointers and asset manifests.
+- Account `5627873db128d04e0396781f999faea2`, bucket `law-tech-assets`, public host `https://assets.law-tech.dev`.
+- PicGo uses the separate `picgo-upload` credential. Server relay uses `notion-relay`. Never commit or expose either Secret Access Key.
+- Apply `lib/db/migrations/20260628_notion_relay.sql`, configure the variables in `docs/R2_NOTION_RELAY.md`, redeploy Preview, then run the administrator content sync.
+- The first release mirrors images and covers only; video, audio, PDF and ordinary attachment mirroring remain out of scope.

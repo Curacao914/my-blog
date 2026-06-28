@@ -1,6 +1,6 @@
 import BLOG from '@/blog.config'
 import { siteConfig } from '@/lib/config'
-import { fetchGlobalAllData, resolvePostProps } from '@/lib/db/SiteDataApi'
+import { fetchGlobalAllDataWithRelay, resolvePostPropsWithRelay } from '@/lib/content/notionRelayPage'
 import { checkSlugHasMorThanTwoSlash } from '@/lib/utils/post'
 import Slug from '..'
 import { isExport } from '@/lib/utils/buildMode'
@@ -20,7 +20,7 @@ const PrefixSlug = props => {
 
 export async function getStaticPaths() {
   const from = 'slug-paths'
-  const { allPages } = await fetchGlobalAllData({ from })
+  const { allPages } = await fetchGlobalAllDataWithRelay({ from })
 
   // Export 模式：全量预生成
   if (isExport()) {
@@ -71,7 +71,7 @@ export async function getStaticProps({
     return { notFound: true }
   }
 
-  const props = await resolvePostProps({
+  const props = await resolvePostPropsWithRelay({
     prefix,
     slug,
     suffix,

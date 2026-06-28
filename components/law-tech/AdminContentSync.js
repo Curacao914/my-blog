@@ -39,6 +39,9 @@ export function AdminContentSync({ compact = true }) {
       setState(warnings.length ? 'warning' : 'done')
       setSummary([
         `已同步 ${Number(data?.contentCount || 0)} 条内容`,
+        data?.relay?.promoted
+          ? `稳定快照 ${Number(data.relay.pages || 0)} 篇 / 图片 ${Number(data.relay.mirroredImages || 0)} 张`
+          : '',
         data?.algolia?.available && !data?.algolia?.error ? `全文索引 ${Number(data.algolia.synced || 0)} 条` : '',
         Number(data?.algolia?.removed || 0) ? `清理旧索引 ${Number(data.algolia.removed)} 条` : '',
         warnings.join('；')

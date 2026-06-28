@@ -6,6 +6,7 @@ import { syncAlgoliaContent } from '@/lib/content/algoliaSearch'
 import { clearPublicContentIndexCache, loadPublicContentIndex } from '@/lib/content/publicIndex'
 import { clearNotionTaxonomyCache } from '@/lib/content/notionTaxonomy'
 import { enrichNotionSearchBodies } from '@/lib/content/notionSearch'
+import { syncNotionRelay } from '@/lib/content/notionRelaySync'
 
 
 function cleanPath(value) {
@@ -98,6 +99,18 @@ export default async function handler(req, res) {
 
   try {
     const clearedSites = await clearNotionCaches()
+    let relay = { enabled: false, skipped: true }
+    let relayError = ''
+    try {
+      relay = await syncNotionRelay({
+        triggeredBy: auth.actorProfile?.id || auth.profile?.id || auth.userId || null
+      })
+    } catch (error) {
+      relayError = error instanceof Error ? error.message : 'Notion relay failed'
+      console.warn('[content sync] Notion relay failed; keeping the previous active batch', error)
+      relay = { enabled: true, promoted: false, error: relayError }
+    }
+
     const { items, source } = await loadPublicContentIndex({
       from: 'admin-content-sync',
       bypassCache: true,
@@ -122,6 +135,7 @@ export default async function handler(req, res) {
     }
     const pages = await revalidatePaths(res, String(req.body?.path || '/'), items)
     const warnings = []
+    if (relayError) warnings.push(`Notion 稳定中继失败，继续使用上一批：${relayError}`)
     if (clearedSites && !String(source || '').split('+').includes('notion')) warnings.push('Notion 内容未能重新读取，已保留其他公开来源')
     if (notionSearch.failed) warnings.push(`${notionSearch.failed} 篇 Notion 正文未能更新索引`)
     if (algolia.error) warnings.push('Algolia 同步失败，站内索引仍可使用')
@@ -131,6 +145,7 @@ export default async function handler(req, res) {
       contentCount: items.length,
       source,
       clearedSites,
+      relay,
       notionSearch: {
         total: notionSearch.total,
         enriched: notionSearch.enriched,

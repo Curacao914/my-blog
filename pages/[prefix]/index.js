@@ -2,7 +2,7 @@ import BLOG from '@/blog.config'
 import useNotification from '@/components/Notification'
 import OpenWrite from '@/components/OpenWrite'
 import { siteConfig } from '@/lib/config'
-import { fetchGlobalAllData, resolvePostProps } from '@/lib/db/SiteDataApi'
+import { fetchGlobalAllDataWithRelay, resolvePostPropsWithRelay } from '@/lib/content/notionRelayPage'
 import { useGlobal } from '@/lib/global'
 import { getPageTableOfContents } from '@/lib/db/notion/getPageTableOfContents'
 import { getPasswordQuery } from '@/lib/utils/password'
@@ -114,7 +114,7 @@ Slug.propTypes = {
 
 export async function getStaticPaths() {
   const from = 'slug-paths'
-  const { allPages } = await fetchGlobalAllData({ from })
+  const { allPages } = await fetchGlobalAllDataWithRelay({ from })
 
   // Export 模式：全量预生成
   if (isExport()) {
@@ -144,7 +144,7 @@ export async function getStaticProps({ params: { prefix }, locale }) {
     return { notFound: true }
   }
 
-  const props = await resolvePostProps({
+  const props = await resolvePostPropsWithRelay({
     prefix,
     locale,
   })
