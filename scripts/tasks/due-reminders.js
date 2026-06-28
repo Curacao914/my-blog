@@ -50,6 +50,8 @@ function getConfig() {
   }
 
   return {
+    ownerProfileId: process.env.TASK_REMINDER_OWNER_PROFILE_ID || localEnv.TASK_REMINDER_OWNER_PROFILE_ID || '',
+    ownerClerkUserId: process.env.SCHEDULE_OWNER_USER_ID || localEnv.SCHEDULE_OWNER_USER_ID || '',
     baseUrl: `${supabaseUrl.replace(/\/$/, '')}/rest/v1`,
     headers: {
       apikey: serviceKey,
@@ -82,11 +84,25 @@ function encodeFilterValue(value) {
   return encodeURIComponent(value).replace(/\./g, '%2E')
 }
 
-async function listDueReminders(options = {}) {
+async function resolveOwnerId() {
+  const config = getConfig()
+  if (config.ownerProfileId) return config.ownerProfileId
+  if (!config.ownerClerkUserId) {
+    throw new Error('Set TASK_REMINDER_OWNER_PROFILE_ID or SCHEDULE_OWNER_USER_ID before reading legacy task reminders.')
+  }
+  const rows = await request(`/profiles?select=id&clerk_user_id=eq.${encodeURIComponent(config.ownerClerkUserId)}&limit=1`)
+  const ownerId = rows?.[0]?.id
+  if (!ownerId) throw new Error('Configured task reminder owner profile was not found.')
+  return ownerId
+}
+
+async function listDueReminders(ownerId, options = {}) {
+  if (!ownerId) throw new Error('ownerId is required')
   const now = options.now || new Date().toISOString()
   const limit = Number(options.limit || 20)
   const select = [
     'id',
+    'owner_id',
     'title',
     'status',
     'type',
@@ -104,12 +120,12 @@ async function listDueReminders(options = {}) {
   ].join(',')
 
   return request(
-    `/tasks?select=${select}&remind_at=lte.${encodeFilterValue(now)}&reminder_sent_at=is.null&status=not.in.(done,archived)&order=remind_at.asc&limit=${limit}`
+    `/tasks?select=${select}&owner_id=eq.${encodeURIComponent(ownerId)}&remind_at=lte.${encodeFilterValue(now)}&reminder_sent_at=is.null&status=not.in.(done,archived)&order=remind_at.asc&limit=${limit}`
   )
 }
 
-async function markReminderSent(taskId) {
-  const rows = await request(`/tasks?id=eq.${encodeURIComponent(taskId)}`, {
+async function markReminderSent(ownerId, taskId) {
+  const rows = await request(`/tasks?id=eq.${encodeURIComponent(taskId)}&owner_id=eq.${encodeURIComponent(ownerId)}`, {
     method: 'PATCH',
     headers: {
       Prefer: 'return=representation'
@@ -140,7 +156,8 @@ async function main() {
     return
   }
 
-  const due = await listDueReminders({
+  const ownerId = await resolveOwnerId()
+  const due = await listDueReminders(ownerId, {
     now: args.now,
     limit: args.limit
   })
@@ -148,7 +165,7 @@ async function main() {
 
   if (args['mark-sent']) {
     for (const task of due || []) {
-      const updated = await markReminderSent(task.id)
+      const updated = await markReminderSent(ownerId, task.id)
       marked.push({ id: updated?.id || task.id, title: updated?.title || task.title })
     }
   }

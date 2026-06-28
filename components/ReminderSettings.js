@@ -23,9 +23,14 @@ export function ReminderSettings({ cronConfigured = false, emailConfigured = fal
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState('')
   const [testing, setTesting] = useState(false)
+  const [providerConfigured, setProviderConfigured] = useState(Boolean(emailConfigured && senderConfigured))
 
   useEffect(() => {
     let cancelled = false
+    fetch('/api/settings/email', { credentials: 'same-origin' })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (!cancelled && data) setProviderConfigured(Boolean(data.effective?.configured)) })
+      .catch(() => {})
     fetch('/api/reminders/preferences', { credentials: 'same-origin' })
       .then(async response => {
         const data = await response.json().catch(() => ({}))
@@ -105,12 +110,12 @@ export function ReminderSettings({ cronConfigured = false, emailConfigured = fal
   return <article className='reminder-settings-card'>
     <header>
       <div><span>Reminders</span><h3>邮件提醒</h3></div>
-      <em>{emailConfigured && senderConfigured && cronConfigured ? '生产就绪' : emailConfigured ? '可发送测试' : '等待邮件配置'}</em>
+      <em>{providerConfigured && cronConfigured ? '生产就绪' : providerConfigured ? '可发送测试' : '等待邮件配置'}</em>
     </header>
     <p>每天上午 9:00 左右整理今日安排与未来 24 小时提醒；周一可在同一封邮件里附上本周回顾。</p>
     <div className='reminder-channel-status' aria-label='邮件提醒服务状态'>
-      <span className={emailConfigured ? 'is-ok' : ''}>邮件 API</span>
-      <span className={senderConfigured ? 'is-ok' : ''}>正式发件人</span>
+      <span className={providerConfigured ? 'is-ok' : ''}>个人邮件 API</span>
+      <span className={providerConfigured ? 'is-ok' : ''}>发件人</span>
       <span className={cronConfigured ? 'is-ok' : ''}>生产定时</span>
     </div>
     <form onSubmit={save}>
@@ -132,7 +137,7 @@ export function ReminderSettings({ cronConfigured = false, emailConfigured = fal
       </div>
       <div className='reminder-settings-actions'>
         <button className='is-primary' disabled={disabled} type='submit'>{state === 'saving' ? '保存中…' : '保存设置'}</button>
-        <button disabled={disabled || testing || !preference.email || !emailConfigured} onClick={sendTest} type='button'>{testing ? '发送中…' : '发送测试邮件'}</button>
+        <button disabled={disabled || testing || !preference.email || !providerConfigured} onClick={sendTest} type='button'>{testing ? '发送中…' : '发送测试邮件'}</button>
       </div>
       {message ? <p className={`reminder-settings-message ${messageType === 'error' ? 'is-error' : ''}`}>{message}</p> : null}
       <small>每日提醒会在上午 9 点附近送达；实际时间可能有少量浮动。</small>

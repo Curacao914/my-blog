@@ -1,14 +1,8 @@
 import handler from '@/pages/api/courses/jobs/[id]/supplement'
 import { supplementCourseTextPack } from '@/lib/courseRepository'
-import { ensureProfile } from '@/lib/server/supabase'
 
-jest.mock('@/lib/auth/serverAdmin', () => ({
-  getAdminCandidate: jest.fn(() => ({ userId: 'clerk-course-owner' })),
-  requireAdminRequest: jest.fn(() => ({ ok: true, via: 'clerk' }))
-}))
-
-jest.mock('@/lib/server/supabase', () => ({
-  ensureProfile: jest.fn()
+jest.mock('@/lib/auth/courseAccess', () => ({
+  requireCourseWorkspace: jest.fn(async (_req, options = {}) => ({ ok: true, profile: { id: 'profile-course-1', role: 'member', status: 'active' }, ...(options.ai ? { modelConfig: { apiKey: 'member-key', baseUrl: 'https://api.example/v1', models: { default: 'member-model', outline: 'member-model', writer: 'member-model', reviewer: 'member-model', revision: 'member-model', finalReview: 'member-model' } } } : {}) }))
 }))
 
 jest.mock('@/lib/courseRepository', () => ({
@@ -29,7 +23,6 @@ function createRes() {
 describe('/api/courses/jobs/[id]/supplement', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    ensureProfile.mockResolvedValue({ profile: { id: 'profile-course-1' } })
   })
 
   it('supplements the server-owned course and returns the updated workflow', async () => {

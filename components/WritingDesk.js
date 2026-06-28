@@ -50,7 +50,7 @@ export function WritingDesk() {
   return <div className='writing-desk'>
     <section className='writing-desk-hero'>
       <div><span>Writing room</span><h2>从已有材料继续写。</h2><p>随手记负责保存碎片，发布台负责公开设置；这里把两端放在同一张桌面上。</p></div>
-      <div><Link className='soft-button primary' href='/desk/inbox?noteId=new'>新建随手记</Link><Link className='soft-button' href='/desk/publish'>打开发布台</Link></div>
+      <div className='writing-desk-actions'><Link className='soft-button primary' href='/desk/inbox?noteId=new'>新建随手记</Link><Link className='soft-button' href='/desk/publish'>打开发布台</Link></div>
     </section>
 
     {message ? <p className='status-line'>{message}</p> : null}

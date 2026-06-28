@@ -285,3 +285,18 @@ The deployed `content_items_source_check` accepts `course-worker`, not `course-w
 - Vercel Cron 设为每天 `01:00 UTC`，对应北京时间上午 9 点；Preview 只能手动验收，自动触发要等代码进入 Production。
 - 部署步骤、环境变量和 curl 验收命令见 `docs/REMINDER_EMAIL_SETUP.md`。
 - 提醒阶段验收后，下一项大型功能是 Writing Studio，其后为安全分享链接和更深的系统设置。
+
+## 当前追加：多用户工作区、权限与个人服务配置
+
+状态：代码已在本轮工作区完成；变更文件语法解析和 `git diff --check` 通过。仍需本地 Jest、生产构建、Supabase 迁移以及两个真实 Clerk 账号的 Preview 隔离验收。
+
+- 工作台从单管理员准入改为 `owner / member` 角色与 `pending / active / suspended` 状态。
+- 未登录用户在右上角看到登录与“注册并申请权限”；登录后通过头像悬浮窗查看账号、进入设置、退出登录。管理员可以切换为启用成员进行真实权限测试。
+- 管理员在“设置 → 成员与权限”中添加授权邮箱、批准或暂停成员、增删改功能权限、删除成员，并可直接以该成员身份查看。
+- 日程、任务、随手记、阅读材料、课程、内容、提醒和浏览器缓存按有效 profile 隔离；成员不能通过猜测记录 ID 访问他人数据。
+- 每个用户分别保存 AI API、模型、Resend API、发件人、收件邮箱与提醒策略；成员不会回退使用管理员的环境变量 Key。
+- API Key 使用 AES-256-GCM 加密，依赖稳定的 `USER_SECRETS_ENCRYPTION_KEY`，前端不回显完整内容。
+- `/desk/system` 改为清晰的设置目录：账号、AI、邮件发送、提醒、成员与权限、站点维护。管理员测试成员身份时不显示管理员专属栏目。
+- 修复工作台身份卡过小与日期截断、Today 聚焦事项重叠和重复、发布/写作按钮错位。
+- 迁移、环境变量、RLS 与双用户验收见 `docs/MULTI_USER_WORKSPACE.md`。
+- 本阶段通过后再推进 Writing Studio；写作草稿从创建之初必须带 owner，不再事后补隔离。

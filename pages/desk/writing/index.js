@@ -15,4 +15,4 @@ export default function WritingPage() {
   </>
 }
 WritingPage.layout = 'bare'
-export const getServerSideProps = requireDeskPage()
+export const getServerSideProps = requireDeskPage({ permission: 'writing' })

@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 
-import { requireAdminRequest } from '@/lib/auth/serverAdmin'
+import { requireCourseWorkspace } from '@/lib/auth/courseAccess'
 import { buildPrompt, callCourseModel } from '@/lib/course/aiAdapter'
 
 export const config = {
@@ -53,7 +53,7 @@ function cleanAssignments(value = [], materialKeys = new Set(), lessonKeys = new
 
 export default async function handler(req, res) {
   const requestId = crypto.randomUUID()
-  const auth = await requireAdminRequest(req)
+  const auth = await requireCourseWorkspace(req, { ai: true })
   if (!auth.ok) return res.status(auth.status).json({ ok: false, error: auth.error, stage: 'group-materials', requestId })
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -67,6 +67,7 @@ export default async function handler(req, res) {
 
     const materialKeys = new Set(materials.map(material => String(material?.clientKey || '')).filter(Boolean))
     const result = await callCourseModel({
+      config: auth.modelConfig,
       role: 'grouping',
       prompt: buildPrompt({
         role: 'grouping',

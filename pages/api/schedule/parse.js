@@ -1,5 +1,8 @@
 import { cleanDisplayTags, cleanDisplayText } from '@/lib/domain/metadata'
 import { addCalendarDays } from '@/lib/domain/calendarDate'
+import { profileCan } from '@/lib/auth/permissions'
+import { requireWorkspaceRequest } from '@/lib/auth/serverAdmin'
+import { resolveUserAiConfig } from '@/lib/server/userIntegrations'
 
 export const runtime = 'nodejs'
 
@@ -451,9 +454,8 @@ async function callScheduleModel({ apiKey, baseUrl, model, messages }) {
   return { ok: true, data: await response.json() }
 }
 
-export async function POST(request) {
-  const body = await request.json()
-  const { apiKey, baseUrl, model } = getScheduleModelConfig()
+async function runScheduleParse(body, config) {
+  const { apiKey, baseUrl, model } = config
   const referenceDate = body.referenceDate || getShanghaiToday()
 
   if (!apiKey || !model) {
@@ -498,19 +500,28 @@ ${command}`
   return Response.json({ mode: parsed.mode === 'replace' ? 'replace' : 'append', items: safeItems })
 }
 
+export async function POST(request) {
+  const body = await request.json()
+  return runScheduleParse(body, getScheduleModelConfig())
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  const auth = await requireWorkspaceRequest(req, { permission: 'schedule' })
+  if (!auth.ok) return res.status(auth.status).json({ error: auth.error, code: auth.code })
+  if (!profileCan(auth.profile, 'ai')) return res.status(403).json({ error: '当前账号没有 AI 使用权限', code: 'permission_denied' })
+
   try {
-    const request = new Request('http://law-tech.local/api/schedule/parse', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(req.body || {})
+    const userConfig = await resolveUserAiConfig(auth.profile)
+    const response = await runScheduleParse(req.body || {}, {
+      apiKey: userConfig.apiKey,
+      baseUrl: userConfig.baseUrl,
+      model: userConfig.models?.schedule || userConfig.models?.default || ''
     })
-    const response = await POST(request)
     const data = await response.json()
     return res.status(response.status).json(data)
   } catch (error) {

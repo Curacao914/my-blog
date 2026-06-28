@@ -366,3 +366,30 @@ Implemented scope:
 - `docs/REMINDER_EMAIL_SETUP.md` is the deployment and verification source of truth.
 
 The next major product phase after reminder verification is Writing Studio. Secure share links and deeper System settings remain after it. Automatic Cron delivery cannot be marked verified until this code is in Vercel Production.
+
+## Current Phase: Multi-user Workspace and Private Service Configuration
+
+Status: implementation prepared in the current handoff workspace. Changed-file syntax parsing and `git diff --check` pass; dependency-backed Jest, production build, database migration and two-account Preview security verification remain required.
+
+Implemented scope:
+
+- owner/member/pending/suspended workspace identities backed by Clerk and `profiles`;
+- per-feature permissions for schedule, notes, reading, courses, writing, reminders, AI and publishing;
+- owner member CRUD, invite allowlist, suspension, permission editing and signed identity switching;
+- effective-profile isolation for schedule, tasks, notes, reading/materials, courses, content management, reminders and client caches;
+- formal `owner_id` columns for tasks, content items and course jobs, with parent-inherited RLS policies for child tables;
+- encrypted per-user OpenAI-compatible and Resend configuration;
+- members never fall back to owner environment credentials;
+- account avatar popover for login, registration/application, profile information, settings and impersonation;
+- compact `/desk/system` settings navigation instead of large conceptual cards;
+- repairs for identity-card truncation, Today focus overlap/duplication, and publishing/writing action alignment.
+
+Required deployment work:
+
+1. apply `20260628_reminder_preferences.sql` if still pending;
+2. apply `20260628_multi_user_workspace.sql`;
+3. configure stable `WORKSPACE_SESSION_SECRET` and `USER_SECRETS_ENCRYPTION_KEY`;
+4. create a second Clerk account and execute `docs/MULTI_USER_WORKSPACE.md` isolation checks;
+5. do not invite real friends or merge `main` until cross-user ID access and per-user credential tests pass.
+
+The next feature phase remains Writing Studio, now built directly on the multi-user owner-scoped model.

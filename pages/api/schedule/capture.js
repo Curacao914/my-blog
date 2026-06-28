@@ -176,7 +176,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { profile } = await ensureProfile({ clerkUserId })
+    const { profile } = await ensureProfile({ clerkUserId, role: 'owner', status: 'active' })
     const existingRows = await listScheduleRows(profile.id)
     const currentItems = (existingRows || []).map(fromDbScheduleItem)
     const captureKey = captureKeyFor(req)

@@ -5,15 +5,9 @@ import {
   getTextPackCourseRuntimeForOwner
 } from '@/lib/courseRepository'
 import { signalCourseOrchestrator } from '@/lib/course/orchestrator'
-import { ensureProfile } from '@/lib/server/supabase'
 
-jest.mock('@/lib/auth/serverAdmin', () => ({
-  getAdminCandidate: jest.fn(async () => ({ userId: 'clerk-course-owner' })),
-  requireAdminRequest: jest.fn(async () => ({ ok: true, via: 'clerk' }))
-}))
-
-jest.mock('@/lib/server/supabase', () => ({
-  ensureProfile: jest.fn()
+jest.mock('@/lib/auth/courseAccess', () => ({
+  requireCourseWorkspace: jest.fn(async (_req, options = {}) => ({ ok: true, profile: { id: 'profile-course-1', role: 'member', status: 'active' }, ...(options.ai ? { modelConfig: { apiKey: 'member-key', baseUrl: 'https://api.example/v1', models: { default: 'member-model', outline: 'member-model', writer: 'member-model', reviewer: 'member-model', revision: 'member-model', finalReview: 'member-model' } } } : {}) }))
 }))
 
 jest.mock('@/lib/course/orchestrator', () => ({
@@ -23,7 +17,10 @@ jest.mock('@/lib/course/orchestrator', () => ({
 jest.mock('@/lib/courseRepository', () => ({
   applyCourseWorkflowAction: jest.fn(),
   getTextPackCourseJobForOwner: jest.fn(),
-  getTextPackCourseRuntimeForOwner: jest.fn()
+  getTextPackCourseRuntimeForOwner: jest.fn(),
+  workflowFromJob: jest.fn(
+    job => job?.preprocess_result?.workflow || {}
+  )
 }))
 
 function createRes() {
@@ -49,7 +46,6 @@ function createRes() {
 describe('/api/courses/jobs/[id]/workflow', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    ensureProfile.mockResolvedValue({ profile: { id: 'profile-course-1' } })
     signalCourseOrchestrator.mockResolvedValue({ resumed: true, runId: 'run-1' })
   })
 

@@ -1,17 +1,8 @@
-import { requireAdminRequest } from '@/lib/auth/serverAdmin'
+import { requireWorkspaceRequest } from '@/lib/auth/serverAdmin'
 import { fromDbScheduleItem } from '@/lib/domain/schedule'
 import { summarizeWorkspaceStatus } from '@/lib/domain/workspaceStatus'
-import { ensureProfile, listNotes, listScheduleRows } from '@/lib/server/supabase'
+import { listNotes, listScheduleRows } from '@/lib/server/supabase'
 
-function ownerUserId(auth) {
-  return (
-    process.env.SCHEDULE_OWNER_USER_ID?.trim() ||
-    process.env.WECHAT_OWNER_USER_ID?.trim() ||
-    process.env.CLERK_ADMIN_USER_IDS?.split(',')[0]?.trim() ||
-    auth.userId ||
-    (auth.via === 'local-dev' ? 'local-dev' : '')
-  )
-}
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -19,13 +10,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ ok: false, error: 'Method not allowed' })
   }
 
-  const auth = await requireAdminRequest(req)
-  if (!auth.ok) return res.status(auth.status).json({ ok: false, error: auth.error })
-  const userId = ownerUserId(auth)
-  if (!userId) return res.status(500).json({ ok: false, error: 'No schedule owner configured' })
+  const auth = await requireWorkspaceRequest(req)
+  if (!auth.ok) return res.status(auth.status).json({ ok: false, error: auth.error, code: auth.code })
+  const profile = auth.profile
 
   try {
-    const { profile } = await ensureProfile({ clerkUserId: userId })
     const [rows, notes] = await Promise.all([
       listScheduleRows(profile.id),
       listNotes(profile.id, { activeOnly: true, limit: 100 })

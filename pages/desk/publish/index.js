@@ -16,4 +16,4 @@ export default function PublishPage() {
 }
 
 PublishPage.layout = 'bare'
-export const getServerSideProps = requireDeskPage()
+export const getServerSideProps = requireDeskPage({ permission: 'writing' })

@@ -189,3 +189,13 @@ The first reminder release adds administrator-only preferences, Resend test mail
 Vercel Cron is configured at `0 1 * * *` UTC. It runs only on Production deployments; Preview requires an authenticated manual call. Required production secrets are `RESEND_API_KEY`, a verified `REMINDER_FROM`, and `CRON_SECRET`. See `docs/REMINDER_EMAIL_SETUP.md`.
 
 After this phase is Preview-verified, the next large feature is Writing Studio, followed by secure sharing/password access and deeper settings.
+
+## Current Phase Override: Multi-user Workspace Foundation
+
+This phase now precedes Writing Studio. The workbench supports a root `owner`, invited `member` profiles, pending approval, suspension, per-feature permissions and owner impersonation for testing. Personal schedule, tasks, notes, reading, course jobs, content items, reminders, browser caches and settings are scoped to the effective profile. Members never inherit the owner's global AI or Resend credentials; personal keys are encrypted in `user_integrations` with `USER_SECRETS_ENCRYPTION_KEY`.
+
+The real owner manages members from `/desk/system?section=members`, may switch identity from the account popover or a member row, and sees owner-only site maintenance only when not impersonating. The workbench top-right area is now an account/auth surface rather than public-home shortcuts. `/desk/system` is the central compact settings surface for account, AI, email, reminders, members and site maintenance.
+
+Deployment requires the reminder migration followed by `lib/db/migrations/20260628_multi_user_workspace.sql`, plus stable `WORKSPACE_SESSION_SECRET` and `USER_SECRETS_ENCRYPTION_KEY`. Before inviting friends, verify with two real Clerk accounts that IDs cannot be guessed across users and that AI/email keys never cross profile boundaries. Detailed invariants and the acceptance matrix live in `docs/MULTI_USER_WORKSPACE.md`.
+
+After this phase is Preview-verified, continue with Writing Studio on the owner-scoped content/version model, then secure share links.

@@ -1,4 +1,4 @@
-import { requireAdminRequest } from '@/lib/auth/serverAdmin'
+import { requireWorkspaceRequest } from '@/lib/auth/serverAdmin'
 import {
   getManagedContentBySource,
   saveCoursePublication,
@@ -12,14 +12,13 @@ import {
   getTextPackCourseJobForOwner,
   workflowFromJob
 } from '@/lib/courseRepository'
-import { ensureProfile } from '@/lib/server/supabase'
 
 export default async function handler(req, res) {
-  const auth = await requireAdminRequest(req)
-  if (!auth.ok) return res.status(auth.status).json({ ok: false, error: auth.error })
+  const auth = await requireWorkspaceRequest(req, { permission: 'writing' })
+  if (!auth.ok) return res.status(auth.status).json({ ok: false, error: auth.error, code: auth.code })
 
   try {
-    const { profile } = await ensureProfile({ clerkUserId: auth.userId || 'local-dev' })
+    const profile = auth.profile
     const jobId = String(req.query.id || '')
     const job = await getTextPackCourseJobForOwner(profile.id, jobId)
     const workflow = workflowFromJob(job)
@@ -30,7 +29,7 @@ export default async function handler(req, res) {
     if (!lesson) return res.status(404).json({ ok: false, error: 'Lesson not found' })
 
     const sourceId = `${jobId}:${lessonKey}`
-    const existing = await getManagedContentBySource(sourceId)
+    const existing = await getManagedContentBySource(profile.id, sourceId)
 
     if (req.method === 'GET') {
       const defaults = buildCoursePublicationModel({
@@ -53,7 +52,8 @@ export default async function handler(req, res) {
           completed: lesson.status === 'completed'
         },
         settings: existing?.settings || defaults.settings,
-        publication: existing || lesson.publication || null
+        publication: existing || lesson.publication || null,
+        canPublish: profile.role === 'owner' || Boolean(auth.publicProfile?.permissions?.publish)
       })
     }
 
@@ -63,13 +63,18 @@ export default async function handler(req, res) {
     }
 
     const action = String(req.body?.action || 'draft')
+    const canPublish = profile.role === 'owner' || Boolean(auth.publicProfile?.permissions?.publish)
+    if (['publish', 'withdraw'].includes(action) && !canPublish) {
+      return res.status(403).json({ ok: false, error: '没有公开发布权限' })
+    }
     let publication
 
     if (action === 'withdraw') {
       if (!existing?.id) throw new Error('这份笔记还没有发布记录')
-      publication = await withdrawManagedContent(existing.id)
+      publication = await withdrawManagedContent(profile.id, existing.id)
     } else {
       publication = await saveCoursePublication({
+        ownerId: profile.id,
         jobId,
         workflow,
         lessonKey,

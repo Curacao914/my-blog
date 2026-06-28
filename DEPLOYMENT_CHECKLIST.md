@@ -24,9 +24,10 @@ Use this checklist before considering the durable-workflow/auth/refresh phase ve
 ## Auth
 
 - [ ] Signed-out visit to `/desk/today` redirects to sign-in.
-- [ ] Signed-in non-admin is denied.
-- [ ] Configured admin can enter `/desk`.
-- [ ] Admin session endpoint returns the expected authenticated state.
+- [ ] Uninvited signed-in users enter the pending state rather than the workbench.
+- [ ] Invited active members can enter only their granted workbench modules.
+- [ ] Configured owner can enter `/desk` and open owner-only settings.
+- [ ] Account session endpoint returns actor, effective profile, role, status, permissions and impersonation state correctly.
 - [ ] Private schedule, notes, course, and revalidate APIs reject unauthenticated requests.
 
 ## Durable course workflow
@@ -77,10 +78,32 @@ Expected pattern: resource use should correlate with real course steps, not with
 - [ ] Pixel Link avatar, browser-local date/time and `看到我记得喝口水` render in expanded, collapsed and mobile navigation.
 - [ ] `/api/desk/status` rejects signed-out requests and returns real Today / active / draft counts for the owner.
 - [ ] `lib/db/migrations/20260628_reminder_preferences.sql` has been applied to the target Supabase project.
-- [ ] Preview has `RESEND_API_KEY`, `REMINDER_FROM`, and `CRON_SECRET` for manual verification.
-- [ ] `REMINDER_FROM` uses a verified Resend domain before Production rollout.
-- [ ] `/desk/system` can save the recipient and reminder toggles.
+- [ ] Preview has `CRON_SECRET`; owner environment fallback may additionally use `RESEND_API_KEY` and `REMINDER_FROM`.
+- [ ] Each member saves a separate Resend API Key and verified sender in System; member accounts never use owner environment credentials.
+- [ ] `/desk/system` can save profile-scoped email-provider settings, recipient and reminder toggles.
 - [ ] “发送测试邮件” reaches the typed address without exposing the address or key in a public page.
 - [ ] Manual authenticated `/api/reminders/run` returns one owner-isolated digest result.
 - [ ] Re-running the same fixed local date does not resend the daily digest.
 - [ ] Production Cron is not claimed verified while the feature exists only on a Preview branch.
+
+## Multi-user workspace
+
+- [ ] Query existing profiles and confirm exactly one existing `owner`; migration must stop if this precondition is not met.
+- [ ] Apply `lib/db/migrations/20260628_multi_user_workspace.sql` after the reminder migration.
+- [ ] Configure a stable `WORKSPACE_SESSION_SECRET` in Preview and Production.
+- [ ] Configure a stable `USER_SECRETS_ENCRYPTION_KEY`; record it securely before any user saves credentials.
+- [ ] Signed-out users see login and registration/application actions.
+- [ ] Uninvited sign-up lands in pending state rather than receiving member or owner access.
+- [ ] An invited email becomes an active member and sees only granted navigation.
+- [ ] Suspended members cannot enter workbench APIs or pages.
+- [ ] Owner can edit permissions, suspend/restore, delete and impersonate a member.
+- [ ] Owner-only System sections disappear while impersonating.
+- [ ] Member A cannot list, fetch, update or delete Member B's tasks, notes, schedule, reading, courses or content by guessed ID.
+- [ ] Member browser caches use profile-specific keys and remain empty after identity switching.
+- [ ] Member without a saved AI key cannot use the owner's environment key.
+- [ ] Member without a saved Resend key cannot use the owner's email quota.
+- [ ] Reminder runner sends each member only their own data using their own email provider configuration.
+- [ ] Legacy task reminder scripts/API are pinned to `TASK_REMINDER_OWNER_PROFILE_ID` or the configured owner Clerk ID and never scan all members together.
+- [ ] Member without `publish` may save private drafts but cannot publish or withdraw public content.
+- [ ] RLS is enabled for personal parent tables and content/course child tables.
+- [ ] Do not invite real users or merge `main` until the two-account matrix in `docs/MULTI_USER_WORKSPACE.md` passes.

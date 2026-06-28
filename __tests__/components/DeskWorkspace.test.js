@@ -10,6 +10,28 @@ jest.mock('next/router', () => ({
   })
 }))
 
+
+jest.mock('@/hooks/useWorkspaceSession', () => ({
+  clearWorkspaceSessionCache: jest.fn(),
+  useWorkspaceSession: () => ({
+    loading: false,
+    session: {
+      ok: true,
+      signedIn: true,
+      profile: {
+        id: 'profile-test-1',
+        role: 'owner',
+        status: 'active'
+      },
+      actor: {
+        id: 'profile-test-1',
+        role: 'owner',
+        status: 'active'
+      }
+    }
+  })
+}))
+
 const longUrl = 'https://example.com/articles/a-very-long-reading-link-that-should-wrap-without-breaking-the-workspace-layout'
 
 const items = [

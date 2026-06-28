@@ -3,6 +3,8 @@ import crypto from 'crypto'
 import { fromDbScheduleItem } from '@/lib/domain/schedule'
 import { dateKeyInTimeZone, isMondayInTimeZone, REMINDER_TIME_ZONE } from '@/lib/domain/reminderDigest'
 import { sendReminderEmail } from '@/lib/server/email'
+import { getWorkspaceProfileById } from '@/lib/server/workspaceProfiles'
+import { resolveUserEmailConfig } from '@/lib/server/userIntegrations'
 import { buildDigestEmail } from '@/lib/server/reminderDigest'
 import { markReminderEvent } from '@/lib/server/reminders'
 import {
@@ -120,10 +122,15 @@ export default async function handler(req, res) {
     ])
     const remindersByOwner = groupByOwner(pending || [])
     const preferenceByOwner = new Map((preferences || []).map(preference => [preference.owner_id, preference]))
+    const profileByOwner = new Map()
     for (const ownerId of remindersByOwner.keys()) {
       if (!preferenceByOwner.has(ownerId)) {
-        const fallback = fallbackPreference(ownerId)
-        if (fallback) preferenceByOwner.set(ownerId, fallback)
+        const profile = await getWorkspaceProfileById(ownerId)
+        if (profile) profileByOwner.set(ownerId, profile)
+        if (profile?.role === 'owner' && profile.status === 'active') {
+          const fallback = fallbackPreference(ownerId)
+          if (fallback) preferenceByOwner.set(ownerId, fallback)
+        }
       }
     }
 
@@ -142,6 +149,11 @@ export default async function handler(req, res) {
       if (!dailyNeeded && !weeklyNeeded && !ownerReminders.length) continue
 
       try {
+        const profile = profileByOwner.get(ownerId) || await getWorkspaceProfileById(ownerId)
+        if (!profile || profile.status !== 'active') {
+          results.push({ ownerId, status: 'skipped', reason: 'workspace member is inactive' })
+          continue
+        }
         const rows = await listScheduleRows(ownerId)
         const items = (rows || []).map(fromDbScheduleItem)
         const email = buildDigestEmail({
@@ -151,11 +163,14 @@ export default async function handler(req, res) {
           weeklyEnabled: weeklyNeeded,
           siteUrl: process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_LINK || 'https://law-tech.dev'
         })
+        const emailConfig = await resolveUserEmailConfig(profile)
+        if (!emailConfig.apiKey || !emailConfig.from) throw new Error('Email provider is not configured for this workspace')
         const emailResult = await sendReminderEmail({
           to: preference.email,
           subject: email.subject,
           text: email.text,
-          html: email.html
+          html: email.html,
+          config: emailConfig
         })
         await markRowsSent(ownerReminders, emailResult)
 
@@ -182,7 +197,7 @@ export default async function handler(req, res) {
       }
     }
 
-    const ok = results.every(result => result.status === 'sent')
+    const ok = results.every(result => result.status !== 'failed')
     return res.status(ok ? 200 : 500).json({
       ok,
       checkedAt: now.toISOString(),

@@ -149,6 +149,7 @@ export function ContentPublishingDesk() {
   const [mode, setMode] = useState('settings')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [canPublish, setCanPublish] = useState(false)
 
   async function loadIndex() {
     const [contentData, courseData] = await Promise.all([
@@ -156,6 +157,7 @@ export function ContentPublishingDesk() {
       requestCourseJson('/api/courses/notes', {}, '课程笔记读取失败')
     ])
     setItems(contentData.items || [])
+    setCanPublish(Boolean(contentData.canPublish))
     setTaxonomy({ ...emptyTaxonomy, ...(contentData.taxonomy || {}) })
     setCourses(courseData.courses || [])
   }
@@ -173,6 +175,7 @@ export function ContentPublishingDesk() {
       '课程笔记发布信息读取失败'
     )
     setSource(data.source)
+    if (typeof data.canPublish === 'boolean') setCanPublish(data.canPublish)
     setPublication(data.publication)
     setForm({ ...emptyForm, ...(data.settings || {}), tags: unique(data.settings?.tags || []) })
   }
@@ -295,9 +298,9 @@ export function ContentPublishingDesk() {
           <label className='wide'>链接路径<input value={form.slug} onChange={event => update('slug', event.target.value)} placeholder='notes/course/lesson-1' /></label>
           <label>访问方式<select value={form.accessMode} onChange={event => update('accessMode', event.target.value)}>
             <option value='private'>私密</option>
-            <option value='public'>公开</option>
-            <option value='password'>密码</option>
-          </select></label>
+            {canPublish ? <option value='public'>公开</option> : null}
+            {canPublish ? <option value='password'>密码</option> : null}
+          </select>{!canPublish ? <small>当前身份只能保存私人草稿。</small> : null}</label>
           {form.accessMode === 'password' ? <label>访问密码<input type='password' value={form.password || ''} onChange={event => update('password', event.target.value)} placeholder={publication ? '留空则沿用原密码' : '设置密码'} /></label> : null}
           {form.accessMode === 'password' ? <label>有效期<input type='datetime-local' value={form.expiresAt || ''} onChange={event => update('expiresAt', event.target.value)} /></label> : null}
           <div className='publishing-checks wide'>
@@ -326,8 +329,8 @@ export function ContentPublishingDesk() {
 
         <div className='publishing-actions'>
           <button className='soft-button' type='button' disabled={busy} onClick={() => void save('draft')}>保存草稿</button>
-          <button className='soft-button primary' type='button' disabled={busy} onClick={() => void save('publish')}>{publication?.status === 'published' ? '更新发布版本' : '发布'}</button>
-          {publication?.status === 'published' ? <button className='soft-button danger' type='button' disabled={busy} onClick={() => void save('withdraw')}>撤回</button> : null}
+          {canPublish ? <button className='soft-button primary' type='button' disabled={busy} onClick={() => void save('publish')}>{publication?.status === 'published' ? '更新发布版本' : '发布'}</button> : null}
+          {canPublish && publication?.status === 'published' ? <button className='soft-button danger' type='button' disabled={busy} onClick={() => void save('withdraw')}>撤回</button> : null}
         </div>
       </section>
     </div> : <div className='publishing-picker'>

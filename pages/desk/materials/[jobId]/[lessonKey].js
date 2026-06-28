@@ -18,7 +18,7 @@ export default function CourseNoteReaderPage({ jobId, lessonKey }) {
 CourseNoteReaderPage.layout = 'bare'
 
 export const getServerSideProps = async context => {
-  const auth = await requireDeskPage()(context)
+  const auth = await requireDeskPage({ permission: 'courses' })(context)
   if (!auth.props) return auth
   return {
     props: {

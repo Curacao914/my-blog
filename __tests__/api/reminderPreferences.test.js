@@ -1,11 +1,10 @@
 import handler from '@/pages/api/reminders/preferences'
 
-import { requireAdminRequest } from '@/lib/auth/serverAdmin'
-import { ensureProfile, getReminderPreferences, upsertReminderPreferences } from '@/lib/server/supabase'
+import { requireWorkspaceRequest } from '@/lib/auth/serverAdmin'
+import { getReminderPreferences, upsertReminderPreferences } from '@/lib/server/supabase'
 
-jest.mock('@/lib/auth/serverAdmin', () => ({ requireAdminRequest: jest.fn() }))
+jest.mock('@/lib/auth/serverAdmin', () => ({ requireWorkspaceRequest: jest.fn() }))
 jest.mock('@/lib/server/supabase', () => ({
-  ensureProfile: jest.fn(),
   getReminderPreferences: jest.fn(),
   upsertReminderPreferences: jest.fn()
 }))
@@ -24,8 +23,7 @@ function createRes() {
 describe('/api/reminders/preferences', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    requireAdminRequest.mockResolvedValue({ ok: true, via: 'clerk', userId: 'user-1', user: { email: 'owner@example.com' } })
-    ensureProfile.mockResolvedValue({ profile: { id: 'profile-1' } })
+    requireWorkspaceRequest.mockResolvedValue({ ok: true, via: 'clerk', profile: { id: 'profile-1', email: 'owner@example.com' } })
   })
 
   it('defaults the first setup to a daily digest without creating a row on read', async () => {

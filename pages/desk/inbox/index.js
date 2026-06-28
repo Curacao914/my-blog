@@ -19,4 +19,4 @@ export default function InboxPage() {
 }
 
 InboxPage.layout = 'bare'
-export const getServerSideProps = requireDeskPage()
+export const getServerSideProps = requireDeskPage({ permission: 'notes' })

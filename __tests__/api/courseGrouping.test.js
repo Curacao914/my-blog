@@ -1,8 +1,8 @@
 import handler from '@/pages/api/courses/group-materials'
 import { callCourseModel } from '@/lib/course/aiAdapter'
 
-jest.mock('@/lib/auth/serverAdmin', () => ({
-  requireAdminRequest: jest.fn(() => ({ ok: true }))
+jest.mock('@/lib/auth/courseAccess', () => ({
+  requireCourseWorkspace: jest.fn(async (_req, options = {}) => ({ ok: true, profile: { id: 'profile-course-1', role: 'member', status: 'active' }, ...(options.ai ? { modelConfig: { apiKey: 'member-key', baseUrl: 'https://api.example/v1', models: { default: 'member-model', outline: 'member-model', writer: 'member-model', reviewer: 'member-model', revision: 'member-model', finalReview: 'member-model' } } } : {}) }))
 }))
 
 jest.mock('@/lib/course/aiAdapter', () => ({
@@ -46,5 +46,6 @@ describe('/api/courses/group-materials', () => {
     expect(res.statusCode).toBe(200)
     expect(res.body.lessons.map(item => item.key)).toEqual(['lesson-1', 'lesson-2'])
     expect(res.body.assignments[0]).toEqual(expect.objectContaining({ materialKey: 'deck', lessonKey: 'lesson-1' }))
+    expect(callCourseModel).toHaveBeenCalledWith(expect.objectContaining({ config: expect.objectContaining({ apiKey: 'member-key' }) }))
   })
 })

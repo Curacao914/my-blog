@@ -1,7 +1,11 @@
 import handler from '@/pages/api/courses/capabilities'
 
-jest.mock('@/lib/auth/serverAdmin', () => ({
-  requireAdminRequest: jest.fn(() => ({ ok: true, via: 'local-dev' }))
+jest.mock('@/lib/auth/courseAccess', () => ({
+  requireCourseWorkspace: jest.fn(async () => ({ ok: true, profile: { id: 'profile-course-1', role: 'owner', status: 'active' } }))
+}))
+
+jest.mock('@/lib/server/userIntegrations', () => ({
+  resolveUserAiConfig: jest.fn(async () => ({ apiKey: process.env.COURSE_AI_API_KEY || '', source: 'environment', models: { default: process.env.COURSE_AI_MODEL || '', schedule: process.env.COURSE_AI_MODEL || '', outline: process.env.COURSE_AI_MODEL || '', writer: process.env.COURSE_AI_MODEL || '', reviewer: process.env.COURSE_AI_MODEL || '', revision: process.env.COURSE_AI_MODEL || '', finalReview: process.env.COURSE_AI_MODEL || '' } }))
 }))
 
 function createRes() {

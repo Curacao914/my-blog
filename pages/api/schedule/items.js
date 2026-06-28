@@ -1,20 +1,18 @@
 import { fromDbScheduleItem, toDbScheduleItem } from '@/lib/domain/schedule'
 import {
   deleteScheduleRows,
-  ensureProfile,
   listScheduleRows,
   upsertScheduleRows
 } from '@/lib/server/supabase'
 import { syncRemindersForScheduleItems } from '@/lib/server/reminders'
-import { getScheduleOwnerUserId } from '@/lib/auth/scheduleOwner'
+import { getScheduleOwner } from '@/lib/auth/scheduleOwner'
 
 export default async function handler(req, res) {
-  const userId = await getScheduleOwnerUserId(req)
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  const owner = await getScheduleOwner(req, 'schedule')
+  if (!owner.ok) return res.status(owner.status).json({ error: owner.error, code: owner.code })
+  const profile = owner.profile
 
   try {
-    const { profile } = await ensureProfile({ clerkUserId: userId })
-
     if (req.method === 'GET') {
       const rows = await listScheduleRows(profile.id)
       return res.status(200).json({ items: (rows || []).map(fromDbScheduleItem) })

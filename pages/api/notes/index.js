@@ -2,14 +2,13 @@ import { fromDbScheduleItem } from '@/lib/domain/schedule'
 import { cleanDisplayTags, cleanDisplayText, excerptText } from '@/lib/domain/metadata'
 import {
   deleteNote,
-  ensureProfile,
   findNote,
   findScheduleRow,
   listNotes,
   updateNote,
   upsertNote
 } from '@/lib/server/supabase'
-import { getScheduleOwnerUserId } from '@/lib/auth/scheduleOwner'
+import { getScheduleOwner } from '@/lib/auth/scheduleOwner'
 
 const uuidPattern = /^[0-9a-f-]{36}$/i
 
@@ -99,12 +98,11 @@ function sendServerError(res, error) {
 }
 
 export default async function handler(req, res) {
-  const userId = await getScheduleOwnerUserId(req)
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  const owner = await getScheduleOwner(req, 'notes')
+  if (!owner.ok) return res.status(owner.status).json({ error: owner.error, code: owner.code })
+  const profile = owner.profile
 
   try {
-    const { profile } = await ensureProfile({ clerkUserId: userId })
-
     if (req.method === 'GET') {
       const noteId = req.query.id || req.query.noteId
       if (noteId) {

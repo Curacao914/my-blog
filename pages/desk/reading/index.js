@@ -19,4 +19,4 @@ export default function ReadingPage() {
 }
 
 ReadingPage.layout = 'bare'
-export const getServerSideProps = requireDeskPage()
+export const getServerSideProps = requireDeskPage({ permission: 'reading' })

@@ -1,4 +1,4 @@
-import { requireAdminRequest } from '@/lib/auth/serverAdmin'
+import { getConfiguredCaptureOwner } from '@/lib/auth/scheduleOwner'
 import {
   parseIncomingTaskPayload,
   toPublicTask
@@ -74,9 +74,9 @@ function readRawBody(req) {
 }
 
 export default async function handler(req, res) {
-  const auth = await requireAdminRequest(req, { allowCaptureToken: true })
-  if (!auth.ok) {
-    return res.status(auth.status).json({ ok: false, error: auth.error })
+  const owner = await getConfiguredCaptureOwner(req)
+  if (!owner.ok) {
+    return res.status(owner.status).json({ ok: false, error: owner.error })
   }
 
   if (req.method !== 'POST') {
@@ -97,7 +97,7 @@ export default async function handler(req, res) {
       return res.status(result.status).json(result.payload)
     }
 
-    const task = await createTaskFromCapture(parsed.rawText, parsed.context)
+    const task = await createTaskFromCapture(owner.profile.id, parsed.rawText, parsed.context)
 
     return res.status(200).json({
       ok: true,

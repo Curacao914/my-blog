@@ -1,35 +1,18 @@
-import { requireAdminRequest } from '@/lib/auth/serverAdmin'
-import {
-  getCourseJobById,
-  updateCourseJobSetup
-} from '@/lib/courseRepository'
+import { requireCourseWorkspace } from '@/lib/auth/courseAccess'
+import { getCourseJobById, updateCourseJobSetup } from '@/lib/courseRepository'
 
 export default async function handler(req, res) {
-  const auth = await requireAdminRequest(req)
-  if (!auth.ok) {
-    return res.status(auth.status).json({ ok: false, error: auth.error })
-  }
-
-  const jobId = req.query.id
-
+  const auth = await requireCourseWorkspace(req)
+  if (!auth.ok) return res.status(auth.status).json({ ok: false, error: auth.error, code: auth.code })
+  const jobId = String(req.query.id || '')
   try {
-    if (req.method === 'GET') {
-      const job = await getCourseJobById(jobId)
-      if (!job) return res.status(404).json({ ok: false, error: 'Not found' })
-      return res.status(200).json({ ok: true, job })
-    }
-
-    if (req.method === 'PATCH') {
-      const job = await updateCourseJobSetup(jobId, req.body)
-      return res.status(200).json({ ok: true, job })
-    }
-
+    const existing = await getCourseJobById(jobId, auth.profile.id)
+    if (!existing) return res.status(404).json({ ok: false, error: 'Not found' })
+    if (req.method === 'GET') return res.status(200).json({ ok: true, job: existing })
+    if (req.method === 'PATCH') return res.status(200).json({ ok: true, job: await updateCourseJobSetup(jobId, req.body) })
     res.setHeader('Allow', 'GET, PATCH')
     return res.status(405).json({ ok: false, error: 'Method not allowed' })
   } catch (error) {
-    return res.status(400).json({
-      ok: false,
-      error: error instanceof Error ? error.message : 'Invalid request'
-    })
+    return res.status(400).json({ ok: false, error: error instanceof Error ? error.message : 'Invalid request' })
   }
 }

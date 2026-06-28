@@ -15,4 +15,4 @@ export default function MaterialsPage() {
 }
 
 MaterialsPage.layout = 'bare'
-export const getServerSideProps = requireDeskPage()
+export const getServerSideProps = requireDeskPage({ permission: 'courses' })

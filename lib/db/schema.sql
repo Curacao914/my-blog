@@ -267,11 +267,49 @@ create extension if not exists pgcrypto;
 create table if not exists profiles (
   id uuid primary key default gen_random_uuid(),
   clerk_user_id text unique not null,
+  email text,
   display_name text,
-  role text not null default 'owner',
+  avatar_url text,
+  role text not null default 'member' check (role in ('owner', 'member')),
+  status text not null default 'pending' check (status in ('pending', 'active', 'suspended')),
+  permissions jsonb not null default '{}'::jsonb,
+  last_seen_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create table if not exists workspace_invites (
+  id uuid primary key default gen_random_uuid(),
+  email text unique not null,
+  role text not null default 'member' check (role in ('owner', 'member')),
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'revoked')),
+  permissions jsonb not null default '{}'::jsonb,
+  invited_by uuid references profiles(id) on delete set null,
+  accepted_by uuid references profiles(id) on delete set null,
+  expires_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists user_integrations (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references profiles(id) on delete cascade,
+  provider text not null check (provider in ('openai-compatible', 'resend')),
+  enabled boolean not null default true,
+  base_url text,
+  secret_ciphertext text,
+  secret_iv text,
+  secret_tag text,
+  secret_hint text,
+  config jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(owner_id, provider)
+);
+
+alter table tasks add column if not exists owner_id uuid references profiles(id) on delete cascade;
+alter table content_items add column if not exists owner_id uuid references profiles(id) on delete cascade;
+alter table course_jobs add column if not exists owner_id uuid references profiles(id) on delete cascade;
 
 create table if not exists captures (
   id uuid primary key default gen_random_uuid(),
@@ -473,6 +511,12 @@ create table if not exists audit_logs (
 
 create index if not exists idx_captures_owner_state on captures(owner_id, state, created_at desc);
 create unique index if not exists idx_captures_owner_idempotency on captures(owner_id, idempotency_key) where idempotency_key is not null;
+create index if not exists idx_profiles_email_lower on profiles(lower(email)) where email is not null;
+create index if not exists idx_profiles_status_role on profiles(status, role, created_at);
+create index if not exists idx_workspace_invites_status on workspace_invites(status, created_at desc);
+create index if not exists idx_user_integrations_owner on user_integrations(owner_id, provider);
+create index if not exists idx_content_items_owner_status on content_items(owner_id, status, updated_at desc);
+create index if not exists idx_course_jobs_owner_status on course_jobs(owner_id, status, updated_at desc);
 create index if not exists idx_tasks_owner_status on tasks(owner_id, status, due_at);
 create index if not exists idx_schedule_items_owner_date on schedule_items(owner_id, schedule_date, status, starts_at);
 create index if not exists idx_schedule_items_owner_type on schedule_items(owner_id, content_type, status, schedule_date);

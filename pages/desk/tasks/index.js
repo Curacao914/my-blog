@@ -18,4 +18,4 @@ export default function TasksPage() {
   </>
 }
 TasksPage.layout = 'bare'
-export const getServerSideProps = requireDeskPage()
+export const getServerSideProps = requireDeskPage({ permission: 'schedule' })

@@ -1,10 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { CourseApiError, formatCourseApiError, requestCourseJson } from '@/lib/course/clientApi'
+import { useWorkspaceSession } from '@/hooks/useWorkspaceSession'
 
 const CourseTaskContext = createContext(null)
-const STORAGE_KEY = 'law-tech-course-active-tasks-v3'
-const LEGACY_STORAGE_KEY = 'law-tech-course-active-tasks-v2'
+const STORAGE_KEY = profileId => `law-tech-course-active-tasks-v4:${profileId || 'unknown'}`
+const LEGACY_STORAGE_KEYS = ['law-tech-course-active-tasks-v2', 'law-tech-course-active-tasks-v3']
 const AUTO_STATUSES = new Set(['preflight_approved', 'outline_pending', 'outline_generating', 'outline_approved', 'node_planning', 'node_pending', 'node_generating', 'node_review', 'node_revision_required', 'assembly_pending', 'assembling', 'final_revision_required'])
 const HUMAN_STATUSES = new Set(['preflight_required', 'outline_review', 'node_human_review', 'final_review', 'final_review_human'])
 const TERMINAL_STATUSES = new Set(['completed', 'cancelled'])
@@ -19,11 +20,11 @@ function stateForStatus(status) {
   if (HUMAN_STATUSES.has(status) || status === 'paused') return 'waiting'
   return AUTO_STATUSES.has(status) ? 'running' : 'waiting'
 }
-function safeStoredTasks() {
+function safeStoredTasks(profileId) {
   if (typeof window === 'undefined') return {}
   try {
-    window.localStorage.removeItem(LEGACY_STORAGE_KEY)
-    const value = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '{}')
+    LEGACY_STORAGE_KEYS.forEach(key => window.localStorage.removeItem(key))
+    const value = JSON.parse(window.localStorage.getItem(STORAGE_KEY(profileId)) || '{}')
     if (!value || typeof value !== 'object') return {}
     return Object.fromEntries(Object.entries(value).map(([jobId, task]) => [jobId, { ...task, jobId, active: Boolean(task?.active), retryCount: 0, stablePolls: 0 }]))
   } catch { return {} }
@@ -38,17 +39,27 @@ function nextPollDelay(previous, runtime) {
 
 export function CourseTaskProvider({ children }) {
   const router = useRouter()
+  const { loading: sessionLoading, session } = useWorkspaceSession()
+  const profileId = session?.profile?.id || session?.actor?.id || ''
   const [tasks, setTasks] = useState({})
   const timersRef = useRef(new Map())
   const runningRef = useRef(new Set())
   const tasksRef = useRef({})
-  useEffect(() => { setTasks(safeStoredTasks()) }, [])
+  const storageProfileRef = useRef('')
+  useEffect(() => {
+    if (sessionLoading || !profileId) return
+    timersRef.current.forEach(timer => window.clearTimeout(timer))
+    timersRef.current.clear()
+    storageProfileRef.current = ''
+    setTasks(safeStoredTasks(profileId))
+    window.queueMicrotask(() => { storageProfileRef.current = profileId })
+  }, [profileId, sessionLoading])
   useEffect(() => { tasksRef.current = tasks }, [tasks])
   useEffect(() => {
     if (typeof window === 'undefined') return
     const stored = Object.fromEntries(Object.entries(tasks).map(([jobId, task]) => [jobId, { jobId, courseName: task.courseName || '', active: Boolean(task.active), state: task.state || 'waiting', status: task.status || '', label: task.label || '', progress: Number(task.progress || 0), workflowVersion: Number(task.workflowVersion || 0), updatedAt: task.updatedAt || new Date().toISOString(), error: task.error || '' }]))
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
-  }, [tasks])
+    if (profileId && storageProfileRef.current === profileId) window.localStorage.setItem(STORAGE_KEY(profileId), JSON.stringify(stored))
+  }, [tasks, profileId])
   const patchTask = useCallback((jobId, patch) => setTasks(current => ({ ...current, [jobId]: { ...(current[jobId] || { jobId }), ...patch, jobId, updatedAt: new Date().toISOString() } })), [])
   const clearTimer = useCallback(jobId => { const existing = timersRef.current.get(jobId); if (existing) window.clearTimeout(existing); timersRef.current.delete(jobId) }, [])
   const schedule = useCallback((jobId, delay = 3000) => {

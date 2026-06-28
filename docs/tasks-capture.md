@@ -8,6 +8,14 @@
 - `/api/tasks/capture` 可供网页登录态调用。
 - 同一个接口也支持 iOS 快捷指令、外部脚本等入口，使用 `TASK_CAPTURE_TOKEN` 作为轻量口令。
 
+## 多用户所有权说明
+
+浏览器登录态录入始终写入当前有效身份自己的 `tasks.owner_id`。管理员切换为成员身份测试时，录入也进入该成员空间。
+
+`TASK_CAPTURE_TOKEN`、微信中转和 iOS 快捷指令等无浏览器会话的外部入口，第一版仍只绑定环境变量指定的 owner；它们不会根据请求中的邮箱、昵称或 `source_user` 猜测成员身份，也不会默认写入管理员之外的任意账户。后续为成员开放外部录入时，应通过 `integration_accounts` / `user_integrations` 建立经过验证的外部账号绑定，再按绑定关系解析 owner。
+
+因此，当前不要把同一个全局 Capture Token 分发给普通成员。成员应先使用网页登录录入，直到每用户外部 Token 与账号绑定阶段完成。
+
 ## 接口
 
 ```text
@@ -169,11 +177,14 @@ npm run tasks:reminders:due -- --mark-sent
 
 ### 企业微信机器人发送
 
-配置环境变量：
+配置环境变量。多用户版本必须同时指定旧提醒工具只处理哪一个 owner，避免 service-role 查询把不同成员的事项合并发送：
 
 ```bash
 WECOM_BOT_WEBHOOK=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...
+TASK_REMINDER_OWNER_PROFILE_ID=<profiles.id>
 ```
+
+也可以用 `SCHEDULE_OWNER_USER_ID=<Clerk user id>` 让脚本先解析对应 profile。该旧工具只服务一个明确 owner；成员的正式邮件提醒应使用 `/api/reminders/run` 与各自的 Resend 设置。
 
 先 dry-run 查看会发送什么：
 

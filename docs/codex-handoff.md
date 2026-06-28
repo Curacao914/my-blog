@@ -391,3 +391,7 @@ Suggested first checks:
 - New APIs: `/api/desk/status`, `/api/reminders/preferences`, `/api/reminders/test`; `/api/reminders/run` is now the owner-isolated digest runner.
 - Required live checks are documented in `docs/REMINDER_EMAIL_SETUP.md`.
 - After reminder verification, the next large phase is Writing Studio; secure sharing and deeper settings follow.
+
+## Multi-user workspace handoff
+
+The current high-priority phase introduces owner/member workspace access before Writing Studio. Personal repositories and settings must use the effective profile from `requireWorkspaceRequest`; never trust a browser-supplied owner ID. The real owner may impersonate an active member through the signed workspace cookie, and all personal settings must follow the target profile during that test. Members never inherit owner AI or Resend environment credentials. See `docs/MULTI_USER_WORKSPACE.md` and apply `20260628_multi_user_workspace.sql` before testing a second account.

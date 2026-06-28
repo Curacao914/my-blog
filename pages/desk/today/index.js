@@ -19,4 +19,4 @@ export default function TodayPage() {
 }
 
 TodayPage.layout = 'bare'
-export const getServerSideProps = requireDeskPage()
+export const getServerSideProps = requireDeskPage({ permission: 'schedule' })

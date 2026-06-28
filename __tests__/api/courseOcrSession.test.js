@@ -1,7 +1,7 @@
 import handler from '@/pages/api/courses/ocr/session'
 
-jest.mock('@/lib/auth/serverAdmin', () => ({
-  requireAdminRequest: jest.fn(() => ({ ok: true, userId: 'user-1' }))
+jest.mock('@/lib/auth/courseAccess', () => ({
+  requireCourseWorkspace: jest.fn(async (_req, options = {}) => ({ ok: true, profile: { id: 'profile-course-1', role: 'member', status: 'active' }, ...(options.ai ? { modelConfig: { apiKey: 'member-key', baseUrl: 'https://api.example/v1', models: { default: 'member-model', outline: 'member-model', writer: 'member-model', reviewer: 'member-model', revision: 'member-model', finalReview: 'member-model' } } } : {}) }))
 }))
 
 function createRes() {

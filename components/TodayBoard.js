@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { selectRelevantItems } from '@/lib/domain/schedule-context'
 import { cleanDisplayText, tagsFromItem } from '@/lib/domain/metadata'
 import { calendarDateInTimeZone, calendarDateLabel, isCalendarDate } from '@/lib/domain/calendarDate'
+import { useWorkspaceSession } from '@/hooks/useWorkspaceSession'
 
-const storageKey = 'law-tech.schedule.v2'
+const storageKey = profileId => `law-tech.schedule.v3:${profileId || 'unknown'}`
 const commandPlaceholder = '写下今天要处理的事、阅读材料或提醒。'
 
 const viewTabs = [
@@ -333,6 +334,8 @@ function ItemCard({
 }
 
 export function TodayBoard({ initialView = 'today' }) {
+  const { loading: sessionLoading, session } = useWorkspaceSession()
+  const profileId = session?.profile?.id || session?.actor?.id || ''
   const [command, setCommand] = useState('')
   const [view, setView] = useState(initialView)
   const [items, setItems] = useState([])
@@ -344,9 +347,16 @@ export function TodayBoard({ initialView = 'today' }) {
   const [notice, setNotice] = useState('')
   const [showCompleted, setShowCompleted] = useState(false)
   const deletedIdsRef = useRef([])
+  const loadedProfileRef = useRef('')
 
   useEffect(() => {
+    if (sessionLoading || !profileId) return undefined
     let cancelled = false
+    loadedProfileRef.current = ''
+    setItems([])
+    setIsReady(false)
+    setCloudEnabled(false)
+    deletedIdsRef.current = []
     async function loadItems() {
       try {
         const response = await fetch('/api/schedule/items')
@@ -354,6 +364,7 @@ export function TodayBoard({ initialView = 'today' }) {
           const data = await response.json()
           if (!cancelled) {
             const loaded = normalizeItems(data.items || [])
+            loadedProfileRef.current = profileId
             setItems(sortItems(loaded))
             setCloudEnabled(true)
             setIsReady(true)
@@ -362,8 +373,9 @@ export function TodayBoard({ initialView = 'today' }) {
         }
       } catch {}
 
-      const saved = window.localStorage.getItem(storageKey)
+      const saved = window.localStorage.getItem(storageKey(profileId))
       if (!cancelled) {
+        loadedProfileRef.current = profileId
         setItems(saved ? sortItems(normalizeItems(JSON.parse(saved))) : [])
         setNotice('云端暂时不可用')
         setIsReady(true)
@@ -373,11 +385,11 @@ export function TodayBoard({ initialView = 'today' }) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [profileId, sessionLoading])
 
   useEffect(() => {
-    if (!isReady) return
-    window.localStorage.setItem(storageKey, JSON.stringify(items))
+    if (!isReady || !profileId || loadedProfileRef.current !== profileId) return
+    window.localStorage.setItem(storageKey(profileId), JSON.stringify(items))
     if (!cloudEnabled) return
 
     const timer = window.setTimeout(async () => {
@@ -392,7 +404,7 @@ export function TodayBoard({ initialView = 'today' }) {
     }, 450)
 
     return () => window.clearTimeout(timer)
-  }, [items, isReady, cloudEnabled])
+  }, [items, isReady, cloudEnabled, profileId])
 
   const scheduleItems = useMemo(() => items.filter((item) => !isReadingItem(item)), [items])
   const overdueItems = useMemo(() => scheduleItems.filter((item) => item.status === 'active' && dateKind(item.date) === 'overdue'), [scheduleItems])
@@ -433,6 +445,10 @@ export function TodayBoard({ initialView = 'today' }) {
   }, [scheduleItems, view])
 
   const focusIds = useMemo(() => new Set(focusItems.map((item) => item.id)), [focusItems])
+  const carryItems = useMemo(
+    () => overdueItems.filter((item) => !focusIds.has(item.id)),
+    [focusIds, overdueItems]
+  )
 
   const columnGroups = useMemo(() => {
     const withoutFocus = view === 'today' ? visibleItems.filter((item) => !focusIds.has(item.id)) : visibleItems
@@ -537,9 +553,9 @@ export function TodayBoard({ initialView = 'today' }) {
         </section>
       ) : null}
 
-      {view === 'today' && overdueItems.length ? (
+      {view === 'today' && carryItems.length ? (
         <section className="carry-strip">
-          {overdueItems.map((item) => (
+          {carryItems.map((item) => (
             <button key={item.id} type="button" onClick={() => setExpandedId(expandedId === item.id ? '' : item.id)}>
               {item.title}
             </button>

@@ -120,3 +120,16 @@ Status labels:
 | Final Review 回流 | 已完成 | 最终报告与节点修改要求 | 真实模型验证 nodeId 定位质量 |
 | 多课次顺序推进 | 已完成 | 每课独立状态 | 全课程整合尚未实现 |
 | 知识图谱、法条表、案例库、问答 | 未实现 | — | 单课闭环稳定后再进入 |
+
+## Multi-user ownership migration
+
+| Surface | Ownership after migration | Notes |
+| --- | --- | --- |
+| Today / Tasks | `profiles.id` | `tasks.owner_id` added; browser schedule cache is profile-scoped. |
+| Inbox / Notes | `profiles.id` | Existing owner relationship retained and enforced through effective profile. |
+| Reading / Materials | `profiles.id` | Existing owner relationship retained; external bindings remain owner-only for now. |
+| Courses / Materials reader | `course_jobs.owner_id` | Child assets and lessons inherit parent ownership; background AI resolves the job owner's key. |
+| Writing / Content | `content_items.owner_id` | Child versions/access/display/assets inherit parent ownership; public publishing needs explicit permission. |
+| Reminders | `profiles.id` | Recipient, schedule and Resend provider are private per profile. |
+| AI configuration | `user_integrations.owner_id` | Encrypted; members never use owner environment fallback. |
+| Email configuration | `user_integrations.owner_id` | Encrypted Resend key and private sender configuration. |

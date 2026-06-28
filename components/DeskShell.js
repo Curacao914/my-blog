@@ -3,12 +3,17 @@ import { useEffect, useState } from 'react'
 import { deskNav } from '@/lib/domain/navigation'
 import { LawTechIcon } from '@/components/LawTechIcons'
 import { DeskIdentityCard } from '@/components/DeskIdentityCard'
+import { WorkspaceAccountMenu } from '@/components/WorkspaceAccountMenu'
+import { useWorkspaceSession } from '@/hooks/useWorkspaceSession'
 
 const COLLAPSE_KEY = 'law-tech-desk-sidebar-collapsed'
 
-function DeskNavigation({ active, onNavigate }) {
+const NAV_PERMISSION = { today: 'schedule', tasks: 'schedule', inbox: 'notes', reading: 'reading', courses: 'courses', materials: 'courses', writing: 'writing', publish: 'writing' }
+
+function DeskNavigation({ active, onNavigate, profile }) {
+  const groups = deskNav.map(group => ({ ...group, items: group.items.filter(item => profile?.role === 'owner' || !NAV_PERMISSION[item.key] || profile?.permissions?.[NAV_PERMISSION[item.key]]) })).filter(group => group.items.length)
   return <nav className='desk-nav' aria-label='工作台导航'>
-    {deskNav.map(group => (
+    {groups.map(group => (
       <div className='desk-nav-group' key={group.group}>
         <p>{group.group}</p>
         {group.items.map(item => (
@@ -24,6 +29,7 @@ function DeskNavigation({ active, onNavigate }) {
 }
 
 export function DeskShell({ active = 'today', title, kicker, children }) {
+  const { session } = useWorkspaceSession()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const activeItem = deskNav.flatMap(group => group.items).find(item => item.key === active)
@@ -58,7 +64,7 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
             <LawTechIcon name={collapsed ? 'expand' : 'collapse'} size={16} />
           </button>
         </div>
-        <DeskNavigation active={active} />
+        <DeskNavigation active={active} profile={session?.profile} />
         <div className='desk-sidebar-foot'>
           <span><i /> 私人工作区</span>
           <small>数据与灵感，慢慢长成体系。</small>
@@ -78,8 +84,7 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
             </div>
           </div>
           <div className='desk-top-actions'>
-            <Link className='desk-top-action' href='/content'><LawTechIcon name='content' size={16} /><span>公开内容</span></Link>
-            <Link className='desk-top-action is-primary' href='/'><LawTechIcon name='home' size={16} /><span>首页</span></Link>
+            <WorkspaceAccountMenu placement='desk' />
           </div>
         </header>
 
@@ -87,7 +92,7 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
           <button className='desk-mobile-drawer-backdrop' type='button' aria-label='关闭工作台导航' onClick={() => setMobileOpen(false)} />
           <aside className='desk-mobile-drawer' aria-label='移动端工作台导航'>
             <header><DeskIdentityCard compact /><button type='button' aria-label='关闭导航' onClick={() => setMobileOpen(false)}>×</button></header>
-            <DeskNavigation active={active} onNavigate={() => setMobileOpen(false)} />
+            <DeskNavigation active={active} profile={session?.profile} onNavigate={() => setMobileOpen(false)} />
             <footer><i /> 数据与灵感，慢慢长成体系。</footer>
           </aside>
         </div>

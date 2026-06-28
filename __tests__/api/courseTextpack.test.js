@@ -5,15 +5,9 @@ import {
   listTextPackCourseJobs
 } from '@/lib/courseRepository'
 import { buildTextPack } from '@/lib/course/textpack'
-import { ensureProfile } from '@/lib/server/supabase'
 
-jest.mock('@/lib/auth/serverAdmin', () => ({
-  getAdminCandidate: jest.fn(() => ({ userId: 'clerk-user-1' })),
-  requireAdminRequest: jest.fn(() => ({ ok: true, via: 'clerk' }))
-}))
-
-jest.mock('@/lib/server/supabase', () => ({
-  ensureProfile: jest.fn()
+jest.mock('@/lib/auth/courseAccess', () => ({
+  requireCourseWorkspace: jest.fn(async (_req, options = {}) => ({ ok: true, profile: { id: 'profile-course-1', role: 'member', status: 'active' }, ...(options.ai ? { modelConfig: { apiKey: 'member-key', baseUrl: 'https://api.example/v1', models: { default: 'member-model', outline: 'member-model', writer: 'member-model', reviewer: 'member-model', revision: 'member-model', finalReview: 'member-model' } } } : {}) }))
 }))
 
 jest.mock('@/lib/courseRepository', () => ({
@@ -53,7 +47,6 @@ function samplePack() {
 describe('/api/courses/textpack', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    ensureProfile.mockResolvedValue({ profile: { id: 'profile-1' } })
   })
 
   it('imports TextPack for the server-side owner only', async () => {
@@ -72,7 +65,7 @@ describe('/api/courses/textpack', () => {
     await handler(req, res)
 
     expect(res.statusCode).toBe(201)
-    expect(importCourseTextPack).toHaveBeenCalledWith('profile-1', pack)
+    expect(importCourseTextPack).toHaveBeenCalledWith('profile-course-1', pack)
     expect(JSON.stringify(importCourseTextPack.mock.calls[0])).not.toContain('client-owner')
   })
 
@@ -82,7 +75,7 @@ describe('/api/courses/textpack', () => {
     const listRes = createRes()
 
     await handler(listReq, listRes)
-    expect(listTextPackCourseJobs).toHaveBeenCalledWith('profile-1')
+    expect(listTextPackCourseJobs).toHaveBeenCalledWith('profile-course-1')
     expect(listRes.body.jobs).toHaveLength(1)
 
     deleteTextPackCourseJob.mockResolvedValue({ ok: true })
@@ -90,7 +83,7 @@ describe('/api/courses/textpack', () => {
     const deleteRes = createRes()
 
     await handler(deleteReq, deleteRes)
-    expect(deleteTextPackCourseJob).toHaveBeenCalledWith('profile-1', 'job-1')
+    expect(deleteTextPackCourseJob).toHaveBeenCalledWith('profile-course-1', 'job-1')
     expect(JSON.stringify(deleteTextPackCourseJob.mock.calls[0])).not.toContain('other')
   })
 })

@@ -5,6 +5,9 @@ import { hasAlgoliaAdmin, hasAlgoliaSearch } from '@/lib/content/algoliaSearch'
 import { requireAdminRequest } from '@/lib/auth/serverAdmin'
 
 const requiredTables = [
+  { name: 'profiles', probeColumn: 'id' },
+  { name: 'workspace_invites', probeColumn: 'id' },
+  { name: 'user_integrations', probeColumn: 'id' },
   { name: 'content_items', probeColumn: 'id' },
   { name: 'content_versions', probeColumn: 'id' },
   { name: 'content_access', probeColumn: 'item_id' },

@@ -148,16 +148,18 @@ npm run course:worker:cleanup-temp
 
 ## Current Next Work
 
-The user completed an initial manual Preview traversal of the site-wide surface phase and reported no obvious frontend blocker. Smaller visual issues are intentionally deferred into a later polish batch.
+The current priority is the multi-user workspace foundation. Do not continue with Writing Studio until identity, ownership, private service configuration and two-account isolation have been verified on Preview.
 
 Work should proceed in this order unless the user changes priorities:
 
-1. Apply `20260628_reminder_preferences.sql`, configure Resend and `CRON_SECRET`, then verify the test-email and manual reminder-run paths on Preview.
-2. Verify the new workbench identity card on desktop, collapsed sidebar, and mobile drawer. Its second line is intentionally fixed to `看到我记得喝口水`; do not replace it with weather.
-3. Record whether Algolia and administrator content sync are configured or merely code-ready; neither may be described as production-verified without a real run.
-4. Continue with Writing Studio: durable drafts, editing, source-material links, autosave/versioning, and transfer into the existing publishing desk.
-5. Then implement validated share links/password access and deeper System settings.
-6. Configure Production Clerk/reminder variables and merge to `main` only after explicit approval and a rollback plan.
+1. Apply `20260628_reminder_preferences.sql`, then `20260628_multi_user_workspace.sql`.
+2. Configure stable `WORKSPACE_SESSION_SECRET` and `USER_SECRETS_ENCRYPTION_KEY`; never rotate the latter after users have saved encrypted credentials without a migration plan.
+3. Verify the repaired identity card, Today focus layout, and Writing/Publishing action alignment.
+4. Create a second real Clerk account and execute the complete isolation matrix in `docs/MULTI_USER_WORKSPACE.md`, including guessed-ID access, browser-cache separation, AI/Resend separation, suspension, deletion and permission denial.
+5. Verify owner identity switching matches the real member account but does not expose owner-only settings while impersonating.
+6. Record whether Algolia, administrator content sync and production Cron are configured or merely code-ready; none may be described as production-verified without a real run.
+7. Only after the multi-user phase is Preview-verified, continue with Writing Studio, then secure share links/password access and deeper settings.
+8. Merge to `main` only after explicit approval, database backup, migration record and rollback plan.
 
 Performance optimization of large shared First Load JS is real debt, but it should not displace correctness, workflow durability, or publication continuity.
 
@@ -246,8 +248,20 @@ The deployed `content_items_source_check` accepts `course-worker`, not `course-w
 - The ornamental `C / law-tech / PERSONAL WORKSPACE` sidebar block is retired. The workbench identity card uses `/curacao-avatar.png`, browser-local date/time, the fixed hydration line `看到我记得喝口水`, and compact Today / active / draft counts.
 - Do not add weather to the identity card. The user explicitly preferred the hydration line over weather data.
 - Status counts come from authenticated `schedule_items` and `notes`; the frontend may cache them briefly but must not substitute sample values.
-- Reminder preferences are private, administrator-only data in `reminder_preferences`. The first version fixes timezone to `Asia/Shanghai`, daily time to 09:00, and weekly review day to Monday.
+- Reminder preferences are private, profile-scoped data in `reminder_preferences`. The first version fixes timezone to `Asia/Shanghai`, daily time to 09:00, and weekly review day to Monday.
 - Vercel Cron runs `/api/reminders/run` at `0 1 * * *` UTC. Automatic execution belongs to Production; Preview validation uses test email and an authenticated manual runner call.
 - `CRON_SECRET`, Resend keys, sender identity, and saved recipient addresses are server-only. Never expose them through public props, client configuration, logs, URLs, or diagnostics payloads.
-- Daily digest, next-24-hour reminders, and Monday review are combined into at most one email per owner per run. Private, unrelated owners must never be combined in one message.
+- Daily digest, next-24-hour reminders, and Monday review are combined into at most one email per profile per run. Private, unrelated owners must never be combined in one message.
 - This phase requires `lib/db/migrations/20260628_reminder_preferences.sql`; code presence alone is not deployment completion. Follow `docs/REMINDER_EMAIL_SETUP.md`.
+
+## Phase Update: Multi-user Workspace, Permissions and Private Integrations
+
+- The workbench is no longer administrator-only. `owner` and invited `member` profiles may enter; uninvited sign-ups remain `pending`, and `suspended` profiles are denied.
+- `requireWorkspaceRequest` protects member features, `requireOwnerRequest` protects member/site administration, and system tokens protect cron/workers. Do not replace these with navigation-only checks.
+- Personal records must be scoped by the effective `profiles.id` in both repository queries and Supabase RLS. This includes schedule, tasks, notes, reading/materials, reminders, course jobs, content drafts/publications and browser caches.
+- The owner may impersonate an active member through a signed HttpOnly cookie for testing. Impersonation must hide owner-only settings and use the target member's data, permissions, AI provider and email provider.
+- Members never fall back to the owner's global AI or Resend credentials. Only the real owner may use environment credentials as a compatibility fallback.
+- Per-user secrets live in `user_integrations` and are encrypted with AES-256-GCM using `USER_SECRETS_ENCRYPTION_KEY`. Never return plaintext secrets, store them in logs, or rotate the encryption key without a credential migration.
+- `/desk/system` is the single settings center. Personal account, AI, email and reminders follow the effective profile; member management and site maintenance appear only for the real, non-impersonated owner.
+- Members default to private capabilities and `publish = false`. Public publishing must be granted explicitly.
+- Apply `lib/db/migrations/20260628_multi_user_workspace.sql` before inviting a second user. Follow `docs/MULTI_USER_WORKSPACE.md` and perform a real two-account isolation test.

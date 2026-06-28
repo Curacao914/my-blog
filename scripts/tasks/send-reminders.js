@@ -84,11 +84,24 @@ function encodeFilterValue(value) {
   return encodeURIComponent(value).replace(/\./g, '%2E')
 }
 
-async function listDueReminders(env, options = {}) {
+async function resolveOwnerId(env) {
+  if (env.TASK_REMINDER_OWNER_PROFILE_ID) return env.TASK_REMINDER_OWNER_PROFILE_ID
+  if (!env.SCHEDULE_OWNER_USER_ID) {
+    throw new Error('Set TASK_REMINDER_OWNER_PROFILE_ID or SCHEDULE_OWNER_USER_ID before reading legacy task reminders.')
+  }
+  const rows = await supabaseRequest(env, `/profiles?select=id&clerk_user_id=eq.${encodeURIComponent(env.SCHEDULE_OWNER_USER_ID)}&limit=1`)
+  const ownerId = rows?.[0]?.id
+  if (!ownerId) throw new Error('Configured task reminder owner profile was not found.')
+  return ownerId
+}
+
+async function listDueReminders(env, ownerId, options = {}) {
+  if (!ownerId) throw new Error('ownerId is required')
   const now = options.now || new Date().toISOString()
   const limit = Number(options.limit || 20)
   const select = [
     'id',
+    'owner_id',
     'title',
     'status',
     'type',
@@ -107,12 +120,12 @@ async function listDueReminders(env, options = {}) {
 
   return supabaseRequest(
     env,
-    `/tasks?select=${select}&remind_at=lte.${encodeFilterValue(now)}&reminder_sent_at=is.null&status=not.in.(done,archived)&order=remind_at.asc&limit=${limit}`
+    `/tasks?select=${select}&owner_id=eq.${encodeURIComponent(ownerId)}&remind_at=lte.${encodeFilterValue(now)}&reminder_sent_at=is.null&status=not.in.(done,archived)&order=remind_at.asc&limit=${limit}`
   )
 }
 
-async function markReminderSent(env, taskId) {
-  const rows = await supabaseRequest(env, `/tasks?id=eq.${encodeURIComponent(taskId)}`, {
+async function markReminderSent(env, ownerId, taskId) {
+  const rows = await supabaseRequest(env, `/tasks?id=eq.${encodeURIComponent(taskId)}&owner_id=eq.${encodeURIComponent(ownerId)}`, {
     method: 'PATCH',
     headers: {
       Prefer: 'return=representation'
@@ -218,7 +231,8 @@ async function main() {
   const channel = args.channel || 'console'
   const shouldSend = Boolean(args.send)
   const shouldMark = shouldSend && !args['no-mark']
-  const due = await listDueReminders(env, {
+  const ownerId = await resolveOwnerId(env)
+  const due = await listDueReminders(env, ownerId, {
     now: args.now,
     limit: args.limit
   })
@@ -236,7 +250,7 @@ async function main() {
 
     if (shouldMark) {
       for (const task of due) {
-        const updated = await markReminderSent(env, task.id)
+        const updated = await markReminderSent(env, ownerId, task.id)
         marked.push({ id: updated?.id || task.id, title: updated?.title || task.title })
       }
     }
