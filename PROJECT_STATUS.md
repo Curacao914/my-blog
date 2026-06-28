@@ -393,3 +393,26 @@ Required deployment work:
 5. do not invite real friends or merge `main` until cross-user ID access and per-user credential tests pass.
 
 The next feature phase remains Writing Studio, now built directly on the multi-user owner-scoped model.
+
+## Current Phase Addendum: Workspace Polish and Profile Settings
+
+Status: implementation prepared for local Jest/build and Preview review. No database migration or new environment variable is introduced by this addendum.
+
+Implemented:
+
+- removed the duplicated overdue-item strip that appeared between Today focus cards and grouped lanes;
+- normalized action rows so Writing, Publishing, course and settings buttons stay aligned in normal flow;
+- replaced native permission checkboxes with compact accessible switches;
+- added self-service nickname and remote avatar URL editing at `/desk/system?section=account`;
+- added owner-safe `/api/account/profile`, including HTTP(S)-only avatar validation and impersonation protection;
+- preserved custom profile avatars instead of re-importing Clerk image URLs on every session;
+- clarified that site connection secrets are managed in Vercel/Supabase while System exposes status, recheck and safe maintenance actions;
+- added an explicit low-key return-to-home control in desktop and mobile workbench navigation.
+
+Required next verification:
+
+1. run focused and multi-user Jest suites plus `npm run build`;
+2. verify Today has no clipped strip and action buttons do not drift at desktop/narrow widths;
+3. save a nickname and hosted avatar URL, refresh, and confirm both the sidebar and account popover update;
+4. verify an invalid or non-HTTP avatar URL is rejected;
+5. complete the real two-account isolation matrix before inviting real users or starting Writing Studio.

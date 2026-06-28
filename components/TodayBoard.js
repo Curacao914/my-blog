@@ -407,7 +407,6 @@ export function TodayBoard({ initialView = 'today' }) {
   }, [items, isReady, cloudEnabled, profileId])
 
   const scheduleItems = useMemo(() => items.filter((item) => !isReadingItem(item)), [items])
-  const overdueItems = useMemo(() => scheduleItems.filter((item) => item.status === 'active' && dateKind(item.date) === 'overdue'), [scheduleItems])
   const upcomingStrip = useMemo(
     () => sortItems(scheduleItems).filter((item) => item.status === 'active' && dateKind(item.date) === 'upcoming').slice(0, 3),
     [scheduleItems]
@@ -445,11 +444,6 @@ export function TodayBoard({ initialView = 'today' }) {
   }, [scheduleItems, view])
 
   const focusIds = useMemo(() => new Set(focusItems.map((item) => item.id)), [focusItems])
-  const carryItems = useMemo(
-    () => overdueItems.filter((item) => !focusIds.has(item.id)),
-    [focusIds, overdueItems]
-  )
-
   const columnGroups = useMemo(() => {
     const withoutFocus = view === 'today' ? visibleItems.filter((item) => !focusIds.has(item.id)) : visibleItems
     const activeItems = withoutFocus.filter((item) => item.status !== 'done')
@@ -549,16 +543,6 @@ export function TodayBoard({ initialView = 'today' }) {
               removeItem={removeItem}
               toggleChild={toggleChild}
             />
-          ))}
-        </section>
-      ) : null}
-
-      {view === 'today' && carryItems.length ? (
-        <section className="carry-strip">
-          {carryItems.map((item) => (
-            <button key={item.id} type="button" onClick={() => setExpandedId(expandedId === item.id ? '' : item.id)}>
-              {item.title}
-            </button>
           ))}
         </section>
       ) : null}

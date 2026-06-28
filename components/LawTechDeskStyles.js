@@ -7102,6 +7102,162 @@ html.course-focus-open body { overflow:hidden; }
   .workspace-auth-actions a { padding:8px 9px; font-size:10px; }
 }
 
+
+/* Workspace polish: stable flow, compact permissions, profile settings and action alignment */
+.desk-sidebar { grid-template-rows:auto auto minmax(0,1fr) auto; }
+.desk-home-link {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  width:max-content;
+  margin:0 2px 7px;
+  border-radius:9px;
+  padding:5px 7px;
+  color:var(--quiet);
+  font-size:9px;
+  font-weight:650;
+  text-decoration:none;
+  transition:color .18s ease, background .18s ease, transform .18s ease;
+}
+.desk-home-link:hover { color:var(--leaf); background:rgba(255,255,255,.52); transform:translateY(-1px); }
+.desk-sidebar-collapsed .desk-home-link { justify-self:center; margin-inline:0; padding:7px; }
+.desk-sidebar-collapsed .desk-home-link span { display:none; }
+.desk-mobile-drawer { grid-template-rows:auto auto minmax(0,1fr) auto; }
+.desk-mobile-drawer > .desk-identity-card { margin:0 3px 10px; }
+.desk-home-link.is-mobile { margin:0; }
+
+/* The old carry strip duplicated overdue items and visually slipped between focus and lanes. */
+.focus-strip,
+.today-lanes,
+.today-later-list { position:static; z-index:auto; }
+.focus-strip { align-items:stretch; margin:0; }
+.focus-card { position:relative; height:auto; overflow:visible; }
+.today-lanes { margin-top:0; }
+
+/* One authoritative action-row contract prevents links and buttons from drifting. */
+.course-row-actions,
+.writing-desk-actions,
+.publishing-head-actions,
+.publishing-actions,
+.settings-actions,
+.member-row footer,
+.site-maintenance-actions {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+  min-width:0;
+}
+.course-row-actions > a,
+.course-row-actions > button,
+.writing-desk-actions > a,
+.writing-desk-actions > button,
+.publishing-head-actions > a,
+.publishing-head-actions > button,
+.publishing-actions > a,
+.publishing-actions > button,
+.settings-actions > button,
+.member-row footer > button {
+  position:static !important;
+  inset:auto !important;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto;
+  width:auto;
+  min-width:0;
+  min-height:38px;
+  margin:0;
+  line-height:1.2;
+  white-space:nowrap;
+  vertical-align:middle;
+}
+.publishing-index-list article {
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  min-height:92px;
+}
+.publishing-index-list article > div:first-child { min-width:0; }
+.publishing-index-list article > .course-row-actions { align-self:center; justify-self:end; }
+.writing-desk-hero { grid-template-columns:minmax(0,1fr) auto; align-items:center; }
+.writing-desk-actions { align-self:center; justify-content:flex-end; }
+
+/* Compact permission rows with an in-house switch instead of native giant blue boxes. */
+.member-permission-block { display:grid; gap:10px; }
+.member-permission-block > div:first-child { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+.member-permission-block > div:first-child strong { font-size:11px; }
+.member-permission-block > div:first-child small { color:var(--quiet); font-size:9px; }
+.member-permission-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+.member-permission-grid .member-permission-item {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+  min-height:64px;
+  border:1px solid rgba(17,63,49,.07);
+  border-radius:13px;
+  padding:10px 11px;
+  background:rgba(255,255,255,.34);
+  cursor:pointer;
+  transition:border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.member-permission-grid .member-permission-item:hover { border-color:rgba(17,63,49,.14); background:rgba(255,255,255,.54); }
+.member-permission-grid .member-permission-item.is-enabled { border-color:rgba(38,103,78,.14); background:rgba(220,233,223,.42); }
+.member-permission-grid .member-permission-copy { display:grid; gap:3px; min-width:0; }
+.member-permission-grid .member-permission-copy b { color:var(--ink); font-size:11px; }
+.member-permission-grid .member-permission-copy small { color:var(--quiet); font-size:9px; line-height:1.45; }
+.member-permission-grid .permission-switch { position:relative; display:block; width:36px; height:21px; flex:0 0 36px; }
+.member-permission-grid .permission-switch input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+.member-permission-grid .permission-switch i {
+  position:absolute;
+  inset:0;
+  border:1px solid rgba(17,63,49,.14);
+  border-radius:999px;
+  background:rgba(17,63,49,.08);
+  transition:background .18s ease, border-color .18s ease;
+  pointer-events:none;
+}
+.member-permission-grid .permission-switch i::after {
+  content:'';
+  position:absolute;
+  top:2px;
+  left:2px;
+  width:15px;
+  height:15px;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:0 2px 7px rgba(17,63,49,.16);
+  transition:transform .18s ease;
+}
+.member-permission-grid .permission-switch input:checked + i { border-color:var(--leaf); background:var(--leaf); }
+.member-permission-grid .permission-switch input:checked + i::after { transform:translateX(15px); }
+.member-permission-grid .permission-switch input:focus-visible + i { box-shadow:0 0 0 4px rgba(17,63,49,.09); }
+.member-permission-grid .permission-switch input:disabled + i { opacity:.45; }
+
+/* Account profile editor stores only the remote image URL, never image bytes. */
+.settings-profile-summary { display:flex; align-items:center; gap:13px; border-bottom:1px solid rgba(17,63,49,.07); padding-bottom:15px; }
+.settings-profile-summary > div { display:grid; gap:2px; min-width:0; }
+.settings-profile-summary strong { font-size:15px; }
+.settings-profile-summary span,
+.settings-profile-summary small { color:var(--muted); font-size:10px; }
+.account-profile-form { max-width:720px; }
+.account-profile-form label > small { color:var(--quiet); font-size:9px; line-height:1.55; }
+
+/* Site status is intentionally read-only; safe maintenance actions stay editable. */
+.system-connection-table > div > span:first-child { display:grid; gap:2px; }
+.system-connection-table > div > span:first-child strong { color:var(--ink); font-size:11px; }
+.system-connection-table > div > span:first-child small { color:var(--quiet); font-size:9px; }
+.site-maintenance-actions { justify-content:flex-end; }
+
+@media (max-width:700px) {
+  .member-permission-grid { grid-template-columns:1fr; }
+  .member-permission-block > div:first-child { align-items:flex-start; flex-direction:column; gap:3px; }
+  .publishing-index-list article { grid-template-columns:1fr; }
+  .publishing-index-list article > .course-row-actions { justify-self:start; }
+  .writing-desk-hero { grid-template-columns:1fr; }
+  .writing-desk-actions { justify-content:flex-start; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
 }

@@ -4,10 +4,16 @@ import { clearWorkspaceSessionCache } from '@/hooks/useWorkspaceSession'
 
 function PermissionGrid({ definitions = [], disabled, permissions = {}, onChange }) {
   return <div className='member-permission-grid'>
-    {definitions.map(item => <label key={item.key}>
-      <input checked={Boolean(permissions[item.key])} disabled={disabled} onChange={event => onChange(item.key, event.target.checked)} type='checkbox' />
-      <span><b>{item.label}</b><small>{item.description}</small></span>
-    </label>)}
+    {definitions.map(item => {
+      const enabled = Boolean(permissions[item.key])
+      return <label className={`member-permission-item ${enabled ? 'is-enabled' : ''}`} key={item.key}>
+        <span className='member-permission-copy'><b>{item.label}</b><small>{item.description}</small></span>
+        <span className='permission-switch'>
+          <input checked={enabled} disabled={disabled} onChange={event => onChange(item.key, event.target.checked)} type='checkbox' />
+          <i aria-hidden='true' />
+        </span>
+      </label>
+    })}
   </div>
 }
 
@@ -110,7 +116,7 @@ export function MemberManagement({ actorId = '' }) {
     <header><span>Members</span><h3>成员与权限</h3><p>成员拥有彼此隔离的私人工作区。管理员可以批准、暂停、调整功能权限，并通过右上角账号菜单切换身份测试。</p></header>
     <form className='member-invite-form' onSubmit={invite}>
       <label><span>授权邮箱</span><input required type='email' value={email} onChange={event => setEmail(event.target.value)} placeholder='friend@example.com' /></label>
-      <PermissionGrid definitions={data.permissionDefinitions || []} permissions={invitePermissions} onChange={(key, value) => setInvitePermissions(current => ({ ...current, [key]: value }))} />
+      <div className='member-permission-block'><div><strong>初始权限</strong><small>对方注册后，可以继续在成员列表中调整。</small></div><PermissionGrid definitions={data.permissionDefinitions || []} permissions={invitePermissions} onChange={(key, value) => setInvitePermissions(current => ({ ...current, [key]: value }))} /></div>
       <div className='settings-actions'><button className='is-primary' disabled={state === 'saving'} type='submit'>添加授权</button><small>这不会共享管理员数据或 API Key。未预先授权的注册账号会进入等待批准状态。</small></div>
     </form>
     {message ? <p className={`settings-message ${state === 'error' ? 'is-error' : ''}`}>{message}</p> : null}

@@ -199,3 +199,18 @@ The real owner manages members from `/desk/system?section=members`, may switch i
 Deployment requires the reminder migration followed by `lib/db/migrations/20260628_multi_user_workspace.sql`, plus stable `WORKSPACE_SESSION_SECRET` and `USER_SECRETS_ENCRYPTION_KEY`. Before inviting friends, verify with two real Clerk accounts that IDs cannot be guessed across users and that AI/email keys never cross profile boundaries. Detailed invariants and the acceptance matrix live in `docs/MULTI_USER_WORKSPACE.md`.
 
 After this phase is Preview-verified, continue with Writing Studio on the owner-scoped content/version model, then secure share links.
+
+## Latest Update: Workspace Polish Before Two-account Verification
+
+The multi-user implementation received a focused usability and settings pass after the first Preview review:
+
+- the duplicate Today carry strip was removed; overdue items now appear once in focus or ordinary lanes;
+- action rows across Writing, Publishing, course rows and settings use one normal-flow alignment contract;
+- member permissions use compact custom switches matching the workbench design;
+- Account settings now edit the current actor's display name and remote avatar URL through `/api/account/profile`;
+- only the remote URL string is stored, and Clerk no longer overwrites a custom avatar on every session refresh;
+- impersonation is read-only for self-service profile editing;
+- site connections clearly distinguish deployment-managed secrets from safe in-app maintenance actions;
+- a quiet explicit Home link is available above the sidebar identity block and in the mobile drawer.
+
+No new migration or environment variable is required for this pass. The next action remains a real second Clerk account test: cross-user lists, guessed IDs, local cache separation, permissions, AI/Resend isolation, suspension, deletion and publish denial. Only after that verification should Writing Studio begin.

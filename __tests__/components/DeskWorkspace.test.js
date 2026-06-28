@@ -191,6 +191,7 @@ describe('workspace desk views', () => {
     await waitFor(() => expect(screen.getByText('置顶焦点事项')).toBeInTheDocument())
 
     expect(container.querySelectorAll('.focus-card')).toHaveLength(2)
+    expect(container.querySelector('.carry-strip')).toBeNull()
     expect(container.querySelector('.focus-strip')).not.toHaveTextContent('已经完成的重要事项')
     expect(container.querySelector('.focus-strip')).not.toHaveTextContent('明日紧急事项')
     expect(container.querySelectorAll('.today-stack').length).toBeGreaterThanOrEqual(1)

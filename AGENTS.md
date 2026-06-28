@@ -265,3 +265,14 @@ The deployed `content_items_source_check` accepts `course-worker`, not `course-w
 - `/desk/system` is the single settings center. Personal account, AI, email and reminders follow the effective profile; member management and site maintenance appear only for the real, non-impersonated owner.
 - Members default to private capabilities and `publish = false`. Public publishing must be granted explicitly.
 - Apply `lib/db/migrations/20260628_multi_user_workspace.sql` before inviting a second user. Follow `docs/MULTI_USER_WORKSPACE.md` and perform a real two-account isolation test.
+
+## Phase Update: Workspace Polish and Self-managed Profile
+
+- The Today view must not render a second horizontal carry strip for overdue items. Non-focus overdue items already remain in the ordinary grouped lanes; duplicating them between focus cards and lanes caused clipping and visual overlap.
+- Workbench action controls share one layout contract. Writing, publishing, course-row, settings and member action groups must remain in normal flow, vertically centered, and allowed to wrap without absolute positioning or detached labels.
+- Member permissions use compact accessible switches rather than browser-native oversized checkboxes. Permission visibility never replaces API and repository enforcement.
+- Every signed-in actor may edit their own display name and remote avatar URL from Account settings. The image file remains on the external host; the workspace stores only the URL string. An impersonating owner must not edit the target member through the self-service profile endpoint.
+- A custom avatar must not be overwritten by Clerk on every session refresh. Clerk identity values are only initial fallbacks when the workspace profile field is empty.
+- Site-level Supabase, Notion, Algolia and Cron secrets remain deployment-managed. `/desk/system` may show status, recheck connections, and perform reviewed maintenance actions, but must not expose or edit deployment secrets in browser forms.
+- The workbench sidebar includes a quiet, explicit return-to-home link. Do not rely on an avatar click as the only undisclosed route back to the public site.
+- After this polish phase, the only blocking next step is the real two-account isolation matrix in `docs/MULTI_USER_WORKSPACE.md`. Writing Studio starts only after that matrix passes.

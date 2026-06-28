@@ -107,3 +107,15 @@ Expected pattern: resource use should correlate with real course steps, not with
 - [ ] Member without `publish` may save private drafts but cannot publish or withdraw public content.
 - [ ] RLS is enabled for personal parent tables and content/course child tables.
 - [ ] Do not invite real users or merge `main` until the two-account matrix in `docs/MULTI_USER_WORKSPACE.md` passes.
+
+## Workspace polish verification
+
+- [ ] Today no longer renders `.carry-strip`; an overdue item appears once in focus or its ordinary section.
+- [ ] Writing, Publishing, course and settings action buttons remain vertically aligned at desktop and narrow widths.
+- [ ] Member permission controls render as compact switches and still persist through the owner API.
+- [ ] Account nickname and HTTP(S) avatar URL save, survive refresh, and update the sidebar/account popover.
+- [ ] `javascript:`, `data:` and invalid avatar URLs are rejected.
+- [ ] Profile editing is read-only while the owner is impersonating a member.
+- [ ] Site maintenance exposes health/recheck/sync only and never returns deployment secret values.
+- [ ] Desktop and mobile workbench navigation include an explicit low-key Home link.
+- [ ] Real two-account isolation matrix passes before Writing Studio or real invitations.

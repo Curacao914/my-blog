@@ -300,3 +300,8 @@ The deployed `content_items_source_check` accepts `course-worker`, not `course-w
 - 修复工作台身份卡过小与日期截断、Today 聚焦事项重叠和重复、发布/写作按钮错位。
 - 迁移、环境变量、RLS 与双用户验收见 `docs/MULTI_USER_WORKSPACE.md`。
 - 本阶段通过后再推进 Writing Studio；写作草稿从创建之初必须带 owner，不再事后补隔离。
+
+
+## 2026-06-28：工作台抛光与个人资料设置
+
+在多用户迁移完成后，根据 Preview 反馈完成一轮收口：移除 Today 中重复且被遮挡的逾期事项横条；统一 Writing、Publishing、课程与设置页的操作按钮布局；将成员权限改为符合现有视觉语言的紧凑开关；账号页增加昵称和远程头像 URL 的自助编辑；站点维护页明确部署级 Secret 只读并保留重新检测、内容同步等安全动作；桌面和移动工作台补充明确但克制的返回首页入口。该轮不新增数据库迁移或环境变量。下一步是使用真实第二 Clerk 账号完成隔离矩阵，通过后再进入 Writing Studio。

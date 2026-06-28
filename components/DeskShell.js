@@ -58,6 +58,10 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
       <div className='desk-ambient desk-ambient-one' aria-hidden='true' />
       <div className='desk-ambient desk-ambient-two' aria-hidden='true' />
       <aside className='desk-sidebar'>
+        <Link className='desk-home-link' href='/' aria-label='返回首页'>
+          <LawTechIcon name='home' size={14} />
+          <span>首页</span>
+        </Link>
         <div className='desk-brand-row'>
           <DeskIdentityCard collapsed={collapsed} />
           <button className='desk-collapse-button' type='button' onClick={toggleSidebar} aria-label={collapsed ? '展开侧栏' : '收起侧栏'}>
@@ -90,7 +94,8 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
         <div className={`desk-mobile-drawer-shell ${mobileOpen ? 'is-open' : ''}`} aria-hidden={!mobileOpen}>
           <button className='desk-mobile-drawer-backdrop' type='button' aria-label='关闭工作台导航' onClick={() => setMobileOpen(false)} />
           <aside className='desk-mobile-drawer' aria-label='移动端工作台导航'>
-            <header><DeskIdentityCard compact /><button type='button' aria-label='关闭导航' onClick={() => setMobileOpen(false)}>×</button></header>
+            <header><Link className='desk-home-link is-mobile' href='/' onClick={() => setMobileOpen(false)} aria-label='返回首页'><LawTechIcon name='home' size={14} /><span>首页</span></Link><button type='button' aria-label='关闭导航' onClick={() => setMobileOpen(false)}>×</button></header>
+            <DeskIdentityCard compact />
             <DeskNavigation active={active} profile={session?.profile} onNavigate={() => setMobileOpen(false)} />
             <footer><i /> 私人工作区</footer>
           </aside>

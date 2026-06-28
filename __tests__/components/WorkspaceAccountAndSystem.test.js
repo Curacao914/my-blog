@@ -9,6 +9,8 @@ describe('workspace account and settings surface', () => {
   const sessionHook = read('hooks/useWorkspaceSession.js')
   const app = read('pages/_app.js')
   const system = read('components/SystemDesk.js')
+  const account = read('components/AccountSettings.js')
+  const profileApi = read('pages/api/account/profile.js')
   const identity = read('components/DeskIdentityCard.js')
   const members = read('components/MemberManagement.js')
   const styles = read('components/LawTechDeskStyles.js')
@@ -51,5 +53,29 @@ describe('workspace account and settings surface', () => {
     expect(members).toContain('保存权限')
     expect(members).toContain('删除成员及数据')
     expect(members).toContain('以此身份查看')
+    expect(members).toContain('permission-switch')
+    expect(styles).toContain('.member-permission-grid .permission-switch')
+  })
+
+  it('supports a self-managed nickname and remote avatar URL without storing image bytes', () => {
+    expect(account).toContain('/api/account/profile')
+    expect(account).toContain('显示昵称')
+    expect(account).toContain('头像图片 URL')
+    expect(account).toContain('站内只保存 URL')
+    expect(profileApi).toContain("['http:', 'https:']")
+    expect(profileApi).toContain('auth.actorProfile.id')
+  })
+
+  it('keeps a quiet path back home and marks site secrets as deployment-level settings', () => {
+    expect(shell).toContain("className='desk-home-link'")
+    expect(shell).toContain("href='/'")
+    expect(system).toContain('部署级密钥不会在浏览器中展示或修改')
+    expect(system).toContain('重新检测连接')
+  })
+
+  it('uses a single action-row layout contract across writing and publishing', () => {
+    expect(styles).toContain('One authoritative action-row contract')
+    expect(styles).toContain('.publishing-index-list article > .course-row-actions')
+    expect(styles).toContain('.writing-desk-actions { align-self:center')
   })
 })

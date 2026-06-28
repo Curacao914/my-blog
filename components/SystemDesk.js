@@ -14,21 +14,28 @@ function StatePill({ ok, children }) {
 }
 
 function SiteConnections({ health, state, onReload }) {
-  return <section className='settings-section'>
-    <header><span>Site administration</span><h3>站点连接与维护</h3><p>这里是全站级配置。个人 API、邮件和提醒放在各自设置项中，不与站点连接混在一起。</p></header>
-    {state === 'loading' ? <p className='settings-muted'>正在检测连接…</p> : state === 'error' ? <div className='settings-inline-notice is-error'>检测失败。<button type='button' onClick={onReload}>重新检测</button></div> : <>
+  const rows = [
+    ['数据库', Boolean(health?.databaseReachable), health?.databaseReachable ? '可连接' : '不可用', 'Supabase 项目'],
+    ['Storage', Boolean(health?.storageConfigured), health?.storageConfigured ? '已配置' : '未配置', 'Supabase Storage'],
+    ['Notion', Boolean(health?.notionConfigured), health?.notionConfigured ? '已配置' : '未配置', 'Vercel 环境变量'],
+    ['Algolia 搜索', Boolean(health?.algoliaSearchConfigured), health?.algoliaSearchConfigured ? '可搜索' : '使用本地索引', 'Vercel 环境变量'],
+    ['Algolia 管理', Boolean(health?.algoliaAdminConfigured), health?.algoliaAdminConfigured ? '可更新索引' : '只读或未配置', 'Vercel 环境变量'],
+    ['提醒 Cron', Boolean(health?.reminderCronConfigured), health?.reminderCronConfigured ? '已配置' : '未配置', 'Vercel Cron / Secret']
+  ]
+
+  return <section className='settings-section site-settings'>
+    <header><span>Site administration</span><h3>站点连接与维护</h3><p>这里管理全站连接的状态与维护动作。部署级密钥不会在浏览器中展示或修改。</p></header>
+    <div className='settings-inline-notice'>数据库、Notion、Algolia 与 Cron 的 Secret 由 Vercel 或 Supabase 托管；这里提供状态检查和安全的维护操作，避免把全站密钥暴露给前端。</div>
+    {state === 'loading' || state === 'idle' ? <p className='settings-muted'>正在检测连接…</p> : state === 'error' ? <div className='settings-inline-notice is-error'>检测失败。<button type='button' onClick={onReload}>重新检测</button></div> : <>
       <div className='system-connection-table'>
-        <div><span>数据库</span><StatePill ok={Boolean(health?.databaseReachable)}>{health?.databaseReachable ? '可连接' : '不可用'}</StatePill></div>
-        <div><span>Storage</span><StatePill ok={Boolean(health?.storageConfigured)}>{health?.storageConfigured ? '已配置' : '未配置'}</StatePill></div>
-        <div><span>Notion</span><StatePill ok={Boolean(health?.notionConfigured)}>{health?.notionConfigured ? '已配置' : '未配置'}</StatePill></div>
-        <div><span>Algolia 搜索</span><StatePill ok={Boolean(health?.algoliaSearchConfigured)}>{health?.algoliaSearchConfigured ? '可搜索' : '使用本地索引'}</StatePill></div>
-        <div><span>Algolia 管理</span><StatePill ok={Boolean(health?.algoliaAdminConfigured)}>{health?.algoliaAdminConfigured ? '可更新索引' : '只读或未配置'}</StatePill></div>
-        <div><span>提醒 Cron</span><StatePill ok={Boolean(health?.reminderCronConfigured)}>{health?.reminderCronConfigured ? '已配置' : '未配置'}</StatePill></div>
+        {rows.map(([label, ok, status, source]) => <div key={label}><span><strong>{label}</strong><small>{source}</small></span><StatePill ok={ok}>{status}</StatePill></div>)}
       </div>
+      <div className='settings-actions site-maintenance-actions'><button type='button' onClick={onReload}>重新检测连接</button></div>
       <div className='settings-subsection'><div><h4>同步公开内容</h4><p>清除缓存、重新读取 Notion，并在配置存在时更新 Algolia。</p></div><AdminContentSync compact={false} /></div>
     </>}
   </section>
 }
+
 
 export function SystemDesk() {
   const router = useRouter()
