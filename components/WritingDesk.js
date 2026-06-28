@@ -63,6 +63,11 @@ export function WritingDesk() {
   const [message, setMessage] = useState('')
   const [publishNote, setPublishNote] = useState(null)
   const saveLock = useRef(false)
+  const pendingSaveRef = useRef(false)
+  const editRevisionRef = useRef(0)
+  const activeIdRef = useRef('')
+  const titleRef = useRef('')
+  const bodyRef = useRef('')
 
   const activeNote = useMemo(
     () => notes.find(note => note.id === activeId) || null,
@@ -91,10 +96,14 @@ export function WritingDesk() {
         const loaded = data.notes || []
         setNotes(loaded)
         if (loaded[0]) {
-          setActiveId(loaded[0].id)
-          setTitle(loaded[0].title || '')
-          setBody(noteBody(loaded[0]))
+          activeIdRef.current = loaded[0].id
+          titleRef.current = loaded[0].title || ''
+          bodyRef.current = noteBody(loaded[0])
+          setActiveId(activeIdRef.current)
+          setTitle(titleRef.current)
+          setBody(bodyRef.current)
         } else {
+          activeIdRef.current = 'new'
           setActiveId('new')
         }
         setState('ready')
@@ -127,15 +136,23 @@ export function WritingDesk() {
   }, [activeId, title, body])
 
   function selectNote(note) {
-    setActiveId(note.id)
-    setTitle(note.title || '')
-    setBody(noteBody(note))
+    activeIdRef.current = note.id
+    titleRef.current = note.title || ''
+    bodyRef.current = noteBody(note)
+    editRevisionRef.current += 1
+    setActiveId(activeIdRef.current)
+    setTitle(titleRef.current)
+    setBody(bodyRef.current)
     setDirty(false)
     setSaveState('idle')
     setMessage('')
   }
 
   function newDraft() {
+    activeIdRef.current = 'new'
+    titleRef.current = ''
+    bodyRef.current = ''
+    editRevisionRef.current += 1
     setActiveId('new')
     setTitle('')
     setBody('')
@@ -146,8 +163,15 @@ export function WritingDesk() {
   }
 
   async function saveDraft({ quiet = false } = {}) {
-    if (saveLock.current) return
-    if (!body.trim()) {
+    if (saveLock.current) {
+      pendingSaveRef.current = true
+      return null
+    }
+    const saveActiveId = activeIdRef.current || activeId
+    const saveTitle = titleRef.current
+    const saveBody = bodyRef.current
+    const saveRevision = editRevisionRef.current
+    if (!saveBody.trim()) {
       if (!quiet) setMessage('正文还是空的。')
       return
     }
@@ -157,15 +181,15 @@ export function WritingDesk() {
     if (!quiet) setMessage('')
 
     try {
-      const isNew = activeId === 'new'
+      const isNew = saveActiveId === 'new'
       const response = await fetch('/api/notes', {
         method: isNew ? 'POST' : 'PATCH',
         credentials: 'same-origin',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          id: isNew ? undefined : activeId,
-          title,
-          bodyMarkdown: body,
+          id: isNew ? undefined : saveActiveId,
+          title: saveTitle,
+          bodyMarkdown: saveBody,
           originType: 'writing',
           scope: 'writing'
         })
@@ -175,15 +199,27 @@ export function WritingDesk() {
 
       const saved = data.note
       setNotes(current => [saved, ...current.filter(note => note.id !== saved.id)])
-      setActiveId(saved.id)
-      setTitle(saved.title || title)
-      setDirty(false)
-      setSaveState('saved')
-      if (!quiet) setMessage('已保存')
-      window.setTimeout(() => {
+      const sameEditor = activeIdRef.current === saveActiveId
+      if (!sameEditor) return saved
+      if (isNew) {
+        activeIdRef.current = saved.id
+        setActiveId(saved.id)
+      }
+      if (editRevisionRef.current === saveRevision) {
+        if (!saveTitle.trim() && saved.title) {
+          titleRef.current = saved.title
+          setTitle(saved.title)
+        }
+        setDirty(false)
+        setSaveState('saved')
+        if (!quiet) setMessage('已保存')
+        window.setTimeout(() => {
+          setSaveState('idle')
+          setMessage(current => current === '已保存' ? '' : current)
+        }, 1800)
+      } else {
         setSaveState('idle')
-        setMessage(current => current === '已保存' ? '' : current)
-      }, 1800)
+      }
       return saved
     } catch (error) {
       setSaveState('error')
@@ -191,6 +227,10 @@ export function WritingDesk() {
       return null
     } finally {
       saveLock.current = false
+      if (pendingSaveRef.current) {
+        pendingSaveRef.current = false
+        window.setTimeout(() => void saveDraft({ quiet: true }), 0)
+      }
     }
   }
 
@@ -218,12 +258,18 @@ export function WritingDesk() {
   }
 
   function updateTitle(value) {
+    titleRef.current = value
+    editRevisionRef.current += 1
+    if (saveLock.current) pendingSaveRef.current = true
     setTitle(value)
     setDirty(true)
     setSaveState('idle')
   }
 
   function updateBody(value) {
+    bodyRef.current = value
+    editRevisionRef.current += 1
+    if (saveLock.current) pendingSaveRef.current = true
     setBody(value)
     setDirty(true)
     setSaveState('idle')

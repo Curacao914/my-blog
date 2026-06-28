@@ -140,7 +140,7 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
         </section>
       </div>
 
-      <style jsx>{`
+      <style jsx global>{`
         .public-home { padding-bottom: 76px; }
         .home-dashboard { display:grid; grid-template-columns:minmax(0,1.42fr) minmax(310px,.58fr); gap:20px; padding:32px 0 20px; }
         .home-feature,.home-command,.home-updates,.home-utility-strip {
