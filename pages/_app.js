@@ -7,6 +7,7 @@ import 'react-notion-x/src/styles.css' // 原版的 react-notion-x
 import '@/styles/notion.css' // 在原版之后覆盖阅读样式
 
 import useAdjustStyle from '@/hooks/useAdjustStyle'
+import { primeWorkspaceSession } from '@/hooks/useWorkspaceSession'
 import { GlobalContextProvider } from '@/lib/global'
 import { getBaseLayoutByTheme } from '@/themes/theme'
 import Head from 'next/head'
@@ -32,6 +33,10 @@ import { CourseTaskProvider } from '@/components/CourseTaskManager'
  * @returns
  */
 const MyApp = ({ Component, pageProps }) => {
+  if (typeof window !== 'undefined') {
+    primeWorkspaceSession(pageProps?.workspaceSession)
+  }
+
   // 一些可能出现 bug 的样式，可以统一放入该钩子进行调整
   useAdjustStyle()
 

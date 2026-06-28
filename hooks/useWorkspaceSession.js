@@ -2,6 +2,30 @@ import { useCallback, useEffect, useState } from 'react'
 
 let cached = null
 let inflight = null
+let serverPrimedKey = ''
+
+function serverSessionKey(session = {}) {
+  return [
+    session.actor?.id || '',
+    session.profile?.id || '',
+    session.impersonating ? '1' : '0'
+  ].join(':')
+}
+
+export function primeWorkspaceSession(session) {
+  if (typeof window === 'undefined' || !session) return
+
+  const key = serverSessionKey(session)
+  if (!key || key === serverPrimedKey) return
+
+  cached = {
+    ok: true,
+    signedIn: true,
+    ...session
+  }
+  inflight = null
+  serverPrimedKey = key
+}
 
 async function loadSession() {
   if (cached) return cached
@@ -24,10 +48,11 @@ async function loadSession() {
 export function clearWorkspaceSessionCache() {
   cached = null
   inflight = null
+  serverPrimedKey = ''
 }
 
 export function useWorkspaceSession() {
-  const [state, setState] = useState({ loading: true, session: cached })
+  const [state, setState] = useState({ loading: !cached, session: cached })
 
   const refresh = useCallback(async () => {
     clearWorkspaceSessionCache()

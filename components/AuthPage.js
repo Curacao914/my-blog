@@ -33,7 +33,7 @@ export function AuthPage({ mode = 'sign-in', redirectTo = '/desk/today' }) {
   return (
     <>
       <Head>
-        <title>{isSignUp ? '注册并申请权限' : '登录'} · law-tech.dev</title>
+        <title>{isSignUp ? '注册' : '登录'} · law-tech.dev</title>
         <meta name='robots' content='noindex,nofollow' />
       </Head>
 
@@ -44,7 +44,7 @@ export function AuthPage({ mode = 'sign-in', redirectTo = '/desk/today' }) {
         <section className='auth-card'>
           <div className='copy'>
             <p>law-tech.dev</p>
-            <h1>{isSignUp ? '注册并申请工作区权限' : '登录工作台'}</h1>
+            <h1>{isSignUp ? '注册' : '登录工作台'}</h1>
             <span className='auth-explainer'>{isSignUp ? '注册后，管理员会根据授权邮箱或申请状态开放你的私人工作区。' : '登录后进入仅属于当前账号的日程、笔记、课程与设置。'}</span>
           </div>
           {clerkEnabled ? (

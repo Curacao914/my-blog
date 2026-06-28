@@ -67,7 +67,6 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
         <DeskNavigation active={active} profile={session?.profile} />
         <div className='desk-sidebar-foot'>
           <span><i /> 私人工作区</span>
-          <small>数据与灵感，慢慢长成体系。</small>
         </div>
       </aside>
 
@@ -93,7 +92,7 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
           <aside className='desk-mobile-drawer' aria-label='移动端工作台导航'>
             <header><DeskIdentityCard compact /><button type='button' aria-label='关闭导航' onClick={() => setMobileOpen(false)}>×</button></header>
             <DeskNavigation active={active} profile={session?.profile} onNavigate={() => setMobileOpen(false)} />
-            <footer><i /> 数据与灵感，慢慢长成体系。</footer>
+            <footer><i /> 私人工作区</footer>
           </aside>
         </div>
 

@@ -5,6 +5,9 @@ const read = file => fs.readFileSync(path.join(process.cwd(), file), 'utf8')
 
 describe('workspace account and settings surface', () => {
   const menu = read('components/WorkspaceAccountMenu.js')
+  const shell = read('components/DeskShell.js')
+  const sessionHook = read('hooks/useWorkspaceSession.js')
+  const app = read('pages/_app.js')
   const system = read('components/SystemDesk.js')
   const identity = read('components/DeskIdentityCard.js')
   const members = read('components/MemberManagement.js')
@@ -12,9 +15,19 @@ describe('workspace account and settings surface', () => {
 
   it('uses login, permission application and an avatar popover instead of public shortcuts in the desk topbar', () => {
     expect(menu).toContain("href='/sign-in'")
-    expect(menu).toContain('注册并申请权限')
+    expect(menu).toContain("href='/sign-up'")
+    expect(menu).toMatch(/>\s*注册\s*<\/Link>/)
+    expect(menu).not.toContain('注册并申请权限')
     expect(menu).toContain('workspace-account-popover')
     expect(menu).toContain('/api/admin/impersonation')
+  })
+
+  it('hydrates the client from the server-verified workspace session', () => {
+    expect(sessionHook).toContain('primeWorkspaceSession')
+    expect(sessionHook).toContain('signedIn: true')
+    expect(app).toContain('primeWorkspaceSession(pageProps?.workspaceSession)')
+    expect(menu).toContain('clerkSignedIn')
+    expect(shell).not.toContain('数据与灵感，慢慢长成体系。')
   })
 
   it('centralizes personal and owner settings in a compact section layout', () => {
