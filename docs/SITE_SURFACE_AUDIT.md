@@ -109,3 +109,7 @@
 - 工作台导航按有效成员权限过滤，但 API 和数据层必须独立再次鉴权。
 - `/desk/system?section=members` 与 `section=site` 仅在管理员真实身份下出现；管理员模拟成员时不得泄露这些栏目。
 - 公开站点继续允许未登录访问；公开 Header 的账号入口是补充，不把公开内容本身变成登录后页面。
+
+## Copy and density gate
+
+Public and workbench surfaces must be audited for explanatory filler as well as placeholder vocabulary. A page fails the gate when it relies on architecture prose, generic slogans or oversized decoration instead of usable information. The homepage must expose recent content, search, category navigation and working tools within the first two desktop viewports. Static enforcement lives in `ProductCopy.test.js` and `HomeAndWritingPolish.test.js`.

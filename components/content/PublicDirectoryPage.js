@@ -33,7 +33,6 @@ export function PublicDirectoryPage({
           <div>
             <span className='eyebrow'>{eyebrow}</span>
             <h1>{title}</h1>
-            <p>{description}</p>
           </div>
           <nav aria-label='内容浏览方式'>
             <Link href='/content'>内容库</Link>
@@ -67,10 +66,7 @@ export function PublicDirectoryPage({
           {!groups.length ? <div className='public-directory-empty'><h3>{emptyTitle}</h3><p>{emptyBody}</p></div> : null}
         </section>}
 
-        <footer className='public-directory-foot'>
-          <p>文章、课程笔记与项目共享同一套栏目、标签和搜索，但保留各自的来源与阅读方式。</p>
-          <DynamicSignature compact />
-        </footer>
+        <footer className='public-directory-foot'><DynamicSignature compact /></footer>
       </div>
       <style jsx>{`
         .public-directory-hero { display:flex; align-items:end; justify-content:space-between; gap:32px; padding:70px 0 34px; }
@@ -99,8 +95,7 @@ export function PublicDirectoryPage({
         .public-directory-empty { padding:70px 20px; text-align:center; }
         .public-directory-empty h3 { margin:0; font-family:var(--display-serif); font-size:27px; }
         .public-directory-empty p { margin:9px auto 0; color:var(--muted); }
-        .public-directory-foot { display:flex; align-items:end; justify-content:space-between; gap:30px; margin:36px 0 80px; padding:0 8px; color:var(--muted); }
-        .public-directory-foot p { max-width:600px; line-height:1.8; }
+        .public-directory-foot { display:flex; justify-content:flex-end; margin:28px 0 64px; padding:0 8px; color:var(--muted); }
         .public-directory-foot :global(svg) { width:min(220px,36vw); color:rgba(25,59,49,.7); }
         @media (max-width:980px) { .public-directory-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
         @media (max-width:720px) {

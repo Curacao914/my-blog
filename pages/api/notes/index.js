@@ -98,7 +98,8 @@ function sendServerError(res, error) {
 }
 
 export default async function handler(req, res) {
-  const owner = await getScheduleOwner(req, 'notes')
+  const writingScope = req.query?.scope === 'writing' || req.body?.scope === 'writing'
+  const owner = await getScheduleOwner(req, writingScope ? 'writing' : 'notes')
   if (!owner.ok) return res.status(owner.status).json({ error: owner.error, code: owner.code })
   const profile = owner.profile
 
@@ -114,6 +115,7 @@ export default async function handler(req, res) {
       const notes = await listNotes(profile.id, {
         scheduleItemId: req.query.scheduleItemId,
         sourceReadingId: req.query.sourceReadingId,
+        noteType: writingScope ? 'writing' : undefined,
         activeOnly: req.query.includeArchived !== 'true'
       })
       return res.status(200).json({ notes: notes || [] })
@@ -121,6 +123,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       const scheduleItemId = req.body?.scheduleItemId || req.body?.sourceReadingId
+      if (writingScope && scheduleItemId) return res.status(400).json({ error: 'Writing drafts cannot attach reading items' })
       if (scheduleItemId) {
         if (!isUuid(scheduleItemId)) return res.status(400).json({ error: 'Invalid scheduleItemId' })
         const row = await findScheduleRow(profile.id, scheduleItemId)
@@ -138,6 +141,10 @@ export default async function handler(req, res) {
       }
 
       const payload = normalizeNotePayload(req.body || {})
+      if (writingScope) {
+        payload.note_type = 'writing'
+        payload.metadata = { ...(payload.metadata || {}), originType: 'writing' }
+      }
       if (!payload.body_markdown.trim()) return res.status(400).json({ error: 'Note body is required' })
       const note = await upsertNote(profile.id, payload)
       return res.status(201).json({ note })
@@ -147,7 +154,7 @@ export default async function handler(req, res) {
       const id = req.body?.id || req.query.id
       if (!isUuid(id || '')) return res.status(400).json({ error: 'Invalid note id' })
       const existing = await findNote(profile.id, id)
-      if (!existing) return res.status(404).json({ error: 'Note not found' })
+      if (!existing || (writingScope && existing.note_type !== 'writing')) return res.status(404).json({ error: 'Note not found' })
 
       const patch = {}
       if ('title' in req.body) patch.title = (cleanDisplayText(req.body.title) || noteTitleFromBody(existing.body_markdown)).slice(0, 120)
@@ -171,6 +178,10 @@ export default async function handler(req, res) {
     if (req.method === 'DELETE') {
       const id = req.body?.id || req.query.id
       if (!isUuid(id || '')) return res.status(400).json({ error: 'Invalid note id' })
+      if (writingScope) {
+        const existing = await findNote(profile.id, id)
+        if (!existing || existing.note_type !== 'writing') return res.status(404).json({ error: 'Note not found' })
+      }
       await deleteNote(profile.id, id)
       return res.status(204).end()
     }

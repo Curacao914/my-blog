@@ -13,23 +13,26 @@ describe('workspace account and settings surface', () => {
   const profileApi = read('pages/api/account/profile.js')
   const identity = read('components/DeskIdentityCard.js')
   const members = read('components/MemberManagement.js')
+  const writing = read('components/WritingDesk.js')
   const styles = read('components/LawTechDeskStyles.js')
 
   it('uses login, permission application and an avatar popover instead of public shortcuts in the desk topbar', () => {
     expect(menu).toContain("href='/sign-in'")
     expect(menu).toContain("href='/sign-up'")
-    expect(menu).toMatch(/>\s*注册\s*<\/Link>/)
+    expect(menu).toMatch(/>注册<\/Link>/)
     expect(menu).not.toContain('注册并申请权限')
     expect(menu).toContain('workspace-account-popover')
     expect(menu).toContain('/api/admin/impersonation')
   })
 
-  it('hydrates the client from the server-verified workspace session', () => {
+  it('hydrates the client and updates every mounted account surface immediately after sign-out', () => {
     expect(sessionHook).toContain('primeWorkspaceSession')
-    expect(sessionHook).toContain('signedIn: true')
+    expect(sessionHook).toContain('markWorkspaceSignedOut')
+    expect(sessionHook).toContain('listeners.add')
     expect(app).toContain('primeWorkspaceSession(pageProps?.workspaceSession)')
-    expect(menu).toContain('clerkSignedIn')
-    expect(shell).not.toContain('数据与灵感，慢慢长成体系。')
+    expect(menu).toContain('markWorkspaceSignedOut()')
+    expect(menu).toContain("router.replace('/')")
+    expect(menu).not.toContain("signOut({ redirectUrl: '/' })")
   })
 
   it('centralizes personal and owner settings in a compact section layout', () => {
@@ -57,25 +60,29 @@ describe('workspace account and settings surface', () => {
     expect(styles).toContain('.member-permission-grid .permission-switch')
   })
 
-  it('supports a self-managed nickname and remote avatar URL without storing image bytes', () => {
+  it('supports a self-managed nickname and remote avatar URL without UI architecture lectures', () => {
     expect(account).toContain('/api/account/profile')
     expect(account).toContain('显示昵称')
-    expect(account).toContain('头像图片 URL')
-    expect(account).toContain('站内只保存 URL')
+    expect(account).toContain('头像 URL')
+    expect(account).not.toContain('站内只保存 URL')
+    expect(account).not.toContain('数据空间')
     expect(profileApi).toContain("['http:', 'https:']")
     expect(profileApi).toContain('auth.actorProfile.id')
   })
 
-  it('keeps a quiet path back home and marks site secrets as deployment-level settings', () => {
+  it('keeps a quiet path home and a compact maintenance surface', () => {
     expect(shell).toContain("className='desk-home-link'")
     expect(shell).toContain("href='/'")
-    expect(system).toContain('部署级密钥不会在浏览器中展示或修改')
-    expect(system).toContain('重新检测连接')
+    expect(system).toContain('重新检测')
+    expect(system).toContain('AdminContentSync')
+    expect(system).not.toContain('部署级密钥不会在浏览器中展示或修改')
   })
 
-  it('uses a single action-row layout contract across writing and publishing', () => {
-    expect(styles).toContain('One authoritative action-row contract')
-    expect(styles).toContain('.publishing-index-list article > .course-row-actions')
-    expect(styles).toContain('.writing-desk-actions { align-self:center')
+  it('turns writing into a real editor instead of a module summary page', () => {
+    expect(writing).toContain('MarkdownDocument')
+    expect(writing).toContain('/api/notes?scope=writing')
+    expect(writing).toContain('saveDraft({ quiet: true })')
+    expect(writing).toContain('wordStats')
+    expect(writing).not.toContain('随手记负责保存碎片')
   })
 })

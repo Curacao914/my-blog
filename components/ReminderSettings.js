@@ -112,7 +112,6 @@ export function ReminderSettings({ cronConfigured = false, emailConfigured = fal
       <div><span>Reminders</span><h3>邮件提醒</h3></div>
       <em>{providerConfigured && cronConfigured ? '生产就绪' : providerConfigured ? '可发送测试' : '等待邮件配置'}</em>
     </header>
-    <p>每天上午 9:00 左右整理今日安排与未来 24 小时提醒；周一可在同一封邮件里附上本周回顾。</p>
     <div className='reminder-channel-status' aria-label='邮件提醒服务状态'>
       <span className={providerConfigured ? 'is-ok' : ''}>个人邮件 API</span>
       <span className={providerConfigured ? 'is-ok' : ''}>发件人</span>
@@ -140,7 +139,6 @@ export function ReminderSettings({ cronConfigured = false, emailConfigured = fal
         <button disabled={disabled || testing || !preference.email || !providerConfigured} onClick={sendTest} type='button'>{testing ? '发送中…' : '发送测试邮件'}</button>
       </div>
       {message ? <p className={`reminder-settings-message ${messageType === 'error' ? 'is-error' : ''}`}>{message}</p> : null}
-      <small>每日提醒会在上午 9 点附近送达；实际时间可能有少量浮动。</small>
     </form>
   </article>
 }

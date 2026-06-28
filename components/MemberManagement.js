@@ -113,11 +113,11 @@ export function MemberManagement({ actorId = '' }) {
   }
 
   return <section className='settings-section members-settings'>
-    <header><span>Members</span><h3>成员与权限</h3><p>成员拥有彼此隔离的私人工作区。管理员可以批准、暂停、调整功能权限，并通过右上角账号菜单切换身份测试。</p></header>
+    <header><span>Members</span><h3>成员与权限</h3></header>
     <form className='member-invite-form' onSubmit={invite}>
       <label><span>授权邮箱</span><input required type='email' value={email} onChange={event => setEmail(event.target.value)} placeholder='friend@example.com' /></label>
-      <div className='member-permission-block'><div><strong>初始权限</strong><small>对方注册后，可以继续在成员列表中调整。</small></div><PermissionGrid definitions={data.permissionDefinitions || []} permissions={invitePermissions} onChange={(key, value) => setInvitePermissions(current => ({ ...current, [key]: value }))} /></div>
-      <div className='settings-actions'><button className='is-primary' disabled={state === 'saving'} type='submit'>添加授权</button><small>这不会共享管理员数据或 API Key。未预先授权的注册账号会进入等待批准状态。</small></div>
+      <div className='member-permission-block'><div><strong>初始权限</strong></div><PermissionGrid definitions={data.permissionDefinitions || []} permissions={invitePermissions} onChange={(key, value) => setInvitePermissions(current => ({ ...current, [key]: value }))} /></div>
+      <div className='settings-actions'><button className='is-primary' disabled={state === 'saving'} type='submit'>添加授权</button></div>
     </form>
     {message ? <p className={`settings-message ${state === 'error' ? 'is-error' : ''}`}>{message}</p> : null}
     <div className='member-list'>{members.map(member => <MemberRow actorId={actorId} definitions={data.permissionDefinitions || []} key={member.id} member={member} ownId={actorId} onChanged={load} />)}</div>

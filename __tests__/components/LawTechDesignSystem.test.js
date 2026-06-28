@@ -23,11 +23,15 @@ describe('law-tech visual system', () => {
     expect(css).toMatch(/\.course-editor-pane\s*\{[\s\S]*?overflow:\s*hidden/)
   })
 
-  it('uses the same warm glass language on the public home', () => {
+  it('uses the warm glass language without turning the homepage into a poster', () => {
     const home = read('pages/index.js')
+    const header = read('components/law-tech/PublicHeader.js')
     const css = read('components/LawTechDeskStyles.js')
-    expect(home).toContain('public-portrait-card')
-    expect(home).toContain('public-entry-grid')
+    expect(home).toContain('home-masthead')
+    expect(home).toContain('home-updates-grid')
+    expect(home).not.toContain('public-portrait-card')
+    expect(home).not.toContain('public-entry-grid')
+    expect(header).toContain('public-header-actions')
     expect(css).toContain('backdrop-filter: blur(24px)')
     expect(css).toContain('--display-serif')
   })

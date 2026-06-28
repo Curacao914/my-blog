@@ -126,15 +126,13 @@ export default function PublicSearchPage({ items = [] }) {
         <PublicHeader active='search' />
 
         <section className='public-search-hero'>
-          <span className='eyebrow'>Search the library</span>
-          <h1>搜索</h1>
-          <p>标题、摘要、栏目与标签会即时筛选；全文索引可用时，也会检索文章与笔记正文。</p>
+          <div><span className='eyebrow'>Search</span><h1>搜索</h1></div>
           <form onSubmit={submit}>
             <input
               autoComplete='off'
               autoFocus
               onChange={event => setQuery(event.target.value)}
-              placeholder='输入文章中的一句话、课程、栏目或标签'
+              placeholder='文章中的一句话、课程、栏目或标签'
               type='search'
               value={query}
             />
@@ -185,13 +183,12 @@ export default function PublicSearchPage({ items = [] }) {
       </div>
 
       <style jsx>{`
-        .public-search-hero { max-width: 820px; padding: 68px 0 32px; }
-        .public-search-hero h1 { margin: 10px 0 12px; font-family: var(--display-serif); font-size: clamp(48px,7vw,78px); font-weight: 600; letter-spacing: -.055em; }
-        .public-search-hero p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.8; }
-        .public-search-hero form { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 9px; margin-top: 24px; border: 1px solid rgba(255,255,255,.78); border-radius: 20px; padding: 8px; background: rgba(255,255,255,.58); box-shadow: 0 18px 50px rgba(24,63,50,.08), inset 0 1px 0 rgba(255,255,255,.9); backdrop-filter: blur(22px); }
-        .public-search-hero input { min-width: 0; border: 0; padding: 10px 13px; color: var(--ink); background: transparent; font-size: 15px; outline: none; }
-        .public-search-hero form button { border: 0; border-radius: 14px; padding: 0 18px; color: #fffaf0; background: var(--leaf); font-weight: 650; cursor: pointer; }
-        .public-search-mode { display:block; min-height:18px; margin:8px 4px 0; color:var(--quiet); font-size:10px; }
+        .public-search-hero { display:grid; grid-template-columns:170px minmax(0,1fr); align-items:end; gap:8px 20px; padding:34px 0 22px; }
+        .public-search-hero h1 { margin:7px 0 0; font-family:var(--display-serif); font-size:clamp(38px,5vw,58px); font-weight:600; letter-spacing:-.05em; }
+        .public-search-hero form { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:9px; border:1px solid rgba(255,255,255,.78); border-radius:18px; padding:7px; background:rgba(255,255,255,.58); box-shadow:0 14px 40px rgba(24,63,50,.07),inset 0 1px 0 rgba(255,255,255,.9); backdrop-filter:blur(22px); }
+        .public-search-hero input { min-width:0; border:0; padding:10px 13px; color:var(--ink); background:transparent; font-size:14px; outline:none; }
+        .public-search-hero form button { border:0; border-radius:12px; padding:0 18px; color:#fffaf0; background:var(--leaf); font-weight:650; cursor:pointer; }
+        .public-search-mode { grid-column:2; display:block; min-height:16px; margin:0 4px; color:var(--quiet); font-size:9px; }
         .public-search-mode.is-fulltext { color:var(--green); }
         .public-search-workspace { display: grid; grid-template-columns: 230px minmax(0,1fr); gap: 22px; align-items: start; padding-bottom: 90px; }
         .public-search-filters,
@@ -219,9 +216,11 @@ export default function PublicSearchPage({ items = [] }) {
           .public-search-filters { position: static; max-height: none; }
         }
         @media (max-width: 620px) {
-          .public-search-hero form { grid-template-columns: 1fr; }
-          .public-search-hero form button { min-height: 42px; }
-          .public-search-grid { grid-template-columns: 1fr; }
+          .public-search-hero { grid-template-columns:1fr; padding-top:24px; }
+          .public-search-mode { grid-column:1; }
+          .public-search-hero form { grid-template-columns:1fr; }
+          .public-search-hero form button { min-height:42px; }
+          .public-search-grid { grid-template-columns:1fr; }
         }
       `}</style>
     </main>

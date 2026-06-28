@@ -190,7 +190,6 @@ const ContentPage = ({ snapshots, facets, stats }) => {
             <span className='eyebrow'>Library</span>
             <h1>内容</h1>
           </div>
-          <p>文章、课程笔记、读书记录与项目记录，按栏目和合集持续归档。</p>
           <dl>
             <div><dt>{stats.total}</dt><dd>条内容</dd></div>
             <div><dt>{stats.byType.article || 0}</dt><dd>篇文章</dd></div>
@@ -308,7 +307,7 @@ const ContentPage = ({ snapshots, facets, stats }) => {
                                   <span>{accessLabels[item.access?.mode] || '公开'}</span>
                                 </div>
                                 <h5>{item.title}</h5>
-                                <p>{item.summary || '暂无摘要。'}</p>
+                                {item.summary ? <p>{item.summary}</p> : null}
                                 {item.course ? <div className='content-course-line'>
                                   {item.course.name ? <span>{item.course.name}</span> : null}
                                   {item.course.lesson ? <span>{item.course.lesson}</span> : null}
@@ -341,15 +340,14 @@ const ContentPage = ({ snapshots, facets, stats }) => {
       .content-library-page { min-height: 100vh; }
       .content-library-intro {
         display: grid;
-        grid-template-columns: minmax(180px,.7fr) minmax(280px,1.3fr) auto;
-        gap: 32px;
+        grid-template-columns: minmax(180px,1fr) auto;
+        gap: 24px;
         align-items: end;
         padding: 48px 0 34px;
         border-bottom: 1px solid rgba(23,35,29,.1);
       }
       .content-library-intro .eyebrow { display: block; margin-bottom: 10px; }
       .content-library-intro h1 { margin: 0; font-family: var(--display-serif); font-size: clamp(44px,7vw,74px); font-weight: 600; line-height: .95; letter-spacing: -.06em; }
-      .content-library-intro > p { margin: 0; max-width: 520px; color: var(--muted); font-size: 15px; line-height: 1.85; }
       .content-library-intro dl { display: flex; gap: 22px; margin: 0; }
       .content-library-intro dl div { display: grid; gap: 2px; text-align: right; }
       .content-library-intro dt { color: var(--ink); font-family: var(--display-serif); font-size: 22px; }

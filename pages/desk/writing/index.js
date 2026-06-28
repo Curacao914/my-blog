@@ -8,7 +8,7 @@ import { requireDeskPage } from '@/lib/auth/deskPage'
 export default function WritingPage() {
   return <>
     <Head><title>写作 · law-tech.dev</title></Head>
-    <DeskShell active='writing' title='写作' kicker='Writing'>
+    <DeskShell active='writing' title='写作' kicker='Studio'>
       <WritingDesk />
     </DeskShell>
     <LawTechDeskStyles />

@@ -287,3 +287,7 @@ The deployed `content_items_source_check` accepts `course-worker`, not `course-w
 - PicGo uses the separate `picgo-upload` credential. Server relay uses `notion-relay`. Never commit or expose either Secret Access Key.
 - Apply `lib/db/migrations/20260628_notion_relay.sql`, configure the variables in `docs/R2_NOTION_RELAY.md`, redeploy Preview, then run the administrator content sync.
 - The first release mirrors images and covers only; video, audio, PDF and ordinary attachment mirroring remain out of scope.
+
+## Durable frontend copy rule
+
+User-facing pages must not explain their own architecture. Prefer labels, values, status and actions. Move storage, encryption, isolation, deployment and implementation explanations to docs/tests. Avoid generic slogans and three-part marketing copy. Homepage space is earned by useful information, not decorative scale. Any new public or workbench copy must pass `__tests__/components/ProductCopy.test.js`.

@@ -51,7 +51,7 @@ export function PublicContentCard({ item, compact = false, featured = false }) {
         <span>{category}</span>
       </div>
       <h3>{item?.title || '未命名内容'}</h3>
-      <p>{item?.summary || '暂无摘要。'}</p>
+      {item?.summary ? <p>{item.summary}</p> : null}
       {tags.length ? <div className='public-content-card-tags'>
         {tags.map(tag => <span key={tag}>{tag}</span>)}
       </div> : null}

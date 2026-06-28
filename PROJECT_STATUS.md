@@ -422,3 +422,14 @@ Required next verification:
 Status: code prepared for local Jest/build, Supabase migration, Preview environment configuration and fault-injection verification.
 
 The relay stores page metadata and record maps as deduplicated Supabase snapshots, mirrors temporary Notion images to Cloudflare R2, and uses one active batch pointer. Promotion occurs only after the complete staging batch succeeds. Old article routes prefer the active batch and fall back to live Notion before the first successful relay sync. Binary assets remain outside Supabase. Deployment source of truth: `docs/R2_NOTION_RELAY.md`.
+
+## Frontend refinement and Writing Studio phase 1
+
+Status: implementation prepared on `codex/homepage-phase1`, awaiting local Jest/build and Preview visual verification.
+
+- Homepage changed from a poster composition to a compact information surface with search, recent content, category counts, tools and workbench entry.
+- Public header uses a balanced three-column layout and keeps account/sync actions in one group.
+- Clerk sign-out now publishes a signed-out workspace session to every mounted account surface before routing home.
+- Explanatory product copy was removed from public pages and settings; durable copy rules were added to `docs/product-constraints.md` and static tests.
+- Writing Studio phase 1 now provides a real Markdown editor, draft library, search, preview, manual save, autosave, keyboard save and archive.
+- Real two-account isolation testing is recorded as passed. No merge to `main` is authorized by this status update.

@@ -218,3 +218,7 @@ No new migration or environment variable is required for this pass. The next act
 ## Current Phase Override: Notion Relay and R2
 
 The current phase introduces a last-known-good relay for legacy Notion articles. Administrator content sync builds a complete staging batch, mirrors temporary Notion images to Cloudflare R2, stores deduplicated page snapshots in Supabase and promotes one active batch only after every page succeeds. Existing article routes prefer the active relay and retain live Notion as a first-sync fallback. Apply `20260628_notion_relay.sql` and follow `docs/R2_NOTION_RELAY.md`; do not place R2 secrets in repository files. After Preview fault-injection verification, complete the real two-account isolation matrix before Writing Studio.
+
+## Handoff: frontend refinement and Writing Studio
+
+The next assistant should start from the frontend-polish commit on `codex/homepage-phase1`. Verify immediate sign-out rendering, desktop/mobile homepage density, public header alignment, compact search layout, absence of explanatory copy, and Writing Studio save/autosave/preview/archive under both real accounts. Keep `main` untouched. After Preview passes, the next Writing Studio increment may add explicit article projects, version history and publication handoff without weakening owner isolation.

@@ -1,10 +1,12 @@
 import { useAuth, useClerk } from '@clerk/nextjs'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import { useEffect, useRef, useState } from 'react'
 
 import { LawTechIcon } from '@/components/LawTechIcons'
 import {
   clearWorkspaceSessionCache,
+  markWorkspaceSignedOut,
   useWorkspaceSession
 } from '@/hooks/useWorkspaceSession'
 
@@ -30,56 +32,28 @@ function Avatar({ profile, size = 'normal' }) {
 
 function SignedOutActions({ compact = false }) {
   return (
-    <div
-      className={`workspace-auth-actions ${
-        compact ? 'is-compact' : ''
-      }`}
-    >
+    <div className={`workspace-auth-actions ${compact ? 'is-compact' : ''}`}>
       <Link href='/sign-in'>登录</Link>
-      <Link className='is-primary' href='/sign-up'>
-        注册
-      </Link>
+      <Link className='is-primary' href='/sign-up'>注册</Link>
     </div>
   )
 }
 
 function SignedInFallback({ compact = false }) {
   return (
-    <div
-      className={`workspace-auth-actions ${
-        compact ? 'is-compact' : ''
-      }`}
-    >
-      <Link className='is-primary' href='/desk/today'>
-        进入工作台
-      </Link>
+    <div className={`workspace-auth-actions ${compact ? 'is-compact' : ''}`}>
+      <Link className='is-primary' href='/desk/today'>进入工作台</Link>
     </div>
   )
 }
 
-function ClerkSignOut({ onDone }) {
-  const { signOut } = useClerk()
-
-  return (
-    <button
-      type='button'
-      onClick={async () => {
-        clearWorkspaceSessionCache()
-        await signOut({ redirectUrl: '/' })
-        onDone?.()
-      }}
-    >
-      退出登录
-    </button>
-  )
-}
-
 function AccountMenuEnabled({ placement = 'desk' }) {
+  const router = useRouter()
+  const { signOut } = useClerk()
   const {
     isLoaded: clerkLoaded,
     isSignedIn: clerkSignedIn
   } = useAuth()
-
   const {
     loading,
     session,
@@ -94,11 +68,8 @@ function AccountMenuEnabled({ placement = 'desk' }) {
     if (!open) return undefined
 
     const onPointer = event => {
-      if (!rootRef.current?.contains(event.target)) {
-        setOpen(false)
-      }
+      if (!rootRef.current?.contains(event.target)) setOpen(false)
     }
-
     const onKey = event => {
       if (event.key === 'Escape') setOpen(false)
     }
@@ -114,57 +85,32 @@ function AccountMenuEnabled({ placement = 'desk' }) {
 
   if (!session?.signedIn) {
     if (!clerkLoaded || loading) {
-      return (
-        <span
-          className='workspace-account-loading'
-          aria-label='读取账号信息'
-        />
-      )
+      return <span className='workspace-account-loading' aria-label='读取账号信息' />
     }
-
-    if (clerkSignedIn) {
-      return (
-        <SignedInFallback compact={placement === 'desk'} />
-      )
-    }
-
-    return (
-      <SignedOutActions compact={placement === 'desk'} />
-    )
+    if (clerkSignedIn) return <SignedInFallback compact={placement === 'desk'} />
+    return <SignedOutActions compact={placement === 'desk'} />
   }
 
   const profile = session.profile || session.actor || {}
   const actor = session.actor || profile
-
-  const workspaceHref =
-    profile.status === 'pending'
-      ? '/access-pending'
-      : profile.status === 'suspended'
-        ? '/access-suspended'
-        : '/desk/today'
+  const workspaceHref = profile.status === 'pending'
+    ? '/access-pending'
+    : profile.status === 'suspended'
+      ? '/access-suspended'
+      : '/desk/today'
 
   async function switchIdentity(profileId = '') {
     setBusy(true)
-
     try {
-      const switchingToMember =
-        profileId && profileId !== actor.id
-
+      const switchingToMember = profileId && profileId !== actor.id
       const response = await fetch('/api/admin/impersonation', {
         method: switchingToMember ? 'POST' : 'DELETE',
         credentials: 'same-origin',
-        headers: {
-          'content-type': 'application/json'
-        },
-        body: switchingToMember
-          ? JSON.stringify({ profileId })
-          : undefined
+        headers: { 'content-type': 'application/json' },
+        body: switchingToMember ? JSON.stringify({ profileId }) : undefined
       })
 
-      if (!response.ok) {
-        throw new Error('切换身份失败')
-      }
-
+      if (!response.ok) throw new Error('切换身份失败')
       await refresh()
       window.location.reload()
     } finally {
@@ -172,11 +118,24 @@ function AccountMenuEnabled({ placement = 'desk' }) {
     }
   }
 
+  async function signOutNow() {
+    if (busy) return
+    setBusy(true)
+    try {
+      clearWorkspaceSessionCache()
+      await signOut()
+      markWorkspaceSignedOut()
+      setOpen(false)
+      await router.replace('/')
+    } catch {
+      await refresh().catch(() => null)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
-    <div
-      className={`workspace-account-menu placement-${placement}`}
-      ref={rootRef}
-    >
+    <div className={`workspace-account-menu placement-${placement}`} ref={rootRef}>
       <button
         className='workspace-account-trigger'
         type='button'
@@ -185,12 +144,9 @@ function AccountMenuEnabled({ placement = 'desk' }) {
         onClick={() => setOpen(value => !value)}
       >
         <Avatar profile={profile} />
-
         {placement === 'desk' ? (
           <span>
-            <strong>
-              {profile.displayName || '我的工作台'}
-            </strong>
+            <strong>{profile.displayName || '我的工作台'}</strong>
             <small>
               {session.impersonating
                 ? '测试身份'
@@ -200,29 +156,19 @@ function AccountMenuEnabled({ placement = 'desk' }) {
             </small>
           </span>
         ) : null}
-
         <LawTechIcon name='expand' size={13} />
       </button>
 
       {open ? (
-        <div
-          className='workspace-account-popover'
-          role='dialog'
-          aria-label='账号菜单'
-        >
+        <div className='workspace-account-popover' role='dialog' aria-label='账号菜单'>
           <header>
             <Avatar profile={profile} size='large' />
-
             <div>
-              <strong>
-                {profile.displayName || '未命名用户'}
-              </strong>
-              <span>
-                {profile.email || '未提供邮箱'}
-              </span>
+              <strong>{profile.displayName || '未命名用户'}</strong>
+              <span>{profile.email || '未提供邮箱'}</span>
               <small>
                 {session.impersonating
-                  ? '管理员正在以此身份查看'
+                  ? '正在查看测试身份'
                   : profile.role === 'owner'
                     ? '站点管理员'
                     : profile.status === 'pending'
@@ -235,46 +181,24 @@ function AccountMenuEnabled({ placement = 'desk' }) {
           {session.isOwner ? (
             <label className='workspace-identity-switch'>
               <span>测试身份</span>
-
               <select
                 disabled={busy}
                 value={profile.id || actor.id || ''}
-                onChange={event =>
-                  switchIdentity(event.target.value)
-                }
+                onChange={event => switchIdentity(event.target.value)}
               >
                 <option value={actor.id}>
-                  {actor.displayName ||
-                    actor.email ||
-                    '管理员本人'}
+                  {actor.displayName || actor.email || '管理员本人'}
                 </option>
-
                 {(session.switchableProfiles || [])
                   .filter(item => item.id !== actor.id)
                   .map(item => (
-                    <option
-                      key={item.id}
-                      value={item.id}
-                    >
-                      {item.displayName ||
-                        item.email ||
-                        '成员'}
-                      {' · '}
-                      {item.role === 'owner'
-                        ? '管理员'
-                        : '成员'}
+                    <option key={item.id} value={item.id}>
+                      {item.displayName || item.email || '成员'} · {item.role === 'owner' ? '管理员' : '成员'}
                     </option>
                   ))}
               </select>
-
               {session.impersonating ? (
-                <button
-                  type='button'
-                  disabled={busy}
-                  onClick={() =>
-                    switchIdentity(actor.id)
-                  }
-                >
+                <button type='button' disabled={busy} onClick={() => switchIdentity(actor.id)}>
                   退出测试身份
                 </button>
               ) : null}
@@ -282,10 +206,7 @@ function AccountMenuEnabled({ placement = 'desk' }) {
           ) : null}
 
           <nav>
-            <Link
-              href={workspaceHref}
-              onClick={() => setOpen(false)}
-            >
+            <Link href={workspaceHref} onClick={() => setOpen(false)}>
               <LawTechIcon name='today' size={15} />
               {profile.status === 'active'
                 ? '进入工作台'
@@ -293,20 +214,16 @@ function AccountMenuEnabled({ placement = 'desk' }) {
                   ? '查看申请状态'
                   : '查看账号状态'}
             </Link>
-
-            <Link
-              href='/desk/system'
-              onClick={() => setOpen(false)}
-            >
+            <Link href='/desk/system' onClick={() => setOpen(false)}>
               <LawTechIcon name='system' size={15} />
               账号与设置
             </Link>
           </nav>
 
           <footer>
-            <ClerkSignOut
-              onDone={() => setOpen(false)}
-            />
+            <button type='button' disabled={busy} onClick={signOutNow}>
+              {busy ? '正在退出…' : '退出登录'}
+            </button>
           </footer>
         </div>
       ) : null}
@@ -315,15 +232,10 @@ function AccountMenuEnabled({ placement = 'desk' }) {
 }
 
 export function WorkspaceAccountMenu(props) {
-  const clerkEnabled = Boolean(
-    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-  )
-
+  const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
   return clerkEnabled ? (
     <AccountMenuEnabled {...props} />
   ) : (
-    <SignedOutActions
-      compact={props.placement === 'desk'}
-    />
+    <SignedOutActions compact={props.placement === 'desk'} />
   )
 }

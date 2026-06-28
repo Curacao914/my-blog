@@ -24,11 +24,14 @@ describe('public content discovery and syndication', () => {
     expect(search).toContain("from: 'law-tech-search'")
   })
 
-  it('shows recent public content and a stable library map on the homepage', () => {
-    expect(home).toContain('最近内容')
-    expect(home).toContain('PublicContentCard')
+  it('turns the homepage into a useful discovery surface', () => {
+    expect(home).toContain('最近更新')
+    expect(home).toContain('home-updates-grid')
+    expect(home).toContain('home-category-grid')
     expect(home).toContain("['遇事不决', '法与算法', '法律之上', '秘密花园']")
-    expect(home).toContain('DynamicSignature')
+    expect(home).toContain("action='/search'")
+    expect(home).not.toContain('public-portrait-card')
+    expect(home).not.toContain('Library map')
   })
 
   it('replaces the Notion-only search route with unified discovery', () => {
@@ -41,10 +44,10 @@ describe('public content discovery and syndication', () => {
 
   it('syndicates only opted-in public content to feeds and sitemap', () => {
     expect(feed).toContain('selectRssPublicContent')
-    expect(feed).toContain("feedLinks")
+    expect(feed).toContain('feedLinks')
     expect(sitemap).toContain('selectSitemapPublicContent')
-    expect(sitemap).toContain("`${link}${locale}/content`")
-    expect(sitemap).toContain("`${link}${locale}/search`")
+    expect(sitemap).toContain('`${link}${locale}/content`')
+    expect(sitemap).toContain('`${link}${locale}/search`')
   })
 
   it('refreshes home and search when publishing or withdrawing content', () => {
