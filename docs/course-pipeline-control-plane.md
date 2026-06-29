@@ -179,3 +179,51 @@ downloading → downloaded
 → awaiting_llm_window / writing
 → cleanup → completed
 ```
+
+
+## Atomic claim and lease
+
+After running:
+
+```text
+supabase/migrations/20260630_course_pipeline_leases.sql
+```
+
+a Worker claims one task through:
+
+```http
+POST /api/courses/pipeline/claim
+Authorization: Bearer $COURSE_WORKER_SECRET
+
+{
+  "workerId": "worker-host:1234",
+  "leaseSeconds": 900
+}
+```
+
+Long-running steps renew the lease through:
+
+```http
+POST /api/courses/pipeline/<replay-key>/heartbeat
+Authorization: Bearer $COURSE_WORKER_SECRET
+
+{
+  "workerId": "worker-host:1234",
+  "leaseSeconds": 900
+}
+```
+
+Claims use `FOR UPDATE SKIP LOCKED`, so multiple scheduled Worker instances
+cannot process the same replay concurrently. An expired lease is recoverable.
+
+## Pipeline runner
+
+```bash
+COURSE_PIPELINE_ADAPTER_MODULE=/app/course-adapter.mjs \
+npm run course:pipeline:run
+```
+
+The Adapter contract is documented in
+`docs/course-worker-v009c-stage4.md`. The repository intentionally ships no
+fake production Adapter; the next stage connects the validated acquisition,
+ASR and TextPack components.

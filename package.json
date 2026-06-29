@@ -70,7 +70,9 @@
     "postinstall": "patch-package",
     "course:pipeline:sync": "node scripts/course-worker/sync-platform-catalog.mjs",
     "course:pipeline:status": "node scripts/course-worker/pipeline-status.mjs",
-    "course:pipeline:test-client": "node --test scripts/course-worker/pipeline-client.test.mjs scripts/course-worker/platform-catalog-bridge.test.mjs"
+    "course:pipeline:test-client": "node --test scripts/course-worker/pipeline-client.test.mjs scripts/course-worker/platform-catalog-bridge.test.mjs",
+    "course:pipeline:run": "node scripts/course-worker/run-pipeline.mjs",
+    "course:pipeline:test-runner": "node --test scripts/course-worker/pipeline-worker-client.test.mjs scripts/course-worker/pipeline-runner-core.test.mjs"
   },
   "dependencies": {
     "@clerk/localizations": "^3.17.1",
