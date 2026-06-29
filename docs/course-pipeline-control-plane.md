@@ -21,6 +21,25 @@ object key.
 Signed object URLs, playback tokens, cookies, authorization headers and
 teaching-platform URLs are rejected by the payload validator.
 
+## Worker authentication
+
+Worker requests use:
+
+```http
+Authorization: Bearer $COURSE_WORKER_SECRET
+```
+
+Owner resolution follows this order:
+
+1. `X-Law-Tech-Owner-Id`;
+2. `COURSE_WORKER_OWNER_ID`;
+3. `COURSE_WORKER_OWNER_EMAIL`;
+4. the only active workspace owner.
+
+The current single-owner workspace therefore needs only
+`COURSE_WORKER_SECRET`. If the workspace later gains more than one active
+owner, configure an explicit owner ID or email.
+
 ## API
 
 ### Discover all new replays
@@ -28,7 +47,6 @@ teaching-platform URLs are rejected by the payload validator.
 ```http
 POST /api/courses/pipeline
 Authorization: Bearer $COURSE_WORKER_SECRET
-X-Law-Tech-Owner-Id: <profile-id>
 Content-Type: application/json
 
 {
@@ -53,7 +71,6 @@ Every newly discovered replay is inserted; an existing task is never reset.
 ```http
 PATCH /api/courses/pipeline/<replay-key>
 Authorization: Bearer $COURSE_WORKER_SECRET
-X-Law-Tech-Owner-Id: <profile-id>
 Content-Type: application/json
 
 {
@@ -97,21 +114,65 @@ Content-Type: application/json
 
 A signed-in owner can retry their own task. A valid Worker may also retry.
 
-## Required deployment changes
+## Worker client
 
-1. Run `supabase/migrations/20260629_course_pipeline_tasks.sql` in Supabase.
-2. Add the same long random `COURSE_WORKER_SECRET` to Vercel and the remote
-   Worker secret manager.
-3. The Worker sends the target workspace profile ID in
-   `X-Law-Tech-Owner-Id`.
+The reusable client lives at:
+
+```text
+scripts/course-worker/pipeline-client.mjs
+```
+
+Required Worker environment:
+
+```text
+COURSE_CONTROL_PLANE_URL=https://<preview-or-production-domain>
+COURSE_WORKER_SECRET=<same secret as Vercel>
+```
+
+Optional:
+
+```text
+COURSE_WORKER_OWNER_ID=<profile id>
+COURSE_CONTROL_PLANE_TIMEOUT_MS=30000
+```
+
+## Scanner bridge
+
+A safe V008/V009 platform catalog can be synchronized with:
+
+```bash
+npm run course:pipeline:sync -- \
+  --catalog /path/to/platform-catalog.json
+```
+
+By default, only recordings with `isNew: true` are submitted. A baseline or
+manual integration test may use:
+
+```bash
+npm run course:pipeline:sync -- \
+  --catalog /path/to/platform-catalog.json \
+  --all \
+  --dry-run
+```
+
+The bridge strips `watchHref` and never submits teaching-platform URLs,
+cookies, authorization headers or playback tokens.
+
+## Deployment
+
+1. Run `supabase/migrations/20260629_course_pipeline_tasks.sql`.
+2. Configure the same `COURSE_WORKER_SECRET` in Vercel and the Worker.
+3. Configure `COURSE_CONTROL_PLANE_URL` on the Worker.
+4. Only configure `COURSE_WORKER_OWNER_ID` when the workspace has multiple
+   active owners.
 
 ## Next integration
 
-The remote Worker will connect existing validated components to these
-stages:
+The scanner can now register every new replay. The next stage connects each
+persisted task to the existing validated components:
 
 ```text
-discover → downloading → downloaded
+downloading → downloaded
 → transcribing → transcript_ready
 → building_textpack → textpack_ready
 → uploading → uploaded
