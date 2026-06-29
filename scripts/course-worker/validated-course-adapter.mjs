@@ -158,6 +158,9 @@ async function cleanup(task) {
   await acquisition?.close()
   acquisition = null
   return {
+    artifacts: {
+      mediaScratchKey: null
+    },
     runtime: {
       mediaDeleted: true,
       fragmentsDeleted: true,

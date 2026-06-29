@@ -145,6 +145,18 @@ export function createCoursePipelineWorkerClient(
       )
     },
 
+    async claimSpecific(replayKey, input = {}) {
+      return request(
+        `/api/courses/pipeline/${encodeURIComponent(
+          cleanReplayKey(replayKey)
+        )}/claim`,
+        {
+          workerId: cleanWorkerId(input.workerId),
+          leaseSeconds: input.leaseSeconds
+        }
+      )
+    },
+
     async heartbeat(replayKey, input = {}) {
       return request(
         `/api/courses/pipeline/${encodeURIComponent(

@@ -11,7 +11,8 @@ import {
   dedupeRecordings,
   normalizeRecordingRow,
   parseCourseLabel,
-  replayKey
+  replayKey,
+  assertNoSecrets
 } from './platform-core.mjs'
 import { chooseLoginControls } from './login-core.mjs'
 import {
@@ -604,6 +605,76 @@ export function createValidatedAcquisitionRuntime(input = {}) {
     return { context, page: portalPage }
   }
 
+
+  async function discover(options = {}) {
+    const browser = await ensureBrowser()
+    const login = await ensureLoggedIn(
+      browser.context,
+      browser.page,
+      credentials
+    )
+    portalPage = login.page
+
+    const allCourses = await extractCourses(portalPage)
+    const courseName = String(
+      options.courseName || ''
+    ).trim()
+    const courseKeyValue = String(
+      options.courseKey || ''
+    ).trim()
+
+    const selectedCourses = allCourses.filter(course => {
+      if (
+        courseKeyValue &&
+        course.courseKey !== courseKeyValue
+      ) {
+        return false
+      }
+      if (
+        courseName &&
+        !course.name.includes(courseName) &&
+        !course.normalizedName.includes(courseName)
+      ) {
+        return false
+      }
+      return true
+    })
+
+    if (!selectedCourses.length) {
+      throw new Error(
+        courseName || courseKeyValue
+          ? '没有找到匹配的当前学期课程'
+          : '当前学期没有可扫描课程'
+      )
+    }
+
+    const safeCourses = []
+    for (const course of selectedCourses) {
+      const recordings = await scanCourse(
+        portalPage,
+        course
+      )
+      safeCourses.push({
+        courseKey: course.courseKey,
+        courseName: course.name,
+        normalizedName: course.normalizedName,
+        recordings: recordings.map(recording => ({
+          replayKey: recording.replayKey,
+          title: recording.title,
+          startsAtText: recording.startsAtText,
+          teacher: recording.teacher
+        }))
+      })
+    }
+
+    const result = {
+      loginMode: login.mode,
+      courses: safeCourses
+    }
+    assertNoSecrets(result)
+    return result
+  }
+
   async function download(task, runtime = {}) {
     const replayKeyValue = String(task.replay_key || '')
     const courseKeyValue = String(task.course_key || '')
@@ -734,5 +805,5 @@ export function createValidatedAcquisitionRuntime(input = {}) {
     portalPage = null
   }
 
-  return { scratchRoot, download, close }
+  return { scratchRoot, discover, download, close }
 }

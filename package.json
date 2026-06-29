@@ -74,7 +74,11 @@
     "course:pipeline:run": "node scripts/course-worker/run-pipeline.mjs",
     "course:pipeline:test-runner": "node --test scripts/course-worker/pipeline-worker-client.test.mjs scripts/course-worker/pipeline-runner-core.test.mjs",
     "course:pipeline:run-validated": "COURSE_PIPELINE_ADAPTER_MODULE=./scripts/course-worker/validated-course-adapter.mjs node scripts/course-worker/run-pipeline.mjs",
-    "course:pipeline:test-adapter": "node --test scripts/course-worker/runtime/textpack-runtime.test.mjs scripts/course-worker/runtime/textpack-client.test.mjs scripts/course-worker/runtime/hls-hardening.test.mjs"
+    "course:pipeline:test-adapter": "node --test scripts/course-worker/runtime/textpack-runtime.test.mjs scripts/course-worker/runtime/textpack-client.test.mjs scripts/course-worker/runtime/hls-hardening.test.mjs",
+    "course:pipeline:e2e-preflight": "node scripts/course-worker/e2e-preflight.mjs",
+    "course:pipeline:e2e-list": "node scripts/course-worker/e2e-list.mjs",
+    "course:pipeline:e2e-one": "node scripts/course-worker/e2e-run-one.mjs",
+    "course:pipeline:test-e2e": "node --test scripts/course-worker/e2e-core.test.mjs scripts/course-worker/pipeline-worker-client.test.mjs"
   },
   "dependencies": {
     "@clerk/localizations": "^3.17.1",

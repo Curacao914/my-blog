@@ -72,3 +72,48 @@ test('heartbeats the claimed replay', async () => {
     'https://preview.example/api/courses/pipeline/r1/heartbeat'
   )
 })
+
+
+test('claims one exact replay for controlled E2E', async () => {
+  let captured
+  const client = createCoursePipelineWorkerClient({
+    baseUrl: 'https://preview.example',
+    secret: 'worker-secret',
+    fetchImpl: async (url, options) => {
+      captured = {
+        url,
+        body: JSON.parse(options.body)
+      }
+      return jsonResponse(200, {
+        ok: true,
+        task: {
+          replay_key: 'r-specific'
+        }
+      })
+    }
+  })
+
+  const result = await client.claimSpecific(
+    'r-specific',
+    {
+      workerId: 'e2e-worker',
+      leaseSeconds: 1800
+    }
+  )
+
+  assert.equal(
+    result.task.replay_key,
+    'r-specific'
+  )
+  assert.equal(
+    captured.url,
+    'https://preview.example/api/courses/pipeline/r-specific/claim'
+  )
+  assert.deepEqual(
+    captured.body,
+    {
+      workerId: 'e2e-worker',
+      leaseSeconds: 1800
+    }
+  )
+})

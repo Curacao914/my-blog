@@ -57,3 +57,28 @@ COURSE_KEEP_TRANSCRIPT_LOCAL=0
 - ASR 任务超时：已提交 task 和 R2 对象保留，重跑继续轮询；
 - TextPack 上传失败：保留转录与 TextPack，仅重试上传；
 - Worker 中断：租约到期后由下一实例从最近成功阶段继续。
+
+## 第六阶段受控回归命令
+
+先运行预检：
+
+```bash
+npm run course:pipeline:e2e-preflight
+```
+
+列出安全候选：
+
+```bash
+npm run course:pipeline:e2e-list -- --course "国际法学"
+```
+
+只处理一条明确指定的回放：
+
+```bash
+npm run course:pipeline:e2e-one -- \
+  --course "国际法学" \
+  --title "2026-06-03"
+```
+
+该命令使用精确领取 API，不会顺带处理队列中的其他课程。完整报告位于
+`~/.law-tech-course-worker/reports/`。
