@@ -6,32 +6,43 @@ const read = file => fs.readFileSync(path.join(process.cwd(), file), 'utf8')
 describe('homepage and writing studio polish', () => {
   const home = read('pages/index.js')
   const header = read('components/law-tech/PublicHeader.js')
+  const signal = read('components/law-tech/PublicHeaderSignal.js')
+  const homeData = read('lib/domain/publicHome.js')
   const writing = read('components/WritingDesk.js')
   const publishing = read('components/WritingPublishDialog.js')
   const tools = read('pages/tools/index.js')
   const publicationApi = read('pages/api/writing/publication.js')
   const summaryApi = read('pages/api/content/summary.js')
 
-  it('uses real content rather than personal advertising as the homepage focal point', () => {
+  it('uses content, topics and covered cards rather than personal advertising', () => {
     expect(home).toContain('FeaturedContent')
-    expect(home).toContain('home-feature')
-    expect(home).toContain('home-update-list')
-    expect(home).toContain('home-category-summary')
+    expect(home).toContain('home-topic-strip')
+    expect(home).toContain('home-content-thumb')
+    expect(home).toContain('publicHomeQuickLinks')
     expect(home).not.toContain('郭鑫 / Curacao')
     expect(home).not.toContain('北京大学法学院')
     expect(home).not.toContain('意义有什么意义')
   })
 
-  it('turns the left header area into a useful home and update summary', () => {
-    expect(header).toContain('public-home-link')
-    expect(header).toContain("name='home'")
-    expect(header).toContain("summary || 'law-tech.dev'")
+  it('uses the left header area for local time and an editable line corpus', () => {
+    expect(header).toContain('PublicHeaderSignal')
+    expect(signal).toContain('publicHomeDailyLines')
+    expect(signal).toContain('window.setInterval')
+    expect(signal).toContain("href='/'")
+    expect(homeData).toContain('法学之外还有风')
     expect(header).not.toContain("className='brand-mark'")
   })
 
+  it('keeps search compact and lets the tool dock grow horizontally', () => {
+    expect(home).toContain("placeholder='搜索内容'")
+    expect(home).toContain('home-command-links')
+    expect(home).toContain('overflow-x:auto')
+    expect(home).toContain('全部工具')
+  })
+
   it('always sends public tools to the production domain from Preview', () => {
-    expect(home).toContain('https://law-tech.dev/ocr/')
-    expect(home).toContain('https://law-tech.dev/citation/')
+    expect(homeData).toContain('https://law-tech.dev/ocr/')
+    expect(homeData).toContain('https://law-tech.dev/citation/')
     expect(tools).toContain('https://law-tech.dev/ocr/')
     expect(tools).toContain('https://law-tech.dev/citation/')
   })

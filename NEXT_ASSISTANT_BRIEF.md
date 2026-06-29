@@ -4,7 +4,7 @@ Use this as the first briefing for a new model or coding agent.
 
 ## One-paragraph context
 
-`Curacao914/my-blog` is a NotionNext-based personal site becoming law-tech.dev. Work happens on `codex/homepage-phase1`; `main` and `law-tech.dev` remain production and must not be touched without explicit approval. Preview Clerk authentication is working. The course workflow now supports browser material import, OCR, lesson grouping, outline approval, node writing, independent review, local revision, final assembly, rendered Markdown reading, user-controlled final revision, and manual completion. A new note library presents `course → lesson → final note`. Local targeted tests and `npm run build` passed for the latest course-library phase; deployed Preview behavior still needs verification.
+`Curacao914/my-blog` is a NotionNext-derived personal system becoming law-tech.dev: a public topic-led garden plus a private cognitive workbench. Work stays on `codex/homepage-phase1`; `main` and Production remain untouched without explicit approval. Multi-user isolation, Notion relay/R2, public discovery, course-note publishing and the first Writing Studio are already present. The current flagship is no longer Writing Studio: it is an authorized PKU course-replay pipeline that discovers uploaded replays, uses cloud transcription, creates a concise brief plus the existing full note, files both under one course/lesson hierarchy, deletes raw media, and proactively delivers the result. Read `docs/PRODUCT_DIRECTION.md` and `docs/COURSE_REPLAY_AUTOMATION.md` before changing architecture.
 
 ## Start every session with
 
@@ -95,16 +95,15 @@ Still unverified:
 
 ## Next planned product work
 
-Completed or code-complete foundations: lesson-note lifecycle, course-note publishing, unified public index, site-wide surface consolidation, and the first 09:00 Asia/Shanghai email-digest implementation.
+1. Inspect the authorized replay-link extraction code and map the real platform requests without storing a real JWT.
+2. Deliver course closed loop A using one real replay: authorized capture, media retrieval, cloud transcription, brief, existing full-note workflow, cleanup and real email delivery.
+3. Deliver closed loop B: scheduled replay discovery, deduplication, retry and explicit reauthorization.
+4. Deliver closed loop C: multi-course reliability, WeChat delivery/reply mapping and cost/health visibility.
+5. Build Today memory-anchor generation and reply completion.
+6. Build lightweight exploration projects and only then deepen unified capture and resurfacing.
+7. Keep Writing Studio stable; defer aggressive editor expansion.
 
-Current order:
-
-1. Apply and Preview-verify the reminder preference migration, Resend test email, and authenticated manual runner.
-2. Build Writing Studio on the existing content/version model.
-3. Complete validated share links and password access.
-4. Deepen System settings and diagnostics.
-5. Optionally evaluate one-way Notion synchronization.
-6. Prepare an explicitly approved Production rollout and rollback plan.
+Each loop must remain useful if later work stops. Do not ship a placeholder page as an initial phase.
 
 ## End every coding response with a complete handoff
 
@@ -230,3 +229,9 @@ The personal profile masthead was removed after Preview review. Do not restore n
 ## Delivery convention: one command
 
 For future multi-file work, deliver an idempotent patch package with `apply-test-push.sh`. It should resume from known files left by a failed previous run, reject unrelated local changes, run focused Jest plus `npm run build`, precisely stage the allowlist, commit and push only `codex/homepage-phase1`. Do not make the user relay a long series of terminal commands. See `docs/ASSISTED_CHANGE_WORKFLOW.md`.
+
+## Current priority override: course replay automation
+
+The current product constitution is `docs/PRODUCT_DIRECTION.md`: traces of thought, proof of lived experience and possibility of exploration. The implementation specification is `docs/COURSE_REPLAY_AUTOMATION.md`. Use a user-authorized session, never bypass platform access controls, never store a pasted token, prefer cloud transcription, retain transcript/brief/note rather than raw video, and place brief plus final note under the same course lesson. WeChat is the target primary channel; email is the first reliable transport and fallback, not a permanent excuse to omit the reply loop.
+
+The homepage refinement in this phase adds local date/time plus a rotating editable line corpus, a scalable quick-link dock, a separate topic strip, a shorter search placeholder and thumbnails for every recent card. Do not restore the profile billboard or fixed four-cell command box.

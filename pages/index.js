@@ -14,15 +14,9 @@ import {
   publicContentTypeLabel,
   selectRecentPublicContent
 } from '@/lib/content/publicContent'
+import { publicHomeQuickLinks } from '@/lib/domain/publicHome'
 
 const categoryOrder = ['遇事不决', '法与算法', '法律之上', '秘密花园']
-
-const quickLinks = [
-  { label: '内容库', href: '/content', icon: 'content' },
-  { label: 'OCR', href: 'https://law-tech.dev/ocr/', icon: 'materials' },
-  { label: '引注', href: 'https://law-tech.dev/citation/', icon: 'writing' },
-  { label: '工作台', href: '/desk', icon: 'today' }
-]
 
 function categorySummary(items = []) {
   return items.reduce((summary, item) => {
@@ -42,17 +36,18 @@ function formatDate(value) {
   }).format(date)
 }
 
+function coverStyle(item, key) {
+  if (item?.cover) return { backgroundImage: `url("${item.cover}")` }
+  return { '--home-card-hue': String(publicContentStableHue(key)) }
+}
+
 function FeaturedContent({ item }) {
   if (!item) return <div className='home-feature home-empty'>还没有公开内容。</div>
   const category = publicContentCategory(item)
   const collection = publicContentCollection(item)
-  const hue = publicContentStableHue(`${category}:${collection}:${item.title}`)
-  const coverStyle = item.cover
-    ? { backgroundImage: `url("${item.cover}")` }
-    : { '--home-cover-hue': String(hue) }
 
   return <Link className={`home-feature ${item.cover ? 'has-cover' : 'generated-cover'}`} href={publicContentHref(item)}>
-    <span className='home-feature-cover' style={coverStyle} aria-hidden='true'>
+    <span className='home-feature-cover' style={coverStyle(item, `${category}:${collection}:${item.title}`)} aria-hidden='true'>
       {!item.cover ? <><small>{category}</small><strong>{collection || publicContentTypeLabel(item.type)}</strong></> : null}
     </span>
     <span className='home-feature-copy'>
@@ -67,7 +62,16 @@ function FeaturedContent({ item }) {
 function ContentRow({ item }) {
   const category = publicContentCategory(item)
   const collection = publicContentCollection(item)
+  const generated = !item?.cover
+
   return <Link className='home-content-row' href={publicContentHref(item)}>
+    <span
+      className={`home-content-thumb ${generated ? 'generated-cover' : 'has-cover'}`}
+      style={coverStyle(item, `${item?.slug}:${category}:${item?.title}`)}
+      aria-hidden='true'
+    >
+      {generated ? <small>{category}</small> : null}
+    </span>
     <span className='home-content-copy'>
       <small>{[publicContentTypeLabel(item.type), category, collection].filter(Boolean).join(' · ')}</small>
       <strong>{item.title || '未命名内容'}</strong>
@@ -77,11 +81,18 @@ function ContentRow({ item }) {
   </Link>
 }
 
+function TopicCard({ category, count, index }) {
+  const hue = publicContentStableHue(`${category}:${index}`)
+  return <Link className='home-topic-card' href={`/category/${encodeURIComponent(category)}`} style={{ '--topic-hue': String(hue) }}>
+    <span>{category}</span>
+    <strong>{count}</strong>
+    <small>查看专题 ↗</small>
+  </Link>
+}
+
 export default function HomePage({ recentContent = [], contentCount = 0, categories = {} }) {
   const featured = recentContent[0] || null
   const updates = recentContent.slice(1, 7)
-  const latestDate = formatDate(publicContentDate(featured))
-  const summary = [contentCount ? `${contentCount} 条内容` : '', latestDate ? `更新 ${latestDate}` : ''].filter(Boolean).join(' · ')
 
   return <>
     <Head>
@@ -94,7 +105,7 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
       <div className='public-aurora public-aurora-one' aria-hidden='true' />
       <div className='public-aurora public-aurora-two' aria-hidden='true' />
       <div className='public-shell'>
-        <PublicHeader summary={summary} />
+        <PublicHeader />
 
         <section className='home-dashboard'>
           <FeaturedContent item={featured} />
@@ -102,24 +113,37 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
           <aside className='home-command'>
             <form action='/search' method='get'>
               <LawTechIcon name='search' size={17} />
-              <input name='q' type='search' placeholder='搜索文章、课程或关键词' aria-label='搜索公开内容' />
+              <input name='q' type='search' placeholder='搜索内容' aria-label='搜索公开内容' />
               <button type='submit'>搜索</button>
             </form>
 
-            <nav aria-label='常用入口'>
-              {quickLinks.map(item => <Link href={item.href} key={item.label} rel={item.href.startsWith('http') ? 'noreferrer' : undefined}>
-                <LawTechIcon name={item.icon} size={15} />
-                <span>{item.label}</span>
+            <div className='home-command-title'>
+              <span>常用入口</span>
+              <Link href='/tools'>全部工具 ↗</Link>
+            </div>
+            <nav className='home-command-links' aria-label='常用入口'>
+              {publicHomeQuickLinks.map(item => <Link href={item.href} key={item.label} rel={item.href.startsWith('http') ? 'noreferrer' : undefined}>
+                <LawTechIcon name={item.icon} size={16} />
+                <span><strong>{item.label}</strong><small>{item.meta}</small></span>
                 <b>↗</b>
               </Link>)}
             </nav>
 
-            <div className='home-category-summary'>
-              {categoryOrder.map(category => <Link href={`/category/${encodeURIComponent(category)}`} key={category}>
-                <span>{category}</span><strong>{categories[category] || 0}</strong>
-              </Link>)}
+            <div className='home-command-foot'>
+              <strong>{contentCount}</strong>
+              <span>条公开内容</span>
             </div>
           </aside>
+        </section>
+
+        <section className='home-topic-strip' aria-label='专题栏目'>
+          <header>
+            <div><span>Topics</span><h2>专题</h2></div>
+            <Link href='/content'>进入内容库 ↗</Link>
+          </header>
+          <div className='home-topic-track'>
+            {categoryOrder.map((category, index) => <TopicCard category={category} count={categories[category] || 0} index={index} key={category} />)}
+          </div>
         </section>
 
         <section className='home-section home-updates'>
@@ -141,9 +165,9 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
       </div>
 
       <style jsx global>{`
-        .public-home { padding-bottom: 76px; }
+        .public-home { padding-bottom:76px; }
         .home-dashboard { display:grid; grid-template-columns:minmax(0,1.42fr) minmax(310px,.58fr); gap:20px; padding:32px 0 20px; }
-        .home-feature,.home-command,.home-updates,.home-utility-strip {
+        .home-feature,.home-command,.home-topic-strip,.home-updates,.home-utility-strip {
           border:1px solid rgba(255,255,255,.78);
           background:rgba(255,255,255,.56);
           box-shadow:0 18px 55px rgba(24,63,50,.07),inset 0 1px 0 rgba(255,255,255,.9);
@@ -152,7 +176,7 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
         .home-feature { display:grid; grid-template-columns:minmax(230px,.82fr) minmax(0,1.18fr); min-height:390px; overflow:hidden; border-radius:30px; transition:transform .2s ease,box-shadow .2s ease; }
         .home-feature:hover { transform:translateY(-3px); box-shadow:0 26px 70px rgba(24,63,50,.12),inset 0 1px 0 rgba(255,255,255,.94); }
         .home-feature-cover { display:grid; align-content:end; gap:6px; min-height:100%; padding:30px; color:#fff; background-position:center; background-size:cover; }
-        .home-feature.generated-cover .home-feature-cover { background:radial-gradient(circle at 78% 10%,hsla(var(--home-cover-hue),58%,76%,.86),transparent 42%),linear-gradient(145deg,hsl(var(--home-cover-hue),34%,25%),hsl(calc(var(--home-cover-hue) + 28),38%,44%)); }
+        .home-feature.generated-cover .home-feature-cover,.home-content-thumb.generated-cover { background:radial-gradient(circle at 78% 10%,hsla(var(--home-card-hue),58%,76%,.86),transparent 42%),linear-gradient(145deg,hsl(var(--home-card-hue),34%,25%),hsl(calc(var(--home-card-hue) + 28),38%,44%)); }
         .home-feature-cover small { font-size:10px; letter-spacing:.12em; opacity:.76; }
         .home-feature-cover strong { max-width:260px; font-family:var(--display-serif); font-size:clamp(28px,3.2vw,44px); font-weight:560; line-height:1.08; }
         .home-feature-copy { display:flex; min-width:0; flex-direction:column; justify-content:flex-end; padding:clamp(26px,4vw,46px); }
@@ -160,32 +184,50 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
         .home-feature-copy > strong { margin-top:14px; font-family:var(--display-serif); font-size:clamp(32px,4.6vw,58px); font-weight:600; line-height:1.08; letter-spacing:-.045em; }
         .home-feature-copy p { display:-webkit-box; overflow:hidden; margin:16px 0 0; color:var(--muted); font-size:13px; line-height:1.8; -webkit-box-orient:vertical; -webkit-line-clamp:4; }
         .home-feature-copy b { margin-top:24px; color:var(--leaf); font-size:11px; font-weight:680; }
-        .home-command { display:grid; align-content:start; gap:13px; border-radius:30px; padding:18px; }
+        .home-command { display:grid; min-width:0; align-content:start; gap:13px; overflow:hidden; border-radius:30px; padding:18px; }
         .home-command form { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:9px; border:1px solid rgba(17,63,49,.09); border-radius:16px; padding:7px 7px 7px 12px; background:rgba(255,255,255,.72); }
-        .home-command input { min-width:0; border:0; padding:7px 0; color:var(--ink); background:transparent; outline:none; }
+        .home-command input { min-width:0; border:0; padding:7px 0; color:var(--ink); background:transparent; outline:none; font-size:12px; }
+        .home-command input::placeholder { color:#8d98a9; }
         .home-command button { border:0; border-radius:11px; padding:8px 11px; color:#fffaf0; background:var(--leaf); cursor:pointer; }
-        .home-command nav { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
-        .home-command nav a { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:8px; border:1px solid rgba(17,63,49,.07); border-radius:13px; padding:10px; color:var(--muted); background:rgba(255,255,255,.46); font-size:11px; }
-        .home-command nav a:hover { color:var(--leaf); background:rgba(220,233,223,.55); }
-        .home-command nav b { color:var(--leaf); font-weight:500; }
-        .home-category-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; border-top:1px solid rgba(17,63,49,.07); padding-top:13px; }
-        .home-category-summary a { display:flex; align-items:center; justify-content:space-between; gap:8px; border-radius:11px; padding:8px 9px; color:var(--muted); background:rgba(255,255,255,.34); font-size:10px; }
-        .home-category-summary strong { color:var(--leaf); font-family:var(--display-serif); font-size:17px; }
+        .home-command-title { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:1px 2px 0; }
+        .home-command-title span { color:var(--quiet); font-size:9px; letter-spacing:.11em; text-transform:uppercase; }
+        .home-command-title a { color:var(--leaf); font-size:9px; }
+        .home-command-links { display:flex; gap:7px; overflow-x:auto; padding-bottom:3px; scroll-snap-type:x proximity; scrollbar-width:none; }
+        .home-command-links::-webkit-scrollbar { display:none; }
+        .home-command-links a { display:grid; grid-template-columns:auto minmax(0,1fr) auto; flex:0 0 152px; align-items:center; gap:8px; min-width:0; border:1px solid rgba(17,63,49,.07); border-radius:14px; padding:11px; color:var(--muted); background:rgba(255,255,255,.46); scroll-snap-align:start; }
+        .home-command-links a:hover { color:var(--leaf); background:rgba(220,233,223,.55); }
+        .home-command-links span { display:grid; min-width:0; gap:2px; }
+        .home-command-links strong { font-size:11px; }
+        .home-command-links small { overflow:hidden; color:var(--quiet); font-size:8px; text-overflow:ellipsis; white-space:nowrap; }
+        .home-command-links b { color:var(--leaf); font-weight:500; }
+        .home-command-foot { display:flex; align-items:baseline; gap:6px; border-top:1px solid rgba(17,63,49,.07); padding:13px 3px 0; color:var(--quiet); }
+        .home-command-foot strong { color:var(--leaf); font-family:var(--display-serif); font-size:25px; }
+        .home-command-foot span { font-size:9px; }
+        .home-topic-strip { margin-bottom:20px; overflow:hidden; border-radius:28px; padding:18px; }
+        .home-topic-strip > header,.home-updates > header { display:flex; align-items:end; justify-content:space-between; gap:16px; margin-bottom:15px; }
+        .home-topic-strip header span,.home-updates header span { color:var(--quiet); font-size:9px; letter-spacing:.11em; text-transform:uppercase; }
+        .home-topic-strip h2,.home-updates h2 { margin:4px 0 0; font-family:var(--display-serif); font-size:29px; font-weight:600; }
+        .home-topic-strip header a,.home-updates header a { color:var(--leaf); font-size:10px; }
+        .home-topic-track { display:flex; gap:10px; overflow-x:auto; padding-bottom:3px; scroll-snap-type:x proximity; scrollbar-width:none; }
+        .home-topic-track::-webkit-scrollbar { display:none; }
+        .home-topic-card { position:relative; display:grid; flex:1 0 205px; min-height:116px; overflow:hidden; border-radius:18px; padding:16px; color:#fff; background:radial-gradient(circle at 86% 12%,hsla(var(--topic-hue),62%,77%,.75),transparent 42%),linear-gradient(145deg,hsl(var(--topic-hue),31%,27%),hsl(calc(var(--topic-hue) + 26),36%,43%)); scroll-snap-align:start; }
+        .home-topic-card::after { position:absolute; inset:auto -24px -42px auto; width:105px; height:105px; border:1px solid rgba(255,255,255,.24); border-radius:50%; content:''; }
+        .home-topic-card span { font-family:var(--display-serif); font-size:21px; }
+        .home-topic-card strong { position:absolute; top:13px; right:16px; font-family:var(--display-serif); font-size:31px; font-weight:500; opacity:.9; }
+        .home-topic-card small { align-self:end; font-size:9px; opacity:.74; }
         .home-section { margin-top:0; }
         .home-updates { border-radius:30px; padding:20px; }
-        .home-updates > header { display:flex; align-items:end; justify-content:space-between; gap:16px; margin-bottom:15px; }
-        .home-updates header span { color:var(--quiet); font-size:9px; letter-spacing:.11em; text-transform:uppercase; }
-        .home-updates h2 { margin:4px 0 0; font-family:var(--display-serif); font-size:29px; font-weight:600; }
         .home-updates header > div:last-child { display:flex; gap:13px; }
-        .home-updates header a { color:var(--leaf); font-size:10px; }
         .home-update-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
-        .home-content-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:start; min-height:128px; border:1px solid rgba(17,63,49,.075); border-radius:17px; padding:15px 16px; background:rgba(255,255,255,.5); transition:transform .18s ease,background .18s ease; }
+        .home-content-row { display:grid; grid-template-columns:112px minmax(0,1fr) auto; gap:13px; align-items:stretch; min-height:132px; overflow:hidden; border:1px solid rgba(17,63,49,.075); border-radius:17px; padding:9px 13px 9px 9px; background:rgba(255,255,255,.5); transition:transform .18s ease,background .18s ease; }
         .home-content-row:hover { transform:translateY(-2px); background:rgba(255,255,255,.76); }
-        .home-content-copy { display:grid; min-width:0; gap:5px; }
+        .home-content-thumb { display:grid; align-content:end; min-height:112px; overflow:hidden; border-radius:12px; padding:10px; color:#fff; background-position:center; background-size:cover; }
+        .home-content-thumb small { overflow:hidden; font-size:9px; opacity:.8; text-overflow:ellipsis; white-space:nowrap; }
+        .home-content-copy { display:grid; min-width:0; align-content:center; gap:5px; }
         .home-content-copy small { color:var(--blue); font-size:9px; }
         .home-content-copy strong { font-family:var(--display-serif); font-size:19px; font-weight:600; line-height:1.34; }
         .home-content-copy p { display:-webkit-box; overflow:hidden; margin:2px 0 0; color:var(--muted); font-size:11px; line-height:1.65; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
-        .home-content-row time { color:var(--quiet); font-size:9px; white-space:nowrap; }
+        .home-content-row time { align-self:start; padding-top:4px; color:var(--quiet); font-size:9px; white-space:nowrap; }
         .home-utility-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:20px; border-radius:24px; padding:10px; }
         .home-utility-strip a { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:11px; border-radius:15px; padding:12px 13px; background:rgba(255,255,255,.43); }
         .home-utility-strip a:hover { background:rgba(220,233,223,.5); }
@@ -194,9 +236,13 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
         .home-utility-strip small { color:var(--quiet); font-size:9px; }
         .home-utility-strip b { color:var(--leaf); }
         .home-empty { display:grid; place-items:center; min-height:220px; border-radius:30px; color:var(--quiet); }
+        @media (max-width:1040px) {
+          .home-content-row { grid-template-columns:92px minmax(0,1fr) auto; }
+        }
         @media (max-width:940px) {
           .home-dashboard { grid-template-columns:1fr; }
           .home-feature { min-height:340px; }
+          .home-command-links a { flex-basis:170px; }
         }
         @media (max-width:700px) {
           .home-feature { grid-template-columns:1fr; }
@@ -205,8 +251,10 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
         }
         @media (max-width:520px) {
           .home-dashboard { padding-top:20px; }
-          .home-command nav,.home-category-summary { grid-template-columns:1fr; }
-          .home-updates { padding:15px; }
+          .home-updates,.home-topic-strip { padding:15px; }
+          .home-content-row { grid-template-columns:78px minmax(0,1fr); min-height:110px; padding-right:10px; }
+          .home-content-thumb { min-height:92px; }
+          .home-content-row time { display:none; }
         }
       `}</style>
     </main>

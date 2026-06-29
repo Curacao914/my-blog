@@ -106,7 +106,8 @@ Important current behavior:
 - Hosted `/desk` pages and private APIs must fail closed when Clerk or the admin allowlist is missing.
 - Real Clerk session verification is required; cookie presence is not sufficient.
 - Local fallback is only for deliberate non-Vercel development.
-- Never commit or print Supabase service keys, Clerk secrets, AI keys, WeChat tokens, Resend keys, or cron tokens.
+- Never commit or print Supabase service keys, Clerk secrets, AI keys, WeChat tokens, Resend keys, cron tokens, PKU JWTs, session cookies or teaching-platform credentials.
+- A token pasted into chat or logs is treated as exposed. Acquire a fresh authorized session before implementation and store only encrypted, short-lived server/local-helper state.
 - External capture endpoints must return success only after the intended write succeeds.
 - Frontend changes must not silently change visibility, ownership, schedule, access, pinning, importance, urgency, or publication semantics.
 
@@ -148,20 +149,21 @@ npm run course:worker:cleanup-temp
 
 ## Current Next Work
 
-The current priority is the multi-user workspace foundation. Do not continue with Writing Studio until identity, ownership, private service configuration and two-account isolation have been verified on Preview.
+The user has completed the two-account isolation check and the first Writing Studio/publication pass. The current main project is course replay automation, not further Writing Studio expansion.
 
-Work should proceed in this order unless the user changes priorities:
+Work in this order unless the user explicitly changes priorities:
 
-1. Apply `20260628_reminder_preferences.sql`, then `20260628_multi_user_workspace.sql`.
-2. Configure stable `WORKSPACE_SESSION_SECRET` and `USER_SECRETS_ENCRYPTION_KEY`; never rotate the latter after users have saved encrypted credentials without a migration plan.
-3. Verify the repaired identity card, Today focus layout, and Writing/Publishing action alignment.
-4. Create a second real Clerk account and execute the complete isolation matrix in `docs/MULTI_USER_WORKSPACE.md`, including guessed-ID access, browser-cache separation, AI/Resend separation, suspension, deletion and permission denial.
-5. Verify owner identity switching matches the real member account but does not expose owner-only settings while impersonating.
-6. Record whether Algolia, administrator content sync and production Cron are configured or merely code-ready; none may be described as production-verified without a real run.
-7. Only after the multi-user phase is Preview-verified, continue with Writing Studio, then secure share links/password access and deeper settings.
-8. Merge to `main` only after explicit approval, database backup, migration record and rollback plan.
+1. Read `docs/PRODUCT_DIRECTION.md` and `docs/COURSE_REPLAY_AUTOMATION.md`.
+2. Obtain and inspect the authorized PKU replay-link extraction project or userscript. Never paste real JWT/Cookie values into Git, docs, logs or test fixtures.
+3. Produce a sanitized interface map for course list, replay list, replay detail, media source, token expiry and reauthorization.
+4. Complete closed loop A with one real authorized replay: media retrieval, cloud transcription, brief, existing full-note workflow, cleanup and real message delivery.
+5. Add closed loop B only after A is usable: scheduled discovery, deduplication and explicit reauthorization.
+6. Complete closed loop C with multi-course reliability, cost/health visibility, WeChat delivery and reply write-back.
+7. Then build Today memory anchors, followed by exploration projects and unified capture/resurfacing.
+8. Keep Writing Studio reliable but do not make it the current flagship project.
+9. Merge to `main` only after explicit approval, database backup, migration record and rollback plan.
 
-Performance optimization of large shared First Load JS is real debt, but it should not displace correctness, workflow durability, or publication continuity.
+Every named loop must be independently useful and have acceptance evidence. Do not create an empty shell and label the missing workflow as a later phase.
 
 ## Phase Update: Lesson Note Lifecycle
 
@@ -307,4 +309,15 @@ User-facing pages must not explain their own architecture. Prefer labels, values
 - The script must accept known half-applied files from a previous failed run, while stopping on unrelated local changes.
 - It must clean known generated reports, run diff checks, focused tests and the production build, stage only an explicit allowlist, then commit and push `codex/homepage-phase1`.
 - Any failure must stop before commit and push. Never touch `main`, never use `git add .`, never use `--no-verify`, and never read or print `.env*` secrets.
+- One-command scripts must run under the Bash 3.2 shipped by macOS; do not use `mapfile`, `readarray`, associative arrays or Bash 4-only syntax.
 - The durable workflow specification is `docs/ASSISTED_CHANGE_WORKFLOW.md`.
+
+## Product north star: traces, proof and possibility
+
+- `docs/PRODUCT_DIRECTION.md` is the product-priority source of truth.
+- Features should preserve traces of thought, create memory anchors for lived experience, or open paths beyond the user's existing legal domain.
+- The public homepage is topic- and content-led. Real covers belong on featured and ordinary cards; the left header signal uses the editable corpus in `lib/domain/publicHome.js`.
+- Course briefs and full notes are two views of the same course/lesson hierarchy. Never create a parallel brief library.
+- Raw course video is temporary processing material, not permanent site content.
+- Cloud transcription is the default; local Whisper is optional fallback only.
+- WeChat is the target primary delivery channel, with email as a real fallback. Both must share one message record and reply mapping.

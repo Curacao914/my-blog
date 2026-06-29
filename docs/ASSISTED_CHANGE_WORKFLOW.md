@@ -28,7 +28,8 @@ files/
 9. 只精确暂存本轮文件，禁止 `git add .`；
 10. 禁止使用 `--no-verify` 绕过仓库门禁；
 11. 全部通过后自动 commit 并 push `codex/homepage-phase1`；
-12. 不读取、打印、复制或提交 `.env*`、访问令牌和密钥。
+12. 不读取、打印、复制或提交 `.env*`、访问令牌和密钥；
+13. 脚本必须兼容 macOS 自带 Bash 3.2，不使用 `mapfile`、`readarray`、关联数组或其他 Bash 4+ 语法。
 
 ## 三、失败后的处理
 

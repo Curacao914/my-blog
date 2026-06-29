@@ -19,7 +19,7 @@
 
 | 路由 | 定位 | 当前处理 |
 | --- | --- | --- |
-| `/` | 个人主页与主要入口 | 保留主页叙事；最近内容改为一张主卡与四张次卡，避免等宽卡片造成视觉失序。 |
+| `/` | 主题驱动的公开首页 | 顶栏左侧显示日期时间与可编辑语料；主卡和普通卡均使用封面；专题独立成带；工具入口可横向扩展。 |
 | `/content` | 内容图书馆 | 四栏目首层、合集次层、内容末层；支持搜索、栏目、类型、标签与多种浏览入口。 |
 | `/content/[...slug]` | 工作台发布内容阅读 | Markdown、目录、阅读进度、元信息与响应式侧栏。 |
 | `/search` | 统一搜索 | 本地索引即时筛选；配置 Algolia 时追加正文命中结果。 |
@@ -96,11 +96,13 @@
 
 ## 七、后续开发顺序
 
-1. 应用多用户迁移，配置稳定的身份签名与密钥加密环境变量。
-2. 使用两个真实 Clerk 账号完成私人数据、功能权限、AI 与邮件配置的交叉隔离验收。
-3. 推进 Writing Studio：草稿、编辑、素材关联、自动保存、版本与转入发布。
-4. 完成分享链接的 Token 校验、密码、有效期、撤销和访问记录。
-5. 集中处理用户积累的视觉细节，随后才评估合并到 `main`。
+1. 研究并脱敏记录课程平台授权、回放列表与媒体接口。
+2. 完成一节真实回放的人工授权闭环，随后才增加自动监测。
+3. 完成多课程、微信回复、成本与故障可见性。
+4. 建设 Today 记忆锚点。
+5. 建设探索项目与统一收件、再次出现。
+6. Writing Studio 仅做可靠性维护；分享链接和更复杂协作按真实需求进入排序。
+7. 最后再评估合并到 `main`。
 
 ## 八、多用户页面边界
 
@@ -113,3 +115,10 @@
 ## Copy and density gate
 
 Public and workbench surfaces must be audited for explanatory filler as well as placeholder vocabulary. A page fails the gate when it relies on architecture prose, generic slogans or oversized decoration instead of usable information. The homepage must expose recent content, search, category navigation and working tools within the first two desktop viewports. Static enforcement lives in `ProductCopy.test.js` and `HomeAndWritingPolish.test.js`.
+
+## Homepage growth boundary
+
+- `lib/domain/publicHome.js` is the editable source for rotating header lines and quick links until a private home-settings editor exists.
+- Category/topic navigation is not part of the command dock. The dock may grow horizontally and links to the complete tools page.
+- Every recent-content card shows a real cover or deterministic generated cover.
+- “正在探索” may be added only with an easy editing source and real update habit; it must not ship as frozen ornamental copy.

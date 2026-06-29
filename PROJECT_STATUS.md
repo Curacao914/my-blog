@@ -1,6 +1,6 @@
 # law-tech.dev Project Status
 
-Last updated: 2026-06-27, Asia/Shanghai
+Last updated: 2026-06-29, Asia/Shanghai
 
 Repository: `Curacao914/my-blog`
 
@@ -14,11 +14,9 @@ Production: `https://law-tech.dev`
 
 ## Executive Summary
 
-The current branch contains the new public-home/private-workspace reconstruction, durable course workflow, Clerk administrator authorization, manual Notion refresh, Today date corrections, and the newest course-note experience.
+The development branch now contains a multi-user private workbench, durable course-note workflow, unified public content/discovery, Notion last-known-good relay with R2 assets, Writing Studio publication, and a content-first public homepage. The two-account isolation check has been completed by the user. The product north star is now explicit: preserve traces of thought, create memory anchors for lived experience, and keep exploration open beyond law.
 
-The course flow now reaches a human-controlled final state: material import and OCR, lesson grouping, preferences, outline approval, node writing, independent review, local revision, final assembly, rendered Markdown reading, direct editing, explicit user-requested final revision, and manual completion. Completed notes are exposed through a new note library organized as `course → lesson → final note`.
-
-The latest targeted tests and production build were reported successful locally. The newest note-library/final-feedback phase still requires deployed Preview verification. Production remains unchanged.
+The current flagship is the course-replay automation described in `docs/COURSE_REPLAY_AUTOMATION.md`. It must be built as independently useful closed loops rather than an empty phased shell. First research the authorized platform flow and replay-link extraction project; then process one real replay end to end before scheduled monitoring. Production remains unchanged.
 
 ## Source of Truth and Safety
 
@@ -183,14 +181,14 @@ Do not upgrade this evidence to Preview-verified until deployed behavior is chec
 
 ## Planned Work Order
 
-1. Preview verification of the latest phase.
-2. Lesson-note soft delete, restore, and permanent deletion.
-3. Publish course final notes into Supabase content records and `/content`.
-4. Optional one-way Notion synchronization.
-5. Unified legacy and new content index.
-6. Production Clerk configuration and explicitly approved merge to `main`.
-7. Daily 09:00 Asia/Shanghai workspace digest.
-8. First Load JS optimization after correctness and deployment stability.
+1. Inspect the authorized replay-link extractor and produce a sanitized platform interface map.
+2. Course closed loop A: one real replay → cloud transcript → brief → existing full note → cleanup → real delivery.
+3. Course closed loop B: scheduled discovery, deduplication, retry and reauthorization.
+4. Course closed loop C: multi-course reliability, WeChat delivery/replies and cost/health reporting.
+5. Today memory anchors with generated daily draft and reply completion.
+6. Exploration projects: research prompts, import, structured links and editable continuation.
+7. Unified capture and resurfacing.
+8. Explicitly approved Production rollout only after Preview evidence and rollback preparation.
 
 ## Recommended Session Start
 
@@ -441,3 +439,9 @@ Preview review rejected the personal-advertising masthead and low-density latest
 ## 2026-06-28 One-command delivery workflow
 
 AI-assisted multi-file changes now use a one-command delivery package. The package applies idempotently, resumes known half-applied changes after a failed test, rejects unrelated local edits, cleans generated test reports, runs focused Jest and the production build, precisely stages files, commits and pushes only the development branch. The durable contract is documented in `docs/ASSISTED_CHANGE_WORKFLOW.md`.
+
+## Current Strategy: Course Replay and Product North Star
+
+The three product tests are `思考的痕迹 / 存在的证明 / 探索的可能`. The public home now supports an editable rotating line corpus, expandable quick links, topic cards and cover-bearing recent cards. The current architecture decision is to keep Writing Studio stable and shift engineering focus to authorized course replay acquisition, cloud transcription, brief/full-note organization and proactive delivery.
+
+No real PKU JWT, Cookie or password belongs in this repository. Raw replay media is temporary. Briefs and full notes share the existing course/lesson hierarchy. See `docs/PRODUCT_DIRECTION.md` and `docs/COURSE_REPLAY_AUTOMATION.md`.
