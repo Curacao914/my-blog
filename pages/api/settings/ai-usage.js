@@ -1,5 +1,6 @@
 import { requireWorkspaceRequest } from '@/lib/auth/serverAdmin'
 import {
+  DEFAULT_USD_CNY_RATE,
   DEEPSEEK_PRICING_VERSION,
   DEEPSEEK_PRICING_URL,
   deepseekPricingRows,
@@ -55,6 +56,14 @@ export default async function handler(req, res) {
   }
 
   try {
+    const configuredRate = Number(
+      process.env.DEEPSEEK_USD_CNY_RATE ||
+      DEFAULT_USD_CNY_RATE
+    )
+    const usdCnyRate =
+      Number.isFinite(configuredRate) && configuredRate > 0
+        ? configuredRate
+        : DEFAULT_USD_CNY_RATE
     const since = new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000)
     const owner = encodeURIComponent(auth.profile.id)
     const jobs = await supabaseRest(
@@ -89,12 +98,17 @@ export default async function handler(req, res) {
       outputTokens: 0,
       reasoningTokens: 0,
       estimatedUsd: 0,
+      estimatedCny: 0,
       unsupportedCalls: 0,
       missingUsageCalls: 0
     }
 
     traces.forEach(trace => {
-      const result = estimateDeepseekUsageCost(trace.model, trace.usage || {})
+      const result = estimateDeepseekUsageCost(
+        trace.model,
+        trace.usage || {},
+        { usdCnyRate }
+      )
       totals.calls += 1
       totals.cacheHitTokens += result.cacheHitTokens
       totals.cacheMissTokens += result.cacheMissTokens
@@ -102,6 +116,7 @@ export default async function handler(req, res) {
       totals.outputTokens += result.outputTokens
       totals.reasoningTokens += result.reasoningTokens
       totals.estimatedUsd += result.estimatedUsd
+      totals.estimatedCny += result.estimatedCny
       if (!result.supported) totals.unsupportedCalls += 1
       if (!trace.usage) totals.missingUsageCalls += 1
 
@@ -115,7 +130,8 @@ export default async function handler(req, res) {
         cacheMissTokens: 0,
         unknownInputTokens: 0,
         outputTokens: 0,
-        estimatedUsd: 0
+        estimatedUsd: 0,
+        estimatedCny: 0
       }
       current.calls += 1
       current.cacheHitTokens += result.cacheHitTokens
@@ -123,6 +139,7 @@ export default async function handler(req, res) {
       current.unknownInputTokens += result.unknownInputTokens
       current.outputTokens += result.outputTokens
       current.estimatedUsd += result.estimatedUsd
+      current.estimatedCny += result.estimatedCny
       groups.set(key, current)
     })
 
@@ -137,12 +154,14 @@ export default async function handler(req, res) {
       windowDays: DAYS,
       pricingVersion: DEEPSEEK_PRICING_VERSION,
       pricingUrl: DEEPSEEK_PRICING_URL,
-      pricing: deepseekPricingRows(),
+      currency: 'CNY',
+      usdCnyRate,
+      pricing: deepseekPricingRows(usdCnyRate),
       ...totals,
       cacheHitRate,
       groups: [...groups.values()].sort(
         (left, right) =>
-          right.estimatedUsd - left.estimatedUsd ||
+          right.estimatedCny - left.estimatedCny ||
           right.calls - left.calls
       )
     })

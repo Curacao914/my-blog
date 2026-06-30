@@ -17,6 +17,7 @@ import {
   folderSystemKey,
   isReadingFolder,
   isReadingItem,
+  migrateLegacyReadingItems,
   patchReadingTrace,
   readingBody,
   readingItemTitle,
@@ -159,6 +160,14 @@ export function ReadingBox() {
           loaded = await requestSave([...loaded, ...defaults])
         } catch {}
       }
+
+      const migration = migrateLegacyReadingItems(loaded)
+      if (migration.changed) {
+        try {
+          loaded = await requestSave(migration.items)
+        } catch {}
+      }
+
       if (!cancelled) adopt(loaded)
     }
     load()

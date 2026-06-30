@@ -123,7 +123,7 @@ export function WechatSettings({ courseOnly = false }) {
           </label>
         </div>
         <div className='settings-actions'>
-          <button className='is-primary' type='button' onClick={save} disabled={disabled}>
+          <button className='soft-button primary' type='button' onClick={save} disabled={disabled}>
             {state === 'saving' ? '保存中…' : '保存课程通知'}
           </button>
         </div>
@@ -200,10 +200,10 @@ export function WechatSettings({ courseOnly = false }) {
         </div>
 
         <div className='settings-actions'>
-          <button className='is-primary' type='submit' disabled={disabled}>
+          <button className='soft-button primary' type='submit' disabled={disabled}>
             {state === 'saving' ? '保存中…' : '保存'}
           </button>
-          <button type='button' onClick={test} disabled={disabled}>
+          <button className='soft-button' type='button' onClick={test} disabled={disabled}>
             {state === 'testing' ? '正在入队…' : '发送测试微信'}
           </button>
         </div>

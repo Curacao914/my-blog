@@ -611,6 +611,187 @@ function MaterialArchivePanel({ groups, materials, onGroupsChange, onMaterialsCh
   </div>
 }
 
+
+function courseFolderName(job = {}) {
+  return String(job.course_name || '未命名课程').trim() || '未命名课程'
+}
+
+function CourseFolderLibrary({
+  jobs,
+  selectedJobId,
+  onOpen,
+  onDelete,
+  onSupplement,
+  onImport
+}) {
+  const [activeCourse, setActiveCourse] = useState('')
+  const [query, setQuery] = useState('')
+
+  const folders = useMemo(() => {
+    const grouped = new Map()
+    jobs.forEach(job => {
+      const name = courseFolderName(job)
+      const current = grouped.get(name) || {
+        name,
+        jobs: [],
+        lessonCount: 0,
+        totalChars: 0,
+        attentionCount: 0,
+        completedCount: 0,
+        teacher: '',
+        updatedAt: ''
+      }
+      const runtime =
+        job.runtime_summary ||
+        job.preferences?.web_adapter?.runtimeSummary ||
+        {}
+      const stats = job.preferences?.textpack_stats || {}
+      current.jobs.push(job)
+      current.lessonCount += Number(stats.lessonCount || 0)
+      current.totalChars += Number(stats.totalChars || 0)
+      current.attentionCount += Number(runtime.counts?.attention || 0)
+      current.completedCount +=
+        (runtime.status || job.current_node) === 'completed' ? 1 : 0
+      current.teacher ||= job.teacher || ''
+      if (
+        String(job.updated_at || '') >
+        String(current.updatedAt || '')
+      ) {
+        current.updatedAt = job.updated_at || ''
+      }
+      grouped.set(name, current)
+    })
+    return [...grouped.values()].sort((left, right) =>
+      String(right.updatedAt || '').localeCompare(
+        String(left.updatedAt || '')
+      ) || left.name.localeCompare(right.name, 'zh-CN')
+    )
+  }, [jobs])
+
+  useEffect(() => {
+    if (
+      activeCourse &&
+      !folders.some(folder => folder.name === activeCourse)
+    ) {
+      setActiveCourse('')
+    }
+  }, [activeCourse, folders])
+
+  const activeFolder = folders.find(
+    folder => folder.name === activeCourse
+  )
+  const visibleFolders = folders.filter(folder =>
+    folder.name.toLowerCase().includes(query.trim().toLowerCase())
+  )
+
+  if (!jobs.length) {
+    return (
+      <div className='course-empty-state'>
+        <strong>课程库还是空的</strong>
+        <p>从“导入资料”添加课堂转录、课件或已有笔记。</p>
+        <button
+          className='soft-button primary'
+          type='button'
+          onClick={onImport}
+        >
+          导入第一门课程
+        </button>
+      </div>
+    )
+  }
+
+  if (activeFolder) {
+    return (
+      <div className='course-folder-view'>
+        <nav className='course-library-breadcrumbs'>
+          <button type='button' onClick={() => setActiveCourse('')}>
+            课程库
+          </button>
+          <span>/</span>
+          <strong>{activeFolder.name}</strong>
+        </nav>
+        <div className='section-heading compact'>
+          <span>Course Folder</span>
+          <h2>{activeFolder.name}</h2>
+          <p>
+            {activeFolder.teacher || '未填写教师'} ·{' '}
+            {formatNumber(activeFolder.lessonCount)} 个课次
+          </p>
+        </div>
+        <div className='course-job-list compact-list'>
+          {activeFolder.jobs.map(job => (
+            <CourseJobRow
+              key={job.id}
+              job={job}
+              active={selectedJobId === job.id}
+              onOpen={onOpen}
+              onDelete={onDelete}
+              onSupplement={onSupplement}
+            />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className='course-folder-library'>
+      <div className='course-library-toolbar'>
+        <div className='section-heading compact'>
+          <span>Course Library</span>
+          <h2>课程文件夹</h2>
+          <p>按课程归拢课次、材料、简报与完整笔记。</p>
+        </div>
+        <label className='course-folder-search'>
+          <span>搜索课程</span>
+          <input
+            value={query}
+            onChange={event => setQuery(event.target.value)}
+            placeholder='输入课程名称'
+          />
+        </label>
+      </div>
+
+      <div className='course-folder-grid'>
+        {visibleFolders.map(folder => (
+          <button
+            className='course-folder-card'
+            type='button'
+            key={folder.name}
+            onClick={() => setActiveCourse(folder.name)}
+          >
+            <span className='course-folder-card-icon'>课</span>
+            <span className='course-folder-card-copy'>
+              <strong>{folder.name}</strong>
+              <small>
+                {folder.teacher || '未填写教师'} ·{' '}
+                {formatNumber(folder.lessonCount)} 个课次
+              </small>
+              <em>
+                {folder.attentionCount
+                  ? `${folder.attentionCount} 项等待处理`
+                  : `${folder.completedCount}/${folder.jobs.length} 个任务完成`}
+              </em>
+            </span>
+            <span className='course-folder-card-meta'>
+              {folder.updatedAt
+                ? new Date(folder.updatedAt).toLocaleDateString('zh-CN')
+                : '刚刚更新'}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {!visibleFolders.length ? (
+        <div className='course-empty-state'>
+          <strong>没有匹配的课程</strong>
+          <p>换一个关键词，或从“导入资料”建立新课程。</p>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export function CourseTextPackDesk() {
   const router = useRouter()
   const [view, setView] = useState('library')
@@ -778,7 +959,7 @@ export function CourseTextPackDesk() {
 
   return <div className='course-workspace compact'>
     <nav className='course-page-switcher'><button type='button' className={view === 'library' ? 'active' : ''} onClick={() => setView('library')}>课程库</button><button type='button' className={view === 'import' ? 'active' : ''} onClick={() => { if (view !== 'import') resetImport(); setView('import') }}>导入资料</button></nav>
-    {view === 'library' ? <section className='course-library-panel'><div className='section-heading compact'><span>课程库</span><h2>已导入课程</h2></div>{jobs.length ? <div className='course-job-list compact-list'>{jobs.map(job => <CourseJobRow key={job.id} job={job} active={selectedJobId === job.id} onOpen={openJob} onDelete={handleDelete} onSupplement={jobId => openJob(jobId, { supplement: true })} />)}</div> : <div className='course-empty-state'><strong>课程库还是空的</strong><p>从“导入资料”添加课堂转录、课件或已有笔记。</p><button className='soft-button primary' type='button' onClick={() => setView('import')}>导入第一门课程</button></div>}</section> : null}
+    {view === 'library' ? <section className='course-library-panel'><CourseFolderLibrary jobs={jobs} selectedJobId={selectedJobId} onOpen={openJob} onDelete={handleDelete} onSupplement={jobId => openJob(jobId, { supplement: true })} onImport={() => setView('import')} /></section> : null}
     {view === 'import' ? <section className='course-import-shell'>
       <header className='course-import-header'><div><span>{supplementTarget ? '补充课程资料' : '导入课程资料'}</span><h2>{courseName || '新课程'}</h2>{supplementTarget ? <p>新增材料会匹配到已有课次，也可以新建课次。</p> : null}</div><ServiceLights capabilities={capabilities} /></header>
       <nav className='course-import-steps'><button className={importStep === 'select' ? 'active' : ''} type='button' onClick={() => setImportStep('select')}>1 添加资料</button><button className={importStep === 'group' ? 'active' : ''} type='button' disabled={!materials.length} onClick={() => setImportStep('group')}>2 归档材料</button><button className={importStep === 'review' ? 'active' : ''} type='button' disabled={!textPack} onClick={() => setImportStep('review')}>3 确认导入</button></nav>

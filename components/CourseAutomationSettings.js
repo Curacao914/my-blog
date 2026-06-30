@@ -231,14 +231,14 @@ export function CourseAutomationSettings() {
           </label>
 
           <div className='settings-actions'>
-            <button className='is-primary' type='submit' disabled={disabled}>
+            <button className='soft-button primary' type='submit' disabled={disabled}>
               {state === 'saving' ? '保存中…' : '保存课程设置'}
             </button>
-            <button type='button' onClick={backfillBriefs} disabled={disabled || !form.briefEnabled}>
+            <button className='soft-button' type='button' onClick={backfillBriefs} disabled={disabled || !form.briefEnabled}>
               {state === 'backfilling' ? '正在补齐…' : '补齐历史课程简报'}
             </button>
-            <Link className='settings-link-button' href='/desk/courses'>课程中心</Link>
-            <Link className='settings-link-button' href='/desk/library'>完整笔记</Link>
+            <Link className='soft-button' href='/desk/courses'>课程中心</Link>
+            <Link className='soft-button' href='/desk/library'>完整笔记</Link>
           </div>
 
           {backfill?.results?.length ? (

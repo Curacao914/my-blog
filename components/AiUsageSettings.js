@@ -4,10 +4,10 @@ function number(value) {
   return new Intl.NumberFormat('zh-CN').format(Number(value || 0))
 }
 
-function usd(value) {
-  return new Intl.NumberFormat('en-US', {
+function cny(value) {
+  return new Intl.NumberFormat('zh-CN', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'CNY',
     minimumFractionDigits: 4,
     maximumFractionDigits: 6
   }).format(Number(value || 0))
@@ -33,7 +33,9 @@ export function AiUsageSettings() {
         credentials: 'same-origin'
       })
       const payload = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(payload.error || '读取 AI 用量失败')
+      if (!response.ok) {
+        throw new Error(payload.error || '读取 AI 用量失败')
+      }
       setData(payload)
       setState('ready')
     } catch (error) {
@@ -77,13 +79,15 @@ export function AiUsageSettings() {
               <small>{number(data?.outputTokens)} 输出 Token</small>
             </article>
             <article>
-              <span>官方价格估算</span>
-              <strong>{usd(data?.estimatedUsd)}</strong>
-              <small>按每次响应的缓存命中明细计算</small>
+              <span>人民币估算</span>
+              <strong>{cny(data?.estimatedCny)}</strong>
+              <small>按 DeepSeek usage 缓存明细计算</small>
             </article>
           </div>
 
-          {data?.unknownInputTokens || data?.unsupportedCalls || data?.missingUsageCalls ? (
+          {data?.unknownInputTokens ||
+          data?.unsupportedCalls ||
+          data?.missingUsageCalls ? (
             <p className='settings-inline-notice'>
               {data.unknownInputTokens
                 ? `有 ${number(data.unknownInputTokens)} 个旧输入 Token 没有缓存拆分，未强行计价。`
@@ -105,37 +109,45 @@ export function AiUsageSettings() {
               <span>估算费用</span>
             </div>
             {(data?.groups || []).map(group => (
-              <div className='ai-usage-row' key={`${group.model}-${group.role}`}>
+              <div
+                className='ai-usage-row'
+                key={`${group.model}-${group.role}`}
+              >
                 <span>
                   <strong>{group.model}</strong>
                   <small>{group.role}</small>
                 </span>
                 <span>{number(group.calls)}</span>
                 <span>
-                  {number(group.cacheHitTokens)} / {number(group.cacheMissTokens)}
+                  {number(group.cacheHitTokens)} /{' '}
+                  {number(group.cacheMissTokens)}
                 </span>
-                <span>{usd(group.estimatedUsd)}</span>
+                <span>{cny(group.estimatedCny)}</span>
               </div>
             ))}
           </div>
 
           <div className='deepseek-price-note'>
-            <strong>当前官方单价</strong>
+            <strong>当前人民币换算单价</strong>
             {(data?.pricing || []).map(row => (
               <span key={row.model}>
-                {row.model}：命中 {usd(row.cacheHitPerMillionUsd)} /
-                未命中 {usd(row.cacheMissPerMillionUsd)} /
-                输出 {usd(row.outputPerMillionUsd)}（每百万 Token）
+                {row.model}：命中 {cny(row.cacheHitPerMillionCny)} /
+                未命中 {cny(row.cacheMissPerMillionCny)} /
+                输出 {cny(row.outputPerMillionCny)}
+                （每百万 Token）
               </span>
             ))}
             <small>
-              价格快照：{data?.pricingVersion}。这里只按 API 返回的 usage
-              估算，最终扣费仍以 DeepSeek 控制台为准。
+              官方价格快照：{data?.pricingVersion}；按 1 美元 =
+              ¥{Number(data?.usdCnyRate || 0).toFixed(4)} 换算。
+              最终扣费仍以 DeepSeek 控制台为准。
             </small>
           </div>
 
           <div className='settings-actions'>
-            <button type='button' onClick={load}>重新统计</button>
+            <button className='soft-button' type='button' onClick={load}>
+              重新统计
+            </button>
           </div>
         </>
       )}

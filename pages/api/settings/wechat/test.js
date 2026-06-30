@@ -39,9 +39,19 @@ export default async function handler(req, res) {
       deliveryId: result.row?.id || null
     })
   } catch (error) {
-    return res.status(500).json({
+    const detail = error instanceof Error ? error.message : ''
+    const migrationRequired =
+      detail.includes('message_deliveries') ||
+      detail.includes('schema cache') ||
+      detail.includes('PGRST')
+    return res.status(migrationRequired ? 409 : 500).json({
       ok: false,
-      error: error instanceof Error ? error.message : '测试消息入队失败'
+      code: migrationRequired
+        ? 'database_upgrade_required'
+        : 'wechat_test_failed',
+      error: migrationRequired
+        ? '微信发送队列尚未初始化，请先完成数据库升级。'
+        : detail || '测试消息入队失败'
     })
   }
 }

@@ -68,9 +68,18 @@ export default async function handler(req, res) {
     res.setHeader('Allow', 'GET, PATCH')
     return res.status(405).json({ ok: false, error: 'Method not allowed' })
   } catch (error) {
-    return res.status(500).json({
+    const detail = error instanceof Error ? error.message : ''
+    const migrationRequired =
+      detail.includes('user_integrations_provider_check') ||
+      detail.includes('wechat-openclaw')
+    return res.status(migrationRequired ? 409 : 500).json({
       ok: false,
-      error: error instanceof Error ? error.message : '微信设置保存失败'
+      code: migrationRequired
+        ? 'database_upgrade_required'
+        : 'wechat_settings_failed',
+      error: migrationRequired
+        ? '微信设置需要完成一次数据库升级；升级不会修改现有课程和阅读内容。'
+        : detail || '微信设置保存失败'
     })
   }
 }

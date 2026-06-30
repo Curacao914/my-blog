@@ -18,6 +18,10 @@ describe('DeepSeek official pricing estimator', () => {
       500 / 1_000_000 * 0.87,
       10
     )
+    expect(result.estimatedCny).toBeCloseTo(
+      result.estimatedUsd * 7.2,
+      10
+    )
   })
 
   it('does not pretend old unsplit input tokens have an exact cost', () => {

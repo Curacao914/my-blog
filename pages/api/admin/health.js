@@ -4,7 +4,7 @@ import { getDatabaseConfig, getSupabaseRestConfig } from '@/lib/db/client'
 import { hasAlgoliaAdmin, hasAlgoliaSearch } from '@/lib/content/algoliaSearch'
 import { requireAdminRequest } from '@/lib/auth/serverAdmin'
 
-const requiredTables = [
+const coreRequiredTables = [
   { name: 'profiles', probeColumn: 'id' },
   { name: 'workspace_invites', probeColumn: 'id' },
   { name: 'user_integrations', probeColumn: 'id' },
@@ -19,9 +19,12 @@ const requiredTables = [
   { name: 'reminders', probeColumn: 'id' },
   { name: 'reminder_events', probeColumn: 'id' },
   { name: 'reminder_preferences', probeColumn: 'owner_id' },
-  { name: 'message_deliveries', probeColumn: 'id' },
   { name: 'course_jobs', probeColumn: 'id' },
   { name: 'course_assets', probeColumn: 'id' }
+]
+
+const optionalTables = [
+  { name: 'message_deliveries', probeColumn: 'id' }
 ]
 
 async function checkTable(table) {
@@ -74,11 +77,25 @@ export default async function handler(req, res) {
   }
 
   try {
-    const tables = await Promise.all(requiredTables.map(checkTable))
+    const coreTables = await Promise.all(
+      coreRequiredTables.map(checkTable)
+    )
+    const featureTables = await Promise.all(
+      optionalTables.map(checkTable)
+    )
+    const tables = [...coreTables, ...featureTables]
     return res.status(200).json({
       ...basePayload,
-      databaseReachable: tables.every(table => table.ok),
-      messageDeliveriesReady: Boolean(tables.find(table => table.table === 'message_deliveries')?.ok),
+      databaseReachable: coreTables.every(table => table.ok),
+      databaseFullyMigrated: tables.every(table => table.ok),
+      messageDeliveriesReady: Boolean(
+        featureTables.find(
+          table => table.table === 'message_deliveries'
+        )?.ok
+      ),
+      missingFeatureTables: featureTables
+        .filter(table => !table.ok)
+        .map(table => table.table),
       tables
     })
   } catch (error) {
