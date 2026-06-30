@@ -1,4 +1,4 @@
-import { findOutlineCoverageGaps, numberTranscript, splicePlaceholderContext, transcriptLines } from '@/lib/course/onlineRunner'
+import { executeCourseTask, findOutlineCoverageGaps, numberTranscript, splicePlaceholderContext, transcriptLines } from '@/lib/course/onlineRunner'
 
 describe('course outline source coverage helpers', () => {
   test('numbers normalized transcript lines with stable absolute labels', () => {
@@ -37,5 +37,29 @@ describe('course outline source coverage helpers', () => {
     expect(context).toContain('{{H1_SUMMARY:o1}}')
     expect(context).toContain('国际法的广泛性 · 1/1')
     expect(context).not.toContain('这段已批准正文绝不能交给接缝模型改写。')
+  })
+
+  test('reconciles a stored current final review without calling the model again', async () => {
+    const report = {
+      decision: 'approve',
+      reviewedDraftVersion: 3,
+      coverage: 90,
+      grounding: 90,
+      logic: 90,
+      detail: 90,
+      sourceCoverage: 90,
+      issues: []
+    }
+    await expect(executeCourseTask({
+      type: 'reconcile-final-review',
+      lessonKey: 'lesson-01',
+      taskKey: 'reconcile-final-review:lesson-01:version-3:report-1',
+      qualityReport: report
+    })).resolves.toEqual({
+      type: 'complete-final-review',
+      lessonKey: 'lesson-01',
+      taskKey: 'reconcile-final-review:lesson-01:version-3:report-1',
+      qualityReport: report
+    })
   })
 })

@@ -107,7 +107,17 @@ describe('course worker task planner', () => {
       finalReviewReports: [{ value: { decision: 'human_review', reviewedDraftVersion: 1 } }]
     }
     expect(getNextCourseWorkerTask(workflowWith('final_review_human', [exceptional]))).toEqual(expect.objectContaining({
-      type: 'final-review'
+      type: 'reconcile-final-review',
+      qualityReport: expect.objectContaining({ decision: 'human_review' })
+    }))
+
+    const currentApproved = {
+      ...finalLesson,
+      finalReviewReports: [{ value: { decision: 'approve', reviewedDraftVersion: 1 } }]
+    }
+    expect(getNextCourseWorkerTask(workflowWith('final_review', [currentApproved]))).toEqual(expect.objectContaining({
+      type: 'reconcile-final-review',
+      qualityReport: expect.objectContaining({ decision: 'approve' })
     }))
   })
 

@@ -7,7 +7,8 @@ const AUTO_RESUMABLE_CONTENT_CODES = new Set([
   'waiting-node-human-review',
   'waiting-final-human-review',
   'node_human_review',
-  'final_review_human'
+  'final_review_human',
+  'final-review-current'
 ])
 
 function isAutoResumableContentAttention(task = {}) {
