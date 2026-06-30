@@ -47,8 +47,8 @@ jobs:
       COURSE_LLM_MAX_BATCHES_PER_CYCLE: "160"
       COURSE_LLM_COST_MODE: economy
       COURSE_ASR_ALLOW_PAID: "1"
-      COURSE_ASR_MAX_TASK_SECONDS: "14400"
-      COURSE_ASR_DAILY_MAX_SECONDS: "14400"
+      COURSE_ASR_MAX_TASK_SECONDS: "16200"
+      COURSE_ASR_DAILY_MAX_SECONDS: "16200"
       COURSE_ASR_MAX_TASK_COST_CNY: "2"
       COURSE_ASR_DAILY_MAX_COST_CNY: "2"
       COURSE_CONTROL_PLANE_TIMEOUT_MS: "120000"
@@ -102,7 +102,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker build             --file deploy/course-worker/Dockerfile             --tag law-tech-course-worker:remote-test             .
+          docker build \
+            --file deploy/course-worker/Dockerfile \
+            --tag law-tech-course-worker:remote-test \
+            .
 
       - name: Prepare ephemeral worker storage
         shell: bash
@@ -117,7 +120,26 @@ jobs:
           set -euo pipefail
           log="$RUNNER_TEMP/course-worker-health.log"
           set +e
-          docker run --rm             -v "$RUNNER_TEMP/course-worker-data:/data"             -e COURSE_CONTROL_PLANE_URL             -e COURSE_WORKER_SECRET             -e COURSE_WORKER_OWNER_ID             -e PKU_USERNAME             -e PKU_PASSWORD             -e DASHSCOPE_API_KEY             -e R2_ACCESS_KEY_ID             -e R2_SECRET_ACCESS_KEY             -e R2_ENDPOINT             -e R2_BUCKET             -e COURSE_PIPELINE_ALLOWLIST             -e COURSE_HEADLESS             -e COURSE_PROXY_MODE             -e COURSE_MEDIA_ROUTE             -e COURSE_WORKER_ID             -e COURSE_CONTROL_PLANE_TIMEOUT_MS             law-tech-course-worker:remote-test             health >"$log" 2>&1
+          docker run --rm \
+            -v "$RUNNER_TEMP/course-worker-data:/data" \
+            -e COURSE_CONTROL_PLANE_URL \
+            -e COURSE_WORKER_SECRET \
+            -e COURSE_WORKER_OWNER_ID \
+            -e PKU_USERNAME \
+            -e PKU_PASSWORD \
+            -e DASHSCOPE_API_KEY \
+            -e R2_ACCESS_KEY_ID \
+            -e R2_SECRET_ACCESS_KEY \
+            -e R2_ENDPOINT \
+            -e R2_BUCKET \
+            -e COURSE_PIPELINE_ALLOWLIST \
+            -e COURSE_HEADLESS \
+            -e COURSE_PROXY_MODE \
+            -e COURSE_MEDIA_ROUTE \
+            -e COURSE_WORKER_ID \
+            -e COURSE_CONTROL_PLANE_TIMEOUT_MS \
+            law-tech-course-worker:remote-test \
+            health >"$log" 2>&1
           status=$?
           set -e
           health_json="$RUNNER_TEMP/course-worker-data/scratch/health/latest.json"
@@ -136,28 +158,109 @@ jobs:
           set -euo pipefail
           log="$RUNNER_TEMP/course-worker-cycle.log"
           set +e
-          docker run --rm             -v "$RUNNER_TEMP/course-worker-data:/data"             -e COURSE_CONTROL_PLANE_URL             -e COURSE_WORKER_SECRET             -e COURSE_WORKER_OWNER_ID             -e PKU_USERNAME             -e PKU_PASSWORD             -e DASHSCOPE_API_KEY             -e R2_ACCESS_KEY_ID             -e R2_SECRET_ACCESS_KEY             -e R2_ENDPOINT             -e R2_BUCKET             -e COURSE_PIPELINE_ALLOWLIST             -e COURSE_PIPELINE_MAX_TASKS             -e COURSE_LLM_MAX_TASKS_PER_CYCLE             -e COURSE_LLM_MAX_BATCHES_PER_TASK             -e COURSE_LLM_MAX_BATCHES_PER_CYCLE             -e COURSE_LLM_COST_MODE             -e COURSE_ASR_ALLOW_PAID             -e COURSE_ASR_MAX_TASK_SECONDS             -e COURSE_ASR_DAILY_MAX_SECONDS             -e COURSE_ASR_MAX_TASK_COST_CNY             -e COURSE_ASR_DAILY_MAX_COST_CNY             -e COURSE_CONTROL_PLANE_TIMEOUT_MS             -e COURSE_LLM_CONTROL_PLANE_TIMEOUT_MS             -e COURSE_DOWNLOAD_CONCURRENCY             -e COURSE_HEADLESS             -e COURSE_PROXY_MODE             -e COURSE_MEDIA_ROUTE             -e COURSE_WORKER_ID             law-tech-course-worker:remote-test             cycle --max-tasks 1 --since-days 14 --cost-mode economy >"$log" 2>&1
+          docker run --rm \
+            -v "$RUNNER_TEMP/course-worker-data:/data" \
+            -e COURSE_CONTROL_PLANE_URL \
+            -e COURSE_WORKER_SECRET \
+            -e COURSE_WORKER_OWNER_ID \
+            -e PKU_USERNAME \
+            -e PKU_PASSWORD \
+            -e DASHSCOPE_API_KEY \
+            -e R2_ACCESS_KEY_ID \
+            -e R2_SECRET_ACCESS_KEY \
+            -e R2_ENDPOINT \
+            -e R2_BUCKET \
+            -e COURSE_PIPELINE_ALLOWLIST \
+            -e COURSE_PIPELINE_MAX_TASKS \
+            -e COURSE_LLM_MAX_TASKS_PER_CYCLE \
+            -e COURSE_LLM_MAX_BATCHES_PER_TASK \
+            -e COURSE_LLM_MAX_BATCHES_PER_CYCLE \
+            -e COURSE_LLM_COST_MODE \
+            -e COURSE_ASR_ALLOW_PAID \
+            -e COURSE_ASR_MAX_TASK_SECONDS \
+            -e COURSE_ASR_DAILY_MAX_SECONDS \
+            -e COURSE_ASR_MAX_TASK_COST_CNY \
+            -e COURSE_ASR_DAILY_MAX_COST_CNY \
+            -e COURSE_CONTROL_PLANE_TIMEOUT_MS \
+            -e COURSE_LLM_CONTROL_PLANE_TIMEOUT_MS \
+            -e COURSE_DOWNLOAD_CONCURRENCY \
+            -e COURSE_HEADLESS \
+            -e COURSE_PROXY_MODE \
+            -e COURSE_MEDIA_ROUTE \
+            -e COURSE_WORKER_ID \
+            law-tech-course-worker:remote-test \
+            cycle --max-tasks 1 --since-days 14 --cost-mode economy >"$log" 2>&1
           status=$?
           set -e
-          latest_summary="$(
-            find "$RUNNER_TEMP/course-worker-data/scratch/runs"               -name summary.json -type f -print 2>/dev/null |
+
+          mapfile -t llm_summaries < <(
+            find "$RUNNER_TEMP/course-worker-data/scratch/runs" \
+              -path '*/llm-*/summary.json' -type f -print 2>/dev/null |
+              sort
+          )
+          media_summary="$(
+            find "$RUNNER_TEMP/course-worker-data/scratch/runs" \
+              -path '*/cycle-*/summary.json' -type f -print 2>/dev/null |
               sort |
               tail -1 || true
           )"
-          if [[ -n "$latest_summary" && -f "$latest_summary" ]]; then
-            jq '{
-              status: (.status // ""),
-              counts: (.counts // {}),
-              discovery: (
-                if .discovery then {
-                  scannedCourses: (.discovery.scannedCourses // 0),
-                  selectedReplays: (.discovery.selectedReplays // 0),
-                  newlyAdded: (.discovery.newlyAdded // 0)
-                } else {} end
-              ),
-              errorCode: (.error.code // "")
-            }' "$latest_summary"
-          fi
+
+          print_llm_summary() {
+            local stage="$1"
+            local file="${2:-}"
+            if [[ -n "$file" && -f "$file" ]]; then
+              jq --arg stage "$stage" '{
+                stage: $stage,
+                status: (.status // ""),
+                counts: (.counts // {}),
+                errorCode: (.error.code // "")
+              }' "$file"
+            else
+              jq -n --arg stage "$stage" '{
+                stage: $stage,
+                status: "summary-missing",
+                counts: {},
+                errorCode: ""
+              }'
+            fi
+          }
+
+          print_media_summary() {
+            local file="${1:-}"
+            if [[ -n "$file" && -f "$file" ]]; then
+              jq '{
+                stage: "discover-and-preprocess-media",
+                status: (.status // ""),
+                counts: (.counts // {}),
+                discovery: (
+                  if .discovery then {
+                    scannedCourses: (.discovery.scannedCourses // 0),
+                    selectedReplays: (.discovery.selectedReplays // 0),
+                    newlyAdded: (.discovery.newlyAdded // 0)
+                  } else {} end
+                ),
+                errorCode: (.error.code // "")
+              }' "$file"
+            else
+              jq -n '{
+                stage: "discover-and-preprocess-media",
+                status: "summary-missing",
+                counts: {},
+                discovery: {},
+                errorCode: ""
+              }'
+            fi
+          }
+
+          echo 'Safe production stage summaries:'
+          print_llm_summary \
+            "drain-existing-llm" \
+            "${llm_summaries[0]-}"
+          print_media_summary "$media_summary"
+          print_llm_summary \
+            "drain-newly-imported-llm" \
+            "${llm_summaries[1]-}"
+
           if (( status != 0 )); then
             echo 'Remote production cycle failed or needs hard attention. Detailed course content was kept out of this public workflow log.'
             exit "$status"
