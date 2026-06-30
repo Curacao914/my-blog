@@ -69,12 +69,12 @@ describe('course worker task planner', () => {
     expect(getNextCourseWorkerTask(workflowWith('outline_review', [lessons[0], waiting]))).toEqual(expect.objectContaining({ type: 'idle', reason: 'waiting-outline-approval' }))
   })
 
-  it('routes failed review to revision and caps automatic loops', () => {
+  it('routes failed and legacy human review states to automatic revision', () => {
     const node = { id: 'node-1', status: 'node_revision_required', revisionCount: 1, reviewerReports: [{ value: { decision: 'revise', issues: ['覆盖不足'] } }] }
     const lesson = { key: 'lesson-01', order: 1, status: 'node_revision_required', nodes: [node], outline: [], blueprint: {} }
     expect(getNextCourseWorkerTask(workflowWith('node_revision_required', [lesson])).type).toBe('revise-node')
-    const capped = { ...lesson, status: 'node_human_review', nodes: [{ ...node, status: 'node_human_review', revisionCount: 2 }] }
-    expect(getNextCourseWorkerTask(workflowWith('node_human_review', [capped]))).toEqual(expect.objectContaining({ type: 'idle', reason: 'waiting-node-human-review' }))
+    const legacy = { ...lesson, status: 'node_human_review', nodes: [{ ...node, status: 'node_human_review', revisionCount: 1, humanReviewRequired: true }] }
+    expect(getNextCourseWorkerTask(workflowWith('node_human_review', [legacy]))).toEqual(expect.objectContaining({ type: 'revise-node' }))
   })
 
   it('gives each node enough neighboring context without sending an unbounded chat history', () => {
@@ -107,8 +107,7 @@ describe('course worker task planner', () => {
       finalReviewReports: [{ value: { decision: 'human_review', reviewedDraftVersion: 1 } }]
     }
     expect(getNextCourseWorkerTask(workflowWith('final_review_human', [exceptional]))).toEqual(expect.objectContaining({
-      type: 'idle',
-      reason: 'waiting-final-human-review'
+      type: 'final-review'
     }))
   })
 

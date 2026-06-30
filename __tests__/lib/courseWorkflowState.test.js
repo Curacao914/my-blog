@@ -72,7 +72,7 @@ describe('controlled course workflow', () => {
     expect(reviewed.lessons[0].nodes[0].reviewerReports.at(-1).value.issues[0].severity).toBe('suggestion')
   })
 
-  it('automatically queues substantive review failures and moves to human review only after the revision limit', () => {
+  it('automatically queues substantive review failures and accepts the best available draft after the revision limit', () => {
     const spec = saveCourseSpec(sampleWorkflow(), { qualityThreshold: 75, maxAutoRevisions: 1 })
     const outlined = startOutlineReview(spec, { lessonKey: 'lesson-01', outline: [{ title: '总论', lineRange: [1, 5], slideRange: [1, 1], rationale: '主线' }] })
     const planned = planNodesFromOutline(approveOutline(outlined, 'lesson-01'), 'lesson-01')
@@ -89,8 +89,9 @@ describe('controlled course workflow', () => {
       coverage: 80, grounding: 80, logic: 80, detail: 80, sourceCoverage: 80,
       issues: [{ severity: 'blocking', message: '仍存在实质问题。' }], decision: 'revise'
     })
-    expect(exhausted.lessons[0].nodes[0].status).toBe('node_human_review')
+    expect(exhausted.lessons[0].nodes[0].status).toBe('node_approved')
     expect(exhausted.lessons[0].nodes[0].reviewerReports.at(-1).value.autoRevisionExhausted).toBe(true)
+    expect(exhausted.lessons[0].nodes[0].reviewerReports.at(-1).value.autoAcceptedWithWarnings).toBe(true)
   })
 
   it('blocks downstream work only for structural review issues and automatically rechecks it after the source node passes', () => {
@@ -245,7 +246,7 @@ describe('controlled course workflow', () => {
     expect(merged.feedback.at(-1)).toEqual(expect.objectContaining({ type: 'materials-supplemented' }))
   })
 
-  it('runs final review automatically and only falls back to a human after the automatic whole-note revision is exhausted', () => {
+  it('runs final review automatically and completes with warnings after the automatic whole-note revision is exhausted', () => {
     const spec = saveCourseSpec(sampleWorkflow(), { qualityThreshold: 75, maxFinalAutoRevisions: 1 })
     const outline = startOutlineReview(spec, { lessonKey: 'lesson-01', outline: [{ title: '总论', lineRange: [1, 5], slideRange: [1, 1], rationale: '主线' }] })
     const planned = planNodesFromOutline(approveOutline(outline, 'lesson-01'), 'lesson-01')
@@ -273,14 +274,15 @@ describe('controlled course workflow', () => {
       issues: [{ severity: 'high', message: '仍存在无法定位的整体结构问题。' }],
       decision: 'revise'
     })
-    expect(exhausted.status).toBe('final_review_human')
-    expect(exhausted.lessons[0].finalReviewAttention).toEqual(expect.objectContaining({
-      code: 'final-revision-exhausted',
-      lessonKey: 'lesson-01'
+    expect(exhausted.status).toBe('completed')
+    expect(exhausted.lessons[0].qualityReport).toEqual(expect.objectContaining({
+      decision: 'approve',
+      autoRevisionExhausted: true,
+      autoAcceptedWithWarnings: true
     }))
   })
 
-  it('keeps explicit source conflicts as an exceptional human-review state with a structured reason', () => {
+  it('routes explicit source conflicts into automatic revision instead of human review', () => {
     const spec = saveCourseSpec(sampleWorkflow(), { qualityThreshold: 75 })
     const outline = startOutlineReview(spec, { lessonKey: 'lesson-01', outline: [{ title: '总论', lineRange: [1, 5], slideRange: [1, 1], rationale: '主线' }] })
     const planned = planNodesFromOutline(approveOutline(outline, 'lesson-01'), 'lesson-01')
@@ -291,8 +293,9 @@ describe('controlled course workflow', () => {
       decision: 'human_review'
     })
 
-    expect(human.status).toBe('final_review_human')
-    expect(human.lessons[0].finalReviewAttention.message).toContain('核心结论上冲突')
+    expect(human.status).toBe('final_revision_required')
+    expect(human.lessons[0].finalReviewAttention).toBeNull()
+    expect(human.lessons[0].finalRevisionRequests.at(-1).value.message).toContain('核心结论上冲突')
   })
 
 })

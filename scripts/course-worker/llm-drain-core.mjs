@@ -3,6 +3,21 @@ const LLM_STAGES = new Set([
   'writing'
 ])
 
+const AUTO_RESUMABLE_CONTENT_CODES = new Set([
+  'waiting-node-human-review',
+  'waiting-final-human-review',
+  'node_human_review',
+  'final_review_human'
+])
+
+function isAutoResumableContentAttention(task = {}) {
+  return (
+    String(task.stage || '') === 'needs_attention' &&
+    String(task.last_error?.kind || '') === 'llm_workflow_attention' &&
+    AUTO_RESUMABLE_CONTENT_CODES.has(String(task.last_error?.code || ''))
+  )
+}
+
 function text(value) {
   return String(value || '')
     .normalize('NFKC')
@@ -42,7 +57,10 @@ export function selectCourseLlmTasks(tasks = [], options = {}) {
   const maximum = positiveInteger(options.maximum, 4, 20)
 
   return [...tasks]
-    .filter(task => LLM_STAGES.has(String(task.stage || '')))
+    .filter(task =>
+      LLM_STAGES.has(String(task.stage || '')) ||
+      isAutoResumableContentAttention(task)
+    )
     .filter(task => Boolean(task.artifacts?.courseJobId))
     .filter(task => allowAll || courseAllowed(task, allowlist))
     .sort((left, right) =>

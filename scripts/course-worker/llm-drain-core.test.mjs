@@ -21,6 +21,26 @@ test('LLM selection obeys allowlist and excludes media tasks', () => {
       artifacts: { courseJobId: 'job-b' }
     },
     {
+      replay_key: '内容待处理',
+      course_name: '刑法分论',
+      stage: 'needs_attention',
+      artifacts: { courseJobId: 'job-content' },
+      last_error: {
+        kind: 'llm_workflow_attention',
+        code: 'waiting-node-human-review'
+      }
+    },
+    {
+      replay_key: '登录失败',
+      course_name: '刑法分论',
+      stage: 'needs_attention',
+      artifacts: { courseJobId: 'job-auth' },
+      last_error: {
+        kind: 'authentication',
+        code: 'AUTH_EXPIRED'
+      }
+    },
+    {
       replay_key: '下载中',
       course_name: '刑法分论',
       stage: 'downloading',
@@ -32,7 +52,7 @@ test('LLM selection obeys allowlist and excludes media tasks', () => {
   })
   assert.deepEqual(
     selected.map(item => item.replay_key),
-    ['刑法']
+    ['刑法', '内容待处理']
   )
 })
 
