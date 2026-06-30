@@ -144,3 +144,46 @@ test('summary marks attention and exit code', () => {
     2
   )
 })
+
+test('media selection rotates across courses and skips future retries', () => {
+  const selected = selectActionableTasks([
+    {
+      replay_key: 'a-wait',
+      course_key: 'course-a',
+      course_name: '课程甲',
+      stage: 'queued',
+      starts_at_text: '2026-06-01 08:00:00',
+      next_attempt_at: '2026-07-01T00:00:00.000Z'
+    },
+    {
+      replay_key: 'a-one',
+      course_key: 'course-a',
+      course_name: '课程甲',
+      stage: 'queued',
+      starts_at_text: '2026-06-02 08:00:00'
+    },
+    {
+      replay_key: 'a-two',
+      course_key: 'course-a',
+      course_name: '课程甲',
+      stage: 'queued',
+      starts_at_text: '2026-06-03 08:00:00'
+    },
+    {
+      replay_key: 'b-one',
+      course_key: 'course-b',
+      course_name: '课程乙',
+      stage: 'queued',
+      starts_at_text: '2026-06-04 08:00:00'
+    }
+  ], {
+    allowAll: true,
+    maximum: 2,
+    nowMs: Date.parse('2026-06-30T00:00:00.000Z')
+  })
+
+  assert.deepEqual(
+    selected.map(item => item.replay_key),
+    ['a-one', 'b-one']
+  )
+})

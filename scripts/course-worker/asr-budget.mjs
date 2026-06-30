@@ -10,6 +10,13 @@ function positiveNumber(value, fallback) {
     : fallback
 }
 
+function nonNegativeNumber(value, fallback) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed >= 0
+    ? parsed
+    : fallback
+}
+
 function booleanValue(value, fallback) {
   if (value === undefined || value === null || value === '') return fallback
   return !['0', 'false', 'no', 'off'].includes(
@@ -67,7 +74,7 @@ export function resolveAsrBudget(env = process.env) {
       env.COURSE_ASR_MAX_TASK_SECONDS,
       4 * 60 * 60
     ),
-    dailyMaxSeconds: positiveNumber(
+    dailyMaxSeconds: nonNegativeNumber(
       env.COURSE_ASR_DAILY_MAX_SECONDS,
       8 * 60 * 60
     ),
@@ -75,7 +82,7 @@ export function resolveAsrBudget(env = process.env) {
       env.COURSE_ASR_MAX_TASK_COST_CNY,
       2
     ),
-    dailyMaxCostCny: positiveNumber(
+    dailyMaxCostCny: nonNegativeNumber(
       env.COURSE_ASR_DAILY_MAX_COST_CNY,
       5
     ),
@@ -156,9 +163,18 @@ export function reserveAsrBudget(options = {}) {
     0
   )
 
+  const dailySecondsExceeded =
+    budget.dailyMaxSeconds > 0 &&
+    reservedSeconds + durationSeconds >
+      budget.dailyMaxSeconds
+  const dailyCostExceeded =
+    budget.dailyMaxCostCny > 0 &&
+    reservedCostCny + estimatedCostCny >
+      budget.dailyMaxCostCny
+
   if (
-    reservedSeconds + durationSeconds > budget.dailyMaxSeconds ||
-    reservedCostCny + estimatedCostCny > budget.dailyMaxCostCny
+    dailySecondsExceeded ||
+    dailyCostExceeded
   ) {
     throw budgetError(
       'COURSE_ASR_DAILY_BUDGET_DEFERRED',

@@ -57,7 +57,7 @@ export function selectCourseLlmTasks(tasks = [], options = {}) {
   const allowAll = Boolean(options.allowAll)
   const maximum = positiveInteger(options.maximum, 4, 20)
 
-  return [...tasks]
+  const eligible = [...tasks]
     .filter(task =>
       LLM_STAGES.has(String(task.stage || '')) ||
       isAutoResumableContentAttention(task)
@@ -69,7 +69,32 @@ export function selectCourseLlmTasks(tasks = [], options = {}) {
         String(right.first_seen_at || '')
       )
     )
-    .slice(0, maximum)
+
+  const queues = new Map()
+  for (const task of eligible) {
+    const courseIdentity =
+      text(task.course_key) ||
+      text(task.course_name) ||
+      `replay:${text(task.replay_key)}`
+    if (!queues.has(courseIdentity)) {
+      queues.set(courseIdentity, [])
+    }
+    queues.get(courseIdentity).push(task)
+  }
+
+  const selected = []
+  const courseQueues = [...queues.values()]
+  while (selected.length < maximum) {
+    let advanced = false
+    for (const queue of courseQueues) {
+      if (!queue.length) continue
+      selected.push(queue.shift())
+      advanced = true
+      if (selected.length >= maximum) break
+    }
+    if (!advanced) break
+  }
+  return selected
 }
 
 function taskResult(task, patch = {}) {

@@ -119,3 +119,40 @@ test('two LLM tasks resume independently and the batch budget is bounded', async
     ['completed', 'completed']
   )
 })
+
+test('LLM selection rotates across courses before taking a second task', () => {
+  const selected = selectCourseLlmTasks([
+    {
+      replay_key: 'a-one',
+      course_key: 'course-a',
+      course_name: '课程甲',
+      stage: 'writing',
+      first_seen_at: '2026-06-01',
+      artifacts: { courseJobId: 'job-a-one' }
+    },
+    {
+      replay_key: 'a-two',
+      course_key: 'course-a',
+      course_name: '课程甲',
+      stage: 'writing',
+      first_seen_at: '2026-06-02',
+      artifacts: { courseJobId: 'job-a-two' }
+    },
+    {
+      replay_key: 'b-one',
+      course_key: 'course-b',
+      course_name: '课程乙',
+      stage: 'writing',
+      first_seen_at: '2026-06-03',
+      artifacts: { courseJobId: 'job-b-one' }
+    }
+  ], {
+    allowAll: true,
+    maximum: 2
+  })
+
+  assert.deepEqual(
+    selected.map(item => item.replay_key),
+    ['a-one', 'b-one']
+  )
+})

@@ -159,7 +159,10 @@ export function selectActionableTasks(
     Number(options.maximum || 4)
   )
 
-  return [...(tasks || [])]
+  const nowMs = Number(
+    options.nowMs || Date.now()
+  )
+  const eligible = [...(tasks || [])]
     .filter(task =>
       ACTIONABLE_STAGES.has(
         String(task.stage || '')
@@ -175,6 +178,18 @@ export function selectActionableTasks(
         )
       })
     })
+    .filter(task => {
+      const raw = text(
+        task.next_attempt_at ||
+        task.nextAttemptAt
+      )
+      if (!raw) return true
+      const nextAttemptMs = Date.parse(raw)
+      return (
+        !Number.isFinite(nextAttemptMs) ||
+        nextAttemptMs <= nowMs
+      )
+    })
     .sort((left, right) => {
       const leftDate =
         parseCourseDate(
@@ -186,7 +201,32 @@ export function selectActionableTasks(
         )
       return leftDate - rightDate
     })
-    .slice(0, maximum)
+
+  const queues = new Map()
+  for (const task of eligible) {
+    const courseIdentity =
+      text(task.course_key) ||
+      text(task.course_name) ||
+      `replay:${text(task.replay_key)}`
+    if (!queues.has(courseIdentity)) {
+      queues.set(courseIdentity, [])
+    }
+    queues.get(courseIdentity).push(task)
+  }
+
+  const selected = []
+  const courseQueues = [...queues.values()]
+  while (selected.length < maximum) {
+    let advanced = false
+    for (const queue of courseQueues) {
+      if (!queue.length) continue
+      selected.push(queue.shift())
+      advanced = true
+      if (selected.length >= maximum) break
+    }
+    if (!advanced) break
+  }
+  return selected
 }
 
 export function buildCycleSummary(

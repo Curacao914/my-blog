@@ -229,3 +229,99 @@ test('classifies missing adapter as human attention', () => {
     }
   )
 })
+
+test('one failed course does not block the next claimed course', async () => {
+  const first = {
+    ...task(),
+    replay_key: 'replay-fail',
+    course_key: 'course-a',
+    course_name: '课程甲'
+  }
+  const second = {
+    ...task(),
+    replay_key: 'replay-ok',
+    course_key: 'course-b',
+    course_name: '课程乙'
+  }
+  const queue = [first, second, null]
+  const states = new Map([
+    [first.replay_key, first],
+    [second.replay_key, second]
+  ])
+  const events = []
+
+  const client = {
+    async claim() {
+      return { task: queue.shift() }
+    },
+    async heartbeat() {
+      return { ok: true }
+    },
+    async report(replayKey, patch) {
+      const current = states.get(replayKey)
+      const next = {
+        ...current,
+        stage: patch.stage,
+        artifacts: {
+          ...(current.artifacts || {}),
+          ...(patch.artifacts || {})
+        },
+        runtime: {
+          ...(current.runtime || {}),
+          ...(patch.runtime || {})
+        }
+      }
+      states.set(replayKey, next)
+      return { task: next }
+    }
+  }
+
+  const adapter = {
+    async download(current) {
+      events.push(`${current.replay_key}:download`)
+      if (current.replay_key === 'replay-fail') {
+        const error = new Error('temporary media failure')
+        error.retryable = true
+        throw error
+      }
+      return {
+        artifacts: {
+          mediaScratchKey: `${current.replay_key}/media.mp4`
+        }
+      }
+    },
+    async transcribe(current) {
+      events.push(`${current.replay_key}:transcribe`)
+      return { artifacts: {} }
+    },
+    async buildTextpack(current) {
+      events.push(`${current.replay_key}:buildTextpack`)
+      return { artifacts: {} }
+    },
+    async upload(current) {
+      events.push(`${current.replay_key}:upload`)
+      return { artifacts: { courseJobId: 'job-ok' } }
+    },
+    async cleanup(current) {
+      events.push(`${current.replay_key}:cleanup`)
+      return { runtime: { mediaDeleted: true } }
+    }
+  }
+
+  const result = await runCoursePipelineLoop({
+    client,
+    adapter,
+    workerId: 'worker-multi',
+    maxTasks: 3,
+    leaseSeconds: 900,
+    heartbeatEveryMs: 100_000
+  })
+
+  assert.equal(result.processed, 2)
+  assert.equal(result.results[0].status, 'queued')
+  assert.equal(
+    result.results[1].task.stage,
+    'awaiting_llm_window'
+  )
+  assert.ok(events.includes('replay-ok:cleanup'))
+})

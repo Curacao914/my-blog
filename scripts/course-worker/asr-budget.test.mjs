@@ -91,3 +91,34 @@ test('daily budget defers the second task without consuming a technical attempt'
       error.retryable === true
   )
 })
+
+test('zero daily limits keep only the per-task ASR guard', () => {
+  const scratchRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'course-asr-budget-')
+  )
+  const budget = {
+    allowPaid: true,
+    freeSecondsBudget: 0,
+    maxTaskSeconds: 16200,
+    dailyMaxSeconds: 0,
+    maxTaskCostCny: 2,
+    dailyMaxCostCny: 0,
+    pricePerHourCny: 0.288,
+    timeZone: 'Asia/Shanghai'
+  }
+
+  reserveAsrBudget({
+    scratchRoot,
+    replayKey: 'replay-a',
+    durationSeconds: 12000,
+    budget
+  })
+  const second = reserveAsrBudget({
+    scratchRoot,
+    replayKey: 'replay-b',
+    durationSeconds: 12000,
+    budget
+  })
+
+  assert.equal(second.dailyReservedSeconds, 24000)
+})
