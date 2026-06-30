@@ -1,4 +1,4 @@
-import { buildPrompt, extractCourseModelContent, parseJsonResponse, requireCourseModelConfig } from '@/lib/course/aiAdapter'
+import { buildPrompt, callCourseModel, extractCourseModelContent, parseJsonResponse, requireCourseModelConfig } from '@/lib/course/aiAdapter'
 
 describe('course AI adapter', () => {
   it('builds role-specific prompts with source material and prompt version', () => {
@@ -42,5 +42,36 @@ describe('course AI adapter', () => {
   it('accepts structured and multipart model content', () => {
     expect(extractCourseModelContent({ choices: [{ message: { content: { decision: 'approve' } } }] })).toEqual({ decision: 'approve' })
     expect(extractCourseModelContent({ choices: [{ message: { content: [{ type: 'text', text: '{"decision":' }, { type: 'text', text: '"approve"}' }] } }] })).toBe('{"decision":"approve"}')
+  })
+
+  it('preserves a sanitized provider error message for failed model calls', async () => {
+    const previousFetch = global.fetch
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 402,
+      text: async () => JSON.stringify({
+        error: {
+          message: 'Insufficient Balance',
+          type: 'invalid_request_error'
+        }
+      })
+    })
+
+    try {
+      await expect(callCourseModel({
+        role: 'outline',
+        prompt: { system: 'system', user: 'user', version: 'test' },
+        config: {
+          provider: 'deepseek',
+          baseUrl: 'https://api.deepseek.com/v1',
+          apiKey: 'secret-key-that-must-not-appear',
+          models: { outline: 'deepseek-chat' }
+        }
+      })).rejects.toThrow(
+        'Course model call failed: 402 · invalid_request_error: Insufficient Balance'
+      )
+    } finally {
+      global.fetch = previousFetch
+    }
   })
 })
