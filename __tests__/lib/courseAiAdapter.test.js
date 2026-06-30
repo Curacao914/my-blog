@@ -68,7 +68,7 @@ describe('course AI adapter', () => {
           models: { outline: 'deepseek-chat' }
         }
       })).rejects.toThrow(
-        'Course model call failed: 402 · invalid_request_error: Insufficient Balance'
+        'Course model call failed: 402 · api.deepseek.com/deepseek-chat · invalid_request_error: Insufficient Balance'
       )
     } finally {
       global.fetch = previousFetch
