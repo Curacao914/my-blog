@@ -12,9 +12,9 @@ on:
           - health
           - cycle
       allowlist:
-        description: Exact course names separated by commas
+        description: Use * for all current-semester courses, or exact names separated by commas
         required: true
-        default: 刑法分论
+        default: '*'
         type: string
 
 permissions:
@@ -40,17 +40,17 @@ jobs:
       R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
       R2_BUCKET: ${{ secrets.R2_BUCKET }}
-      COURSE_PIPELINE_ALLOWLIST: ${{ inputs.allowlist }}
-      COURSE_PIPELINE_MAX_TASKS: "1"
-      COURSE_LLM_MAX_TASKS_PER_CYCLE: "1"
+      COURSE_PIPELINE_ALLOWLIST: ${{ github.event_name == 'workflow_dispatch' && inputs.allowlist != '*' && inputs.allowlist || '' }}
+      COURSE_PIPELINE_MAX_TASKS: "2"
+      COURSE_LLM_MAX_TASKS_PER_CYCLE: "4"
       COURSE_LLM_MAX_BATCHES_PER_TASK: "160"
-      COURSE_LLM_MAX_BATCHES_PER_CYCLE: "160"
+      COURSE_LLM_MAX_BATCHES_PER_CYCLE: "320"
       COURSE_LLM_COST_MODE: economy
       COURSE_ASR_ALLOW_PAID: "1"
       COURSE_ASR_MAX_TASK_SECONDS: "16200"
-      COURSE_ASR_DAILY_MAX_SECONDS: "16200"
+      COURSE_ASR_DAILY_MAX_SECONDS: "0"
       COURSE_ASR_MAX_TASK_COST_CNY: "2"
-      COURSE_ASR_DAILY_MAX_COST_CNY: "2"
+      COURSE_ASR_DAILY_MAX_COST_CNY: "0"
       COURSE_CONTROL_PLANE_TIMEOUT_MS: "120000"
       COURSE_LLM_CONTROL_PLANE_TIMEOUT_MS: "300000"
       COURSE_DOWNLOAD_CONCURRENCY: "4"
@@ -61,7 +61,7 @@ jobs:
 
     steps:
       - name: Check out worker branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: codex/course-worker-v009c
           persist-credentials: false
@@ -92,8 +92,8 @@ jobs:
             printf ' - %s\n' "${missing[@]}"
             exit 1
           fi
-          if [[ -z "${COURSE_PIPELINE_ALLOWLIST:-}" ]]; then
-            echo 'Course allowlist is empty.'
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "${{ inputs.allowlist }}" != "*" && -z "${COURSE_PIPELINE_ALLOWLIST:-}" ]]; then
+            echo 'Manual course allowlist is empty.'
             exit 1
           fi
           echo 'Required remote-worker configuration is present.'
@@ -119,6 +119,10 @@ jobs:
         run: |
           set -euo pipefail
           log="$RUNNER_TEMP/course-worker-health.log"
+          health_args=()
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" || "${{ inputs.allowlist }}" == "*" ]]; then
+            health_args+=(--all)
+          fi
           set +e
           docker run --rm \
             -v "$RUNNER_TEMP/course-worker-data:/data" \
@@ -139,7 +143,7 @@ jobs:
             -e COURSE_WORKER_ID \
             -e COURSE_CONTROL_PLANE_TIMEOUT_MS \
             law-tech-course-worker:remote-test \
-            health >"$log" 2>&1
+            health "${health_args[@]}" >"$log" 2>&1
           status=$?
           set -e
           health_json="$RUNNER_TEMP/course-worker-data/scratch/health/latest.json"
@@ -152,11 +156,19 @@ jobs:
           fi
 
       - name: Run one complete production cycle
-        if: ${{ inputs.mode == 'cycle' }}
+        if: ${{ github.event_name == 'schedule' || inputs.mode == 'cycle' }}
         shell: bash
         run: |
           set -euo pipefail
           log="$RUNNER_TEMP/course-worker-cycle.log"
+          cycle_args=(
+            --max-tasks 2
+            --since-days 14
+            --cost-mode economy
+          )
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" || "${{ inputs.allowlist }}" == "*" ]]; then
+            cycle_args+=(--all)
+          fi
           set +e
           docker run --rm \
             -v "$RUNNER_TEMP/course-worker-data:/data" \
@@ -189,7 +201,7 @@ jobs:
             -e COURSE_MEDIA_ROUTE \
             -e COURSE_WORKER_ID \
             law-tech-course-worker:remote-test \
-            cycle --max-tasks 1 --since-days 14 --cost-mode economy >"$log" 2>&1
+            cycle "${cycle_args[@]}" >"$log" 2>&1
           status=$?
           set -e
 
