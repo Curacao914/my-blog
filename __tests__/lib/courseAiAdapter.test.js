@@ -63,12 +63,13 @@ describe('course AI adapter', () => {
         prompt: { system: 'system', user: 'user', version: 'test' },
         config: {
           provider: 'deepseek',
+          source: 'user',
           baseUrl: 'https://api.deepseek.com/v1',
           apiKey: 'secret-key-that-must-not-appear',
           models: { outline: 'deepseek-chat' }
         }
       })).rejects.toThrow(
-        'Course model call failed: 402 · api.deepseek.com/deepseek-chat · invalid_request_error: Insufficient Balance'
+        'Course model call failed: 402 · user@api.deepseek.com/deepseek-chat · invalid_request_error: Insufficient Balance'
       )
     } finally {
       global.fetch = previousFetch
