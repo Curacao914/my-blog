@@ -156,7 +156,7 @@ export function selectActionableTasks(
   const allowAll = Boolean(options.allowAll)
   const maximum = Math.max(
     1,
-    Number(options.maximum || 4)
+    Math.min(20, Number(options.maximum || 20))
   )
 
   const nowMs = Number(

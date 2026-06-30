@@ -127,14 +127,37 @@ export default async function handler(req, res) {
         })
       }
 
+      const existing = await getUserIntegration(
+        auth.profile.id,
+        'openai-compatible'
+      )
+      const submittedApiKey = String(
+        req.body?.apiKey || ''
+      ).trim()
+      const clearApiKey = Boolean(
+        req.body?.clearApiKey
+      )
+      if (
+        !submittedApiKey &&
+        !existing?.secret_ciphertext &&
+        !clearApiKey
+      ) {
+        return res.status(400).json({
+          ok: false,
+          error:
+            '首次保存个人 AI 配置时必须填写 API Key；仅填写地址和模型不会创建可用配置',
+          code: 'ai_api_key_required'
+        })
+      }
+
       const record = await upsertUserIntegration(
         auth.profile.id,
         'openai-compatible',
         {
           enabled: req.body?.enabled !== false,
           baseUrl,
-          secret: req.body?.apiKey,
-          clearSecret: Boolean(req.body?.clearApiKey),
+          secret: submittedApiKey,
+          clearSecret: clearApiKey,
           config: {
             ...models,
             ...cleanCostControl(req.body || {})

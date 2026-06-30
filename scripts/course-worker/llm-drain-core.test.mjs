@@ -156,3 +156,58 @@ test('LLM selection rotates across courses before taking a second task', () => {
     ['a-one', 'b-one']
   )
 })
+
+test('failed LLM workflow is selected and recovery is requested only once', async () => {
+  const calls = []
+  const client = {
+    async list() {
+      return {
+        tasks: [
+          {
+            replay_key: 'recover-me',
+            course_name: '国际法学',
+            stage: 'needs_attention',
+            first_seen_at: '2026-06-01',
+            artifacts: { courseJobId: 'job-recover' },
+            last_error: {
+              kind: 'llm_workflow_attention',
+              code: 'failed'
+            }
+          }
+        ]
+      }
+    },
+    async runLlm(replayKey, input) {
+      calls.push({ replayKey, ...input })
+      const completed = calls.length > 1
+      return {
+        ok: true,
+        task: {
+          replay_key: replayKey,
+          course_name: '国际法学',
+          stage: completed ? 'completed' : 'writing',
+          artifacts: { courseJobId: 'job-recover' }
+        },
+        nextAction: completed ? 'done' : 'run',
+        reason: completed ? 'completed' : ''
+      }
+    },
+    async report() {
+      throw new Error('report should not be used')
+    }
+  }
+
+  const result = await drainCourseLlmTasks({
+    client,
+    allowAll: true,
+    maxTasks: 1,
+    maxBatchesPerTask: 3,
+    maxBatches: 3,
+    sleep: async () => {}
+  })
+
+  assert.equal(result.results[0].task.stage, 'completed')
+  assert.equal(calls[0].recoverFailedWorkflow, true)
+  assert.equal(calls[1].recoverFailedWorkflow, false)
+})
+

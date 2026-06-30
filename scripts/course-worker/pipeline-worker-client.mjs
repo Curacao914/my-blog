@@ -179,7 +179,9 @@ export function createCoursePipelineWorkerClient(
           cleanReplayKey(replayKey)
         )}/run-llm`,
         {
-          costMode: String(input.costMode || '')
+          costMode: String(input.costMode || ''),
+          recoverFailedWorkflow:
+            input.recoverFailedWorkflow === true
         },
         {
           timeoutMs: Math.max(

@@ -11,6 +11,15 @@ const AUTO_RESUMABLE_CONTENT_CODES = new Set([
   'final-review-current'
 ])
 
+function isAutoRecoverableFailedWorkflow(task = {}) {
+  return (
+    String(task.stage || '') === 'needs_attention' &&
+    String(task.last_error?.kind || '') ===
+      'llm_workflow_attention' &&
+    String(task.last_error?.code || '') === 'failed'
+  )
+}
+
 function isAutoResumableContentAttention(task = {}) {
   return (
     String(task.stage || '') === 'needs_attention' &&
@@ -44,9 +53,9 @@ function positiveInteger(value, fallback, maximum) {
 
 export function llmDrainLimits(input = {}) {
   return {
-    maxTasks: positiveInteger(input.maxTasks, 4, 20),
-    maxBatchesPerTask: positiveInteger(input.maxBatchesPerTask, 80, 300),
-    maxBatches: positiveInteger(input.maxBatches, 160, 600)
+    maxTasks: positiveInteger(input.maxTasks, 20, 20),
+    maxBatchesPerTask: positiveInteger(input.maxBatchesPerTask, 160, 300),
+    maxBatches: positiveInteger(input.maxBatches, 600, 600)
   }
 }
 
@@ -55,12 +64,13 @@ export function selectCourseLlmTasks(tasks = [], options = {}) {
     ? options.allowlist.map(text).filter(Boolean)
     : []
   const allowAll = Boolean(options.allowAll)
-  const maximum = positiveInteger(options.maximum, 4, 20)
+  const maximum = positiveInteger(options.maximum, 20, 20)
 
   const eligible = [...tasks]
     .filter(task =>
       LLM_STAGES.has(String(task.stage || '')) ||
-      isAutoResumableContentAttention(task)
+      isAutoResumableContentAttention(task) ||
+      isAutoRecoverableFailedWorkflow(task)
     )
     .filter(task => Boolean(task.artifacts?.courseJobId))
     .filter(task => allowAll || courseAllowed(task, allowlist))
@@ -130,6 +140,8 @@ export async function drainCourseLlmTasks(options = {}) {
     let batches = 0
     let completedSteps = []
     let finalReason = ''
+    let recoverFailedWorkflow =
+      isAutoRecoverableFailedWorkflow(current)
 
     while (
       batches < limits.maxBatchesPerTask &&
@@ -138,7 +150,8 @@ export async function drainCourseLlmTasks(options = {}) {
       let data
       try {
         data = await client.runLlm(current.replay_key, {
-          costMode: options.costMode || ''
+          costMode: options.costMode || '',
+          recoverFailedWorkflow
         })
       } catch (error) {
         finalReason = error?.retryable
@@ -164,6 +177,7 @@ export async function drainCourseLlmTasks(options = {}) {
 
       batches += 1
       totalBatches += 1
+      recoverFailedWorkflow = false
       current = data.task || current
       completedSteps = [
         ...completedSteps,

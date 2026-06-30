@@ -131,7 +131,7 @@ async function main() {
       args['max-tasks'] ||
       process.env
         .COURSE_PIPELINE_MAX_TASKS,
-      4,
+      20,
       20
     )
   const sinceDays =
