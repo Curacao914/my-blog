@@ -41,10 +41,10 @@ jobs:
       R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
       R2_BUCKET: ${{ secrets.R2_BUCKET }}
       COURSE_PIPELINE_ALLOWLIST: ${{ github.event_name == 'workflow_dispatch' && inputs.allowlist != '*' && inputs.allowlist || '' }}
-      COURSE_PIPELINE_MAX_TASKS: "2"
-      COURSE_LLM_MAX_TASKS_PER_CYCLE: "4"
+      COURSE_PIPELINE_MAX_TASKS: "20"
+      COURSE_LLM_MAX_TASKS_PER_CYCLE: "20"
       COURSE_LLM_MAX_BATCHES_PER_TASK: "160"
-      COURSE_LLM_MAX_BATCHES_PER_CYCLE: "320"
+      COURSE_LLM_MAX_BATCHES_PER_CYCLE: "600"
       COURSE_LLM_COST_MODE: economy
       COURSE_ASR_ALLOW_PAID: "1"
       COURSE_ASR_MAX_TASK_SECONDS: "16200"
@@ -162,7 +162,7 @@ jobs:
           set -euo pipefail
           log="$RUNNER_TEMP/course-worker-cycle.log"
           cycle_args=(
-            --max-tasks 2
+            --max-tasks 20
             --since-days 14
             --cost-mode economy
           )
