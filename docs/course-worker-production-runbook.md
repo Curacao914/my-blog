@@ -150,3 +150,19 @@ yarn course:pipeline:e2e-from-media   --media auto   --expected-duration 10774  
 
 该入口完全绕过教学网，从 `downloaded` 阶段继续 Paraformer、TextPack、
 工作台导入、笔记流程和清理。原始本地视频不会被删除。
+
+## Production one-shot cycle
+
+```bash
+COURSE_PIPELINE_ALLOWLIST="刑法分论,国际法学"   yarn course:pipeline:health
+```
+
+```bash
+COURSE_PIPELINE_ALLOWLIST="刑法分论,国际法学"   yarn course:pipeline:cycle
+```
+
+每次运行执行健康检查、扫描白名单课程、幂等登记新回放、领取白名单内任务、处理、
+清理、写入结构化摘要并退出。摘要位于
+`~/.law-tech-course-worker/runs/cycle-*/summary.md`。
+
+远程容器配置位于 `deploy/course-worker/`。`/data` 必须使用持久卷。
