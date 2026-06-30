@@ -73,7 +73,6 @@ jobs:
           required=(
             COURSE_CONTROL_PLANE_URL
             COURSE_WORKER_SECRET
-            COURSE_WORKER_OWNER_ID
             PKU_USERNAME
             PKU_PASSWORD
             DASHSCOPE_API_KEY
