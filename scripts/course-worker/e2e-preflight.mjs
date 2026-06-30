@@ -198,9 +198,15 @@ export async function runE2ePreflight(
       version: process.versions.node
     },
     ffmpeg:
-      commandResult(ffmpegPath),
+      commandResult(
+        ffmpegPath,
+        ['-version']
+      ),
     ffprobe:
-      commandResult(ffprobePath),
+      commandResult(
+        ffprobePath,
+        ['-version']
+      ),
     python3:
       commandResult(
         pythonPath,
@@ -249,12 +255,23 @@ export async function runE2ePreflight(
           result.summary?.total ?? null
       }
     } catch (error) {
+      const cause =
+        error && typeof error === 'object'
+          ? error.cause
+          : null
       controlPlane = {
         ok: false,
-        error:
+        error: [
           error instanceof Error
             ? error.message
-            : String(error)
+            : String(error),
+          cause && typeof cause === 'object'
+            ? cause.code
+            : '',
+          cause && typeof cause === 'object'
+            ? cause.message
+            : ''
+        ].filter(Boolean).join(' | ')
       }
     }
   }
