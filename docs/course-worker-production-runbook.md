@@ -82,3 +82,21 @@ npm run course:pipeline:e2e-one -- \
 
 该命令使用精确领取 API，不会顺带处理队列中的其他课程。完整报告位于
 `~/.law-tech-course-worker/reports/`。
+
+## 本地环境持久化
+
+运行：
+
+```bash
+yarn course:pipeline:e2e-prepare
+```
+
+Worker 会自动读取：
+
+```text
+.env.local
+.env.course-worker.local
+```
+
+推荐将真实回归专用密钥放在 `.env.course-worker.local`。该文件已加入
+`.gitignore` 且准备脚本会设置为 `600` 权限。终端 `export` 仍具有最高优先级。

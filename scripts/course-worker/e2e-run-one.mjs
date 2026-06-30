@@ -1,10 +1,8 @@
 #!/usr/bin/env node
-import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
-import adapter from './validated-course-adapter.mjs'
 import {
   buildRegressionReport,
   flattenRegressionCandidates,
@@ -15,15 +13,6 @@ import {
 import {
   runE2ePreflight
 } from './e2e-preflight.mjs'
-import {
-  runClaimedCourseTask
-} from './pipeline-runner-core.mjs'
-import {
-  createCoursePipelineWorkerClient
-} from './pipeline-worker-client.mjs'
-import {
-  createValidatedAcquisitionRuntime
-} from './runtime/acquisition-runtime.mjs'
 
 function parseArgs(argv) {
   const result = {}
@@ -58,8 +47,8 @@ async function main() {
     new Date().toISOString()
   const workerId = String(
     args['worker-id'] ||
-    process.env.COURSE_WORKER_ID ||
-    `e2e-${os.hostname()}-${process.pid}`
+      process.env.COURSE_WORKER_ID ||
+      `e2e-${os.hostname()}-${process.pid}`
   ).replace(
     /[^A-Za-z0-9._:-]/g,
     '_'
@@ -79,11 +68,11 @@ async function main() {
 
   const reportBase = path.resolve(
     process.env.COURSE_E2E_REPORT_DIR ||
-    path.join(
-      os.homedir(),
-      '.law-tech-course-worker',
-      'reports'
-    )
+      path.join(
+        os.homedir(),
+        '.law-tech-course-worker',
+        'reports'
+      )
   )
   let reportDir = path.join(
     reportBase,
@@ -91,17 +80,53 @@ async function main() {
   )
 
   try {
-    preflight = await runE2ePreflight({
-      quiet: true
-    })
+    preflight =
+      await runE2ePreflight({
+        quiet: true
+      })
     if (!preflight.ok) {
       console.log(
-        JSON.stringify(preflight, null, 2)
+        JSON.stringify(
+          preflight,
+          null,
+          2
+        )
       )
       throw new Error(
         'E2E preflight failed'
       )
     }
+
+    const [
+      adapterModule,
+      runnerModule,
+      clientModule,
+      acquisitionModule
+    ] = await Promise.all([
+      import(
+        './validated-course-adapter.mjs'
+      ),
+      import(
+        './pipeline-runner-core.mjs'
+      ),
+      import(
+        './pipeline-worker-client.mjs'
+      ),
+      import(
+        './runtime/acquisition-runtime.mjs'
+      )
+    ])
+    const adapter =
+      adapterModule.default
+    const {
+      runClaimedCourseTask
+    } = runnerModule
+    const {
+      createCoursePipelineWorkerClient
+    } = clientModule
+    const {
+      createValidatedAcquisitionRuntime
+    } = acquisitionModule
 
     const discoveryRuntime =
       createValidatedAcquisitionRuntime()
@@ -169,15 +194,20 @@ async function main() {
 
     const observedClient = {
       ...client,
-      async report(replayKey, patch) {
+      async report(
+        replayKey,
+        patch
+      ) {
         const result =
           await client.report(
             replayKey,
             patch
           )
         stageTimeline.push({
-          at: new Date().toISOString(),
-          stage: patch.stage
+          at:
+            new Date().toISOString(),
+          stage:
+            patch.stage
         })
         return result
       }
@@ -185,28 +215,33 @@ async function main() {
 
     const result =
       await runClaimedCourseTask({
-        client: observedClient,
+        client:
+          observedClient,
         adapter,
-        task: claimed.task,
+        task:
+          claimed.task,
         workerId,
         leaseSeconds,
-        heartbeatEveryMs: 60_000,
+        heartbeatEveryMs:
+          60_000,
         log: message =>
           console.log(`· ${message}`)
       })
     finalTask = result.task
 
     const scratchRoot = path.resolve(
-      process.env.COURSE_WORKER_SCRATCH_DIR ||
-      path.join(
-        os.homedir(),
-        '.law-tech-course-worker'
+      process.env
+        .COURSE_WORKER_SCRATCH_DIR ||
+        path.join(
+          os.homedir(),
+          '.law-tech-course-worker'
+        )
+    )
+    cleanup =
+      verifyRegressionCleanup(
+        scratchRoot,
+        finalTask
       )
-    )
-    cleanup = verifyRegressionCleanup(
-      scratchRoot,
-      finalTask
-    )
 
     if (
       finalTask.stage !==

@@ -4,28 +4,36 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 
 import {
-  createCoursePipelineWorkerClient
-} from './pipeline-worker-client.mjs'
+  COURSE_WORKER_REPO_ROOT,
+  findWorkerExecutable,
+  loadCourseWorkerEnvironment
+} from './worker-env.mjs'
 
-function commandOk(command, args = ['--version']) {
-  const result = spawnSync(command, args, {
-    stdio: 'ignore'
-  })
-  return result.status === 0
-}
-
-function findChrome() {
-  return [
-    process.env.COURSE_CHROME_PATH,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/usr/bin/google-chrome',
-    '/usr/bin/chromium',
-    '/usr/bin/chromium-browser'
-  ].filter(Boolean).find(candidate =>
-    fs.existsSync(candidate)
+function commandResult(
+  command,
+  args = ['--version']
+) {
+  if (!command) {
+    return {
+      ok: false,
+      path: ''
+    }
+  }
+  const result = spawnSync(
+    command,
+    args,
+    {
+      stdio: 'ignore',
+      env: process.env
+    }
   )
+  return {
+    ok: result.status === 0,
+    path: command
+  }
 }
 
 function requiredEnvironment() {
@@ -39,20 +47,30 @@ function requiredEnvironment() {
     'R2_BUCKET'
   ]
   const missing = required.filter(
-    name => !String(process.env[name] || '').trim()
+    name =>
+      !String(
+        process.env[name] || ''
+      ).trim()
   )
 
   const profileDir = path.resolve(
     process.env.COURSE_BROWSER_PROFILE_DIR ||
-    path.join(
-      os.homedir(),
-      '.law-tech-course-worker',
-      'browser-profile'
-    )
+      path.join(
+        os.homedir(),
+        '.law-tech-course-worker',
+        'browser-profile'
+      )
   )
-  const hasProfile =
-    fs.existsSync(profileDir) &&
-    fs.readdirSync(profileDir).length > 0
+  const hasProfile = (() => {
+    try {
+      return (
+        fs.statSync(profileDir).isDirectory() &&
+        fs.readdirSync(profileDir).length > 0
+      )
+    } catch {
+      return false
+    }
+  })()
   const hasCredentials =
     Boolean(process.env.PKU_USERNAME) &&
     Boolean(process.env.PKU_PASSWORD)
@@ -74,10 +92,10 @@ function requiredEnvironment() {
 function scratchCheck() {
   const scratchRoot = path.resolve(
     process.env.COURSE_WORKER_SCRATCH_DIR ||
-    path.join(
-      os.homedir(),
-      '.law-tech-course-worker'
-    )
+      path.join(
+        os.homedir(),
+        '.law-tech-course-worker'
+      )
   )
   fs.mkdirSync(scratchRoot, {
     recursive: true
@@ -95,7 +113,7 @@ function scratchCheck() {
     Number(stat.bsize)
   const minimum = Number(
     process.env.COURSE_E2E_MIN_FREE_BYTES ||
-    5 * 1024 * 1024 * 1024
+      5 * 1024 * 1024 * 1024
   )
 
   return {
@@ -106,23 +124,100 @@ function scratchCheck() {
   }
 }
 
+function nextActions(
+  environment,
+  tools,
+  controlPlane
+) {
+  const actions = []
+  const configPath = path.join(
+    COURSE_WORKER_REPO_ROOT,
+    '.env.course-worker.local'
+  )
+
+  if (environment.missing.length) {
+    actions.push(
+      `填写本机私密配置：${configPath}`
+    )
+  }
+  if (!tools.ffmpeg.ok || !tools.ffprobe.ok) {
+    actions.push(
+      '运行 yarn course:pipeline:e2e-prepare 安装 ffmpeg'
+    )
+  }
+  if (!tools.boto3.ok) {
+    actions.push(
+      '运行 yarn course:pipeline:e2e-prepare 创建 Python 环境并安装 boto3'
+    )
+  }
+  if (!controlPlane.ok) {
+    actions.push(
+      '确认 Preview URL、COURSE_WORKER_SECRET 和 Preview 部署均为最新版本'
+    )
+  }
+  return [...new Set(actions)]
+}
+
 export async function runE2ePreflight(
   options = {}
 ) {
+  const loaded =
+    loadCourseWorkerEnvironment()
   const environment =
     requiredEnvironment()
   const scratch = scratchCheck()
+
+  const ffmpegPath =
+    findWorkerExecutable('ffmpeg')
+  const ffprobePath =
+    findWorkerExecutable('ffprobe')
+  const pythonPath =
+    process.env.COURSE_PYTHON ||
+    findWorkerExecutable(
+      'python3',
+      {
+        candidates: [
+          path.join(
+            COURSE_WORKER_REPO_ROOT,
+            '.venv-course-worker',
+            'bin',
+            'python'
+          )
+        ]
+      }
+    )
+  const chromePath =
+    process.env.COURSE_CHROME_PATH || ''
+
   const tools = {
-    node20:
-      Number(process.versions.node.split('.')[0]) >= 20,
-    ffmpeg: commandOk('ffmpeg'),
-    ffprobe: commandOk('ffprobe'),
-    python3: commandOk('python3', ['--version']),
-    boto3: commandOk('python3', [
-      '-c',
-      'import boto3'
-    ]),
-    chrome: Boolean(findChrome())
+    node20: {
+      ok:
+        Number(
+          process.versions.node.split('.')[0]
+        ) >= 20,
+      version: process.versions.node
+    },
+    ffmpeg:
+      commandResult(ffmpegPath),
+    ffprobe:
+      commandResult(ffprobePath),
+    python3:
+      commandResult(
+        pythonPath,
+        ['--version']
+      ),
+    boto3:
+      commandResult(
+        pythonPath,
+        ['-c', 'import boto3']
+      ),
+    chrome: {
+      ok: Boolean(
+        chromePath &&
+        fs.existsSync(chromePath)
+      ),
+      path: chromePath
+    }
   }
 
   let controlPlane = {
@@ -138,6 +233,11 @@ export async function runE2ePreflight(
     )
   ) {
     try {
+      const {
+        createCoursePipelineWorkerClient
+      } = await import(
+        './pipeline-worker-client.mjs'
+      )
       const client =
         createCoursePipelineWorkerClient()
       const result = await client.list({
@@ -159,16 +259,34 @@ export async function runE2ePreflight(
     }
   }
 
+  const toolsOk =
+    Object.values(tools).every(
+      item => item.ok
+    )
   const result = {
     ok:
       environment.missing.length === 0 &&
-      Object.values(tools).every(Boolean) &&
+      toolsOk &&
       scratch.enoughSpace &&
       controlPlane.ok,
     environment: {
+      configFile: path.join(
+        COURSE_WORKER_REPO_ROOT,
+        '.env.course-worker.local'
+      ),
+      loadedFiles:
+        loaded.loadedFiles.map(
+          filePath =>
+            path.relative(
+              COURSE_WORKER_REPO_ROOT,
+              filePath
+            ) || path.basename(filePath)
+        ),
       missing: environment.missing,
       hasReusableProfile:
         environment.hasProfile,
+      browserProfile:
+        environment.profileDir,
       hasCredentials:
         environment.hasCredentials
     },
@@ -176,27 +294,50 @@ export async function runE2ePreflight(
     scratch,
     controlPlane
   }
+  result.nextActions = nextActions(
+    environment,
+    tools,
+    controlPlane
+  )
 
   if (!options.quiet) {
     console.log(
       JSON.stringify(result, null, 2)
     )
+    if (
+      !result.ok &&
+      result.nextActions.length
+    ) {
+      console.log('\n下一步：')
+      result.nextActions.forEach(
+        (action, index) =>
+          console.log(
+            `${index + 1}. ${action}`
+          )
+      )
+    }
   }
   return result
 }
 
-if (
-  import.meta.url ===
-  `file://${process.argv[1]}`
-) {
-  runE2ePreflight().then(result => {
-    process.exitCode = result.ok ? 0 : 1
-  }).catch(error => {
-    console.error(
-      error instanceof Error
-        ? error.message
-        : String(error)
-    )
-    process.exitCode = 1
-  })
+const directPath = process.argv[1]
+  ? path.resolve(process.argv[1])
+  : ''
+const modulePath =
+  fileURLToPath(import.meta.url)
+
+if (directPath === modulePath) {
+  runE2ePreflight()
+    .then(result => {
+      process.exitCode =
+        result.ok ? 0 : 1
+    })
+    .catch(error => {
+      console.error(
+        error instanceof Error
+          ? error.message
+          : String(error)
+      )
+      process.exitCode = 1
+    })
 }

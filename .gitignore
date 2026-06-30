@@ -29,7 +29,12 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.course-worker.local
 .env
+
+# local course worker runtime
+/.venv-course-worker/
+/.law-tech-course-worker/
 
 # vercel
 .vercel
@@ -41,7 +46,6 @@ tsconfig.tsbuildinfo
 .idea
 .vscode
 .firecrawl/
-
 
 # sitemap
 /public/robots.txt

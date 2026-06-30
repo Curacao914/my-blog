@@ -2,9 +2,6 @@
 import process from 'node:process'
 
 import {
-  createValidatedAcquisitionRuntime
-} from './runtime/acquisition-runtime.mjs'
-import {
   flattenRegressionCandidates
 } from './e2e-core.mjs'
 import {
@@ -34,9 +31,10 @@ function parseArgs(argv) {
 
 async function main() {
   const args = parseArgs(process.argv)
-  const preflight = await runE2ePreflight({
-    quiet: true
-  })
+  const preflight =
+    await runE2ePreflight({
+      quiet: true
+    })
   if (!preflight.ok) {
     console.log(
       JSON.stringify(preflight, null, 2)
@@ -46,20 +44,30 @@ async function main() {
     )
   }
 
+  const {
+    createValidatedAcquisitionRuntime
+  } = await import(
+    './runtime/acquisition-runtime.mjs'
+  )
   const runtime =
     createValidatedAcquisitionRuntime()
   try {
-    const discovery = await runtime.discover({
-      courseName: args.course || ''
-    })
+    const discovery =
+      await runtime.discover({
+        courseName:
+          args.course || ''
+      })
     const candidates =
-      flattenRegressionCandidates(discovery)
+      flattenRegressionCandidates(
+        discovery
+      )
     console.log(
       JSON.stringify(
         {
           loginMode:
             discovery.loginMode,
-          count: candidates.length,
+          count:
+            candidates.length,
           candidates
         },
         null,
