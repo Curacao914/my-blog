@@ -135,3 +135,18 @@ COURSE_PROXY_MODE=off       远程 Worker 固定出口直连
 
 生产发布前必须通过 `docs/course-worker-v009c-handoff-2026-06-30.md`
 列明的单任务和双任务验收门槛。
+
+## Local media downstream bypass
+
+教学网媒体服务器不可用，但已经有完整课程视频时：
+
+```bash
+yarn course:pipeline:e2e-find-media
+```
+
+```bash
+yarn course:pipeline:e2e-from-media   --media auto   --expected-duration 10774   --course "国际法学"   --course-key "course-9c03d5e0f6d314d4eb6f66a0"   --title "2026-06-03第5-6节"   --starts-at "2026-06-03 13:00:00"   --teacher "陈晓航"   --replay-key "replay-d65da69830f79ffb30fd089f"   --worker-id "e2e-192.168.1.18-82522"
+```
+
+该入口完全绕过教学网，从 `downloaded` 阶段继续 Paraformer、TextPack、
+工作台导入、笔记流程和清理。原始本地视频不会被删除。

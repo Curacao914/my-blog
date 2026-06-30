@@ -85,7 +85,10 @@
     "course:pipeline:test-network": "node --test scripts/course-worker/system-proxy.test.mjs",
     "course:pipeline:e2e-final": "bash scripts/course-worker/run-with-network.sh node scripts/course-worker/e2e-resilient.mjs",
     "course:pipeline:e2e-inspect": "node scripts/course-worker/e2e-inspect.mjs",
-    "course:pipeline:test-supervisor": "node --test scripts/course-worker/e2e-supervisor-core.test.mjs"
+    "course:pipeline:test-supervisor": "node --test scripts/course-worker/e2e-supervisor-core.test.mjs",
+    "course:pipeline:e2e-find-media": "node scripts/course-worker/e2e-find-media.mjs",
+    "course:pipeline:e2e-from-media": "bash scripts/course-worker/run-with-network.sh node scripts/course-worker/e2e-from-media.mjs",
+    "course:pipeline:test-local-media": "node --test scripts/course-worker/local-media-core.test.mjs"
   },
   "dependencies": {
     "@clerk/localizations": "^3.17.1",
