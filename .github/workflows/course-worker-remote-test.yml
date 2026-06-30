@@ -1,6 +1,9 @@
-name: Course Worker Remote Test
+name: Course Worker Production
 
 on:
+  # 18:00 UTC = 02:00 Asia/Shanghai = 03:00 Asia/Tokyo
+  schedule:
+    - cron: '0 18 * * *'
   workflow_dispatch:
     inputs:
       mode:
