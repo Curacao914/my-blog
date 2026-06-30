@@ -25,6 +25,7 @@ function cleanModels(body = {}) {
   return {
     defaultModel: model('defaultModel'),
     scheduleModel: model('scheduleModel'),
+    briefModel: model('briefModel'),
     outlineModel: model('outlineModel'),
     writerModel: model('writerModel'),
     reviewerModel: model('reviewerModel'),
@@ -54,6 +55,20 @@ function cleanPeakWindows(value) {
 
   if (!windows.length) throw new Error('课程 AI 高峰时段格式无效')
   return windows
+}
+
+function cleanPricing(body = {}) {
+  const amount = key => {
+    const value = Number(body[key] ?? 0)
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error('AI 单价格式无效')
+    }
+    return Math.round(value * 10000) / 10000
+  }
+  return {
+    inputPricePerMillion: amount('inputPricePerMillion'),
+    outputPricePerMillion: amount('outputPricePerMillion')
+  }
 }
 
 function cleanCostControl(body = {}) {
@@ -160,7 +175,8 @@ export default async function handler(req, res) {
           clearSecret: clearApiKey,
           config: {
             ...models,
-            ...cleanCostControl(req.body || {})
+            ...cleanCostControl(req.body || {}),
+            ...cleanPricing(req.body || {})
           }
         }
       )

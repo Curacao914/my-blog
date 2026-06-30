@@ -6,6 +6,7 @@ const empty = {
   apiKey: '',
   defaultModel: 'deepseek-v4-pro',
   scheduleModel: '',
+  briefModel: '',
   outlineModel: '',
   writerModel: '',
   reviewerModel: '',
@@ -17,7 +18,9 @@ const empty = {
     { start: '09:00', end: '12:00' },
     { start: '14:00', end: '18:00' }
   ],
-  courseBoundaryBufferMinutes: 10
+  courseBoundaryBufferMinutes: 10,
+  inputPricePerMillion: 0,
+  outputPricePerMillion: 0
 }
 
 const COST_MODE_LABELS = {
@@ -189,6 +192,17 @@ export function AiSettings() {
             />
           </label>
           <label>
+            <span>课程简报</span>
+            <input
+              disabled={disabled}
+              value={form.briefModel}
+              onChange={event =>
+                update('briefModel', event.target.value)
+              }
+              placeholder='默认模型'
+            />
+          </label>
+          <label>
             <span>课程大纲</span>
             <input
               disabled={disabled}
@@ -283,6 +297,35 @@ export function AiSettings() {
                   'courseBoundaryBufferMinutes',
                   event.target.value
                 )
+              }
+            />
+          </label>
+        </div>
+
+        <div className='settings-form-grid ai-pricing-grid'>
+          <label>
+            <span>输入单价（元 / 百万 Token）</span>
+            <input
+              min='0'
+              step='0.0001'
+              type='number'
+              disabled={disabled}
+              value={form.inputPricePerMillion}
+              onChange={event =>
+                update('inputPricePerMillion', event.target.value)
+              }
+            />
+          </label>
+          <label>
+            <span>输出单价（元 / 百万 Token）</span>
+            <input
+              min='0'
+              step='0.0001'
+              type='number'
+              disabled={disabled}
+              value={form.outputPricePerMillion}
+              onChange={event =>
+                update('outputPricePerMillion', event.target.value)
               }
             />
           </label>

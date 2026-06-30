@@ -7258,6 +7258,93 @@ html.course-focus-open body { overflow:hidden; }
   .writing-desk-actions { justify-content:flex-start; }
 }
 
+
+/* Reading library: folders lead, documents follow. */
+.reading-library { display:grid; gap:18px; }
+.reading-library-head { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; padding:4px 2px 2px; }
+.reading-library-head h2 { margin:8px 0 6px; font-size:clamp(28px,3.2vw,42px); letter-spacing:-.04em; }
+.reading-library-head p { margin:0; max-width:660px; color:var(--muted); line-height:1.7; }
+.reading-library-head-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+.reading-library button,
+.reading-library select,
+.reading-library input,
+.reading-library textarea { border:1px solid rgba(17,63,49,.12); border-radius:14px; background:rgba(255,255,255,.64); color:var(--ink); }
+.reading-library button { padding:9px 13px; cursor:pointer; transition:transform .18s ease,background .18s ease,border-color .18s ease; }
+.reading-library button:hover:not(:disabled) { transform:translateY(-1px); background:rgba(255,255,255,.88); border-color:rgba(17,63,49,.22); }
+.reading-library button:disabled { opacity:.45; cursor:not-allowed; }
+.reading-library .is-danger { color:#8f4d39; }
+.reading-breadcrumbs { display:flex; flex-wrap:wrap; align-items:center; gap:5px; }
+.reading-breadcrumbs button { padding:7px 10px; border-color:transparent; background:transparent; color:var(--muted); }
+.reading-breadcrumbs button:not(:last-child)::after { content:' /'; margin-left:8px; color:rgba(17,63,49,.28); }
+.reading-folder-strip { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+.reading-folder-card { min-width:0; }
+.reading-folder-card > button { width:100%; min-height:158px; display:grid; align-content:start; justify-items:start; gap:7px; padding:18px; text-align:left; border-radius:24px; background:linear-gradient(145deg,rgba(255,255,255,.76),rgba(220,233,223,.38)); box-shadow:0 14px 34px rgba(24,63,50,.07); }
+.reading-folder-card strong { font-size:17px; }
+.reading-folder-card small { color:var(--muted); font-size:10px; }
+.reading-folder-card p { margin:4px 0 0; color:var(--muted); font-size:11px; line-height:1.6; }
+.reading-folder-icon { display:grid; place-items:center; width:38px; height:38px; border-radius:13px; background:rgba(24,63,50,.1); color:var(--leaf); font-size:14px; font-weight:700; }
+.reading-folder-toolbar,
+.reading-item-manage { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px; border:1px solid rgba(17,63,49,.08); border-radius:18px; background:rgba(255,255,255,.38); }
+.reading-folder-toolbar label,
+.reading-item-manage label { display:flex; align-items:center; gap:7px; color:var(--muted); font-size:10px; }
+.reading-folder-toolbar select,
+.reading-item-manage select { min-width:180px; padding:8px 10px; }
+.reading-library .reading-workspace { margin-top:0; }
+.reading-panel .reading-markdown { margin:20px 0; padding:20px; border-radius:20px; background:rgba(255,255,255,.42); border:1px solid rgba(17,63,49,.08); }
+.reading-panel .reading-markdown h1,
+.reading-panel .reading-markdown h2,
+.reading-panel .reading-markdown h3 { letter-spacing:-.02em; }
+.reading-panel .reading-markdown p,
+.reading-panel .reading-markdown li { line-height:1.9; }
+.reading-empty { min-height:180px; display:grid; place-items:center; border:1px dashed rgba(17,63,49,.14); border-radius:24px; color:var(--muted); background:rgba(255,255,255,.32); }
+
+/* System settings are grouped by responsibility, not by implementation detail. */
+.settings-page-head p { margin:7px 0 0; max-width:720px; color:var(--muted); line-height:1.7; }
+.settings-nav-group { display:grid; gap:5px; }
+.settings-nav-group + .settings-nav-group { margin-top:13px; padding-top:13px; border-top:1px solid rgba(17,63,49,.07); }
+.settings-nav-group > span { padding:0 10px 3px; color:var(--quiet); font-size:9px; letter-spacing:.16em; text-transform:uppercase; }
+.settings-stack { display:grid; gap:15px; }
+.notion-sync-settings { display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.notion-sync-settings > div:first-child { max-width:570px; }
+.notion-sync-settings h4 { margin:0 0 6px; }
+.notion-sync-settings p { margin:0; color:var(--muted); font-size:11px; line-height:1.7; }
+.settings-link-button { display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(17,63,49,.12); border-radius:14px; padding:9px 13px; background:rgba(255,255,255,.62); font-size:11px; }
+.settings-link-button.is-primary { color:#fff; background:var(--leaf); }
+.ai-usage-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.ai-usage-summary article { display:grid; gap:4px; min-height:112px; padding:15px; border:1px solid rgba(17,63,49,.08); border-radius:18px; background:rgba(255,255,255,.45); }
+.ai-usage-summary article > span { color:var(--muted); font-size:9px; letter-spacing:.1em; text-transform:uppercase; }
+.ai-usage-summary strong { font-size:22px; }
+.ai-usage-summary small { color:var(--quiet); font-size:9px; line-height:1.5; }
+.ai-usage-table { display:grid; margin-top:14px; border:1px solid rgba(17,63,49,.08); border-radius:18px; overflow:hidden; }
+.ai-usage-row { display:grid; grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(70px,.5fr)); align-items:center; gap:10px; padding:11px 14px; border-top:1px solid rgba(17,63,49,.06); font-size:10px; }
+.ai-usage-row:first-child { border-top:0; }
+.ai-usage-row.is-head { color:var(--muted); background:rgba(220,233,223,.34); }
+.ai-usage-row > span:first-child { display:grid; gap:2px; min-width:0; }
+.ai-usage-row strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ai-usage-row small { color:var(--quiet); }
+.ai-pricing-grid { margin-top:10px; }
+
+@media (max-width:980px) {
+  .reading-folder-strip { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .ai-usage-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width:700px) {
+  .reading-library-head { align-items:flex-start; flex-direction:column; }
+  .reading-library-head-actions { justify-content:flex-start; }
+  .reading-folder-strip { grid-template-columns:1fr; }
+  .reading-folder-card > button { min-height:126px; }
+  .reading-folder-toolbar,
+  .reading-item-manage { align-items:stretch; flex-direction:column; }
+  .reading-folder-toolbar label,
+  .reading-item-manage label { align-items:stretch; flex-direction:column; }
+  .reading-folder-toolbar select,
+  .reading-item-manage select { width:100%; min-width:0; }
+  .notion-sync-settings { align-items:flex-start; flex-direction:column; }
+  .ai-usage-summary { grid-template-columns:1fr 1fr; }
+  .ai-usage-row { grid-template-columns:minmax(0,1.4fr) repeat(3,54px); padding:10px; gap:5px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
 }
