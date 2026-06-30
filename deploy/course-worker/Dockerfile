@@ -44,10 +44,6 @@ ENV NODE_ENV=production \
 
 VOLUME ["/data"]
 
-ENTRYPOINT [
-  "/usr/bin/tini",
-  "--",
-  "/app/deploy/course-worker/entrypoint.sh"
-]
+ENTRYPOINT ["/usr/bin/tini", "--", "/app/deploy/course-worker/entrypoint.sh"]
 
 CMD ["cycle"]
