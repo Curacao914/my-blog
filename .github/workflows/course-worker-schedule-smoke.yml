@@ -1,0 +1,104 @@
+name: Course Worker Schedule Smoke
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: course-worker-production
+  cancel-in-progress: false
+
+jobs:
+  schedule-smoke:
+    name: No-cost scheduled idempotency smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      COURSE_CONTROL_PLANE_URL: ${{ secrets.COURSE_CONTROL_PLANE_URL }}
+      COURSE_WORKER_SECRET: ${{ secrets.COURSE_WORKER_SECRET }}
+      COURSE_WORKER_OWNER_ID: ${{ secrets.COURSE_WORKER_OWNER_ID }}
+      PKU_USERNAME: ${{ secrets.PKU_USERNAME }}
+      PKU_PASSWORD: ${{ secrets.PKU_PASSWORD }}
+      COURSE_TEST_A: 国际法学
+      COURSE_TEST_B: 习近平法治思想研究专题
+      COURSE_HEADLESS: "1"
+      COURSE_CONTROL_PLANE_TIMEOUT_MS: "120000"
+      COURSE_FINAL_REPORT_DIR: /data/final-acceptance
+      COURSE_IDEMPOTENCY_REPORT_NAME: schedule-smoke.json
+
+    steps:
+      - name: Check out smoke support files
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Check out pinned worker
+        uses: actions/checkout@v5
+        with:
+          ref: f626cbe889f8ae9aa042309784d86857aba11c3b
+          path: worker
+          persist-credentials: false
+
+      - name: Validate no-cost smoke secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            COURSE_CONTROL_PLANE_URL
+            COURSE_WORKER_SECRET
+            PKU_USERNAME
+            PKU_PASSWORD
+          )
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Missing secret: $name"
+              exit 1
+            fi
+          done
+
+      - name: Build pinned worker image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build \
+            --file worker/deploy/course-worker/Dockerfile \
+            --tag law-tech-course-worker:schedule-smoke \
+            worker
+
+      - name: Run actual scheduled no-cost smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/course-worker-data/final-acceptance"
+          chmod 700 "$RUNNER_TEMP/course-worker-data"
+          docker run --rm \
+            -v "$RUNNER_TEMP/course-worker-data:/data" \
+            -v "$GITHUB_WORKSPACE/.github/scripts/course-worker-idempotency-check.mjs:/tmp/idempotency.mjs:ro" \
+            -e COURSE_CONTROL_PLANE_URL \
+            -e COURSE_WORKER_SECRET \
+            -e COURSE_WORKER_OWNER_ID \
+            -e PKU_USERNAME \
+            -e PKU_PASSWORD \
+            -e COURSE_TEST_A \
+            -e COURSE_TEST_B \
+            -e COURSE_HEADLESS \
+            -e COURSE_CONTROL_PLANE_TIMEOUT_MS \
+            -e COURSE_FINAL_REPORT_DIR \
+            -e COURSE_IDEMPOTENCY_REPORT_NAME \
+            law-tech-course-worker:schedule-smoke \
+            node /tmp/idempotency.mjs
+
+      - name: Upload safe scheduled smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: course-worker-schedule-smoke-safe-report
+          path: |
+            ${{ runner.temp }}/course-worker-data/final-acceptance/schedule-smoke.json
+          if-no-files-found: error
+          retention-days: 7
