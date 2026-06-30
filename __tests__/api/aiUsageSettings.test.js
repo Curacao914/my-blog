@@ -7,11 +7,11 @@ describe('AI usage settings API', () => {
     'utf8'
   )
 
-  it('uses workspace ownership, provider usage and configured pricing', () => {
+  it('uses DeepSeek cache split and official-price estimator', () => {
     expect(source).toContain("permission: 'ai'")
-    expect(source).toContain('prompt_tokens')
-    expect(source).toContain('completion_tokens')
-    expect(source).toContain('inputPricePerMillion')
-    expect(source).toContain('estimatedCost')
+    expect(source).toContain('estimateDeepseekUsageCost')
+    expect(source).toContain('cacheHitTokens')
+    expect(source).toContain('cacheMissTokens')
+    expect(source).toContain('estimatedUsd')
   })
 })

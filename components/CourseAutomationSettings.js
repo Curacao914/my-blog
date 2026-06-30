@@ -1,86 +1,271 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
-const MODE_LABELS = {
-  economy: '经济模式',
-  standard: '标准模式',
-  immediate: '立即处理'
+import { WechatSettings } from '@/components/WechatSettings'
+
+const defaults = {
+  enabled: true,
+  briefEnabled: true,
+  scanTime: '02:00',
+  courseCostMode: 'economy',
+  courseBoundaryBufferMinutes: 10,
+  briefModel: 'deepseek-v4-pro',
+  outlineModel: 'deepseek-v4-pro',
+  writerModel: 'deepseek-v4-pro',
+  reviewerModel: 'deepseek-v4-pro',
+  revisionModel: 'deepseek-v4-pro',
+  finalReviewModel: 'deepseek-v4-pro',
+  cleanupMedia: true,
+  autoApproveOutline: true
 }
 
 export function CourseAutomationSettings() {
-  const [ai, setAi] = useState(null)
+  const [form, setForm] = useState(defaults)
+  const [state, setState] = useState('loading')
+  const [message, setMessage] = useState('')
+  const [backfill, setBackfill] = useState(null)
 
-  useEffect(() => {
-    let cancelled = false
-    fetch('/api/settings/ai', { credentials: 'same-origin' })
-      .then(response => response.ok ? response.json() : null)
-      .then(data => {
-        if (!cancelled) setAi(data)
+  async function load() {
+    setState('loading')
+    setMessage('')
+    try {
+      const response = await fetch('/api/settings/course-automation', {
+        credentials: 'same-origin'
       })
-      .catch(() => {})
-    return () => {
-      cancelled = true
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || '读取课程自动化设置失败')
+      setForm(current => ({ ...current, ...(data.config || {}) }))
+      setState('ready')
+    } catch (error) {
+      setState('error')
+      setMessage(error.message)
     }
-  }, [])
+  }
 
-  const mode =
-    ai?.effective?.costControl?.mode ||
-    ai?.integration?.config?.courseCostMode ||
-    'economy'
+  useEffect(() => { load() }, [])
+
+  function update(key, value) {
+    setForm(current => ({ ...current, [key]: value }))
+    setMessage('')
+  }
+
+  async function save(event) {
+    event.preventDefault()
+    setState('saving')
+    setMessage('')
+    try {
+      const response = await fetch('/api/settings/course-automation', {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(form)
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || '保存失败')
+      setForm(current => ({ ...current, ...(data.config || {}) }))
+      setState('ready')
+      setMessage('课程自动化设置已保存')
+    } catch (error) {
+      setState('error')
+      setMessage(error.message)
+    }
+  }
+
+  async function backfillBriefs() {
+    setState('backfilling')
+    setMessage('')
+    try {
+      const response = await fetch('/api/courses/briefs/backfill', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ limit: 2 })
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || '历史简报补齐失败')
+      setBackfill(data)
+      setState('ready')
+      setMessage(
+        data.remaining
+          ? `本轮已处理 ${data.completed || 0} 节，仍有 ${data.remaining} 节可继续补齐`
+          : `历史课程简报已补齐，本轮完成 ${data.completed || 0} 节`
+      )
+    } catch (error) {
+      setState('error')
+      setMessage(error.message)
+    }
+  }
+
+  const disabled = ['loading', 'saving', 'backfilling'].includes(state)
 
   return (
-    <section className='settings-section course-automation-settings'>
-      <header>
-        <span>Courses</span>
-        <h3>课程自动化</h3>
-      </header>
+    <div className='settings-stack'>
+      <section className='settings-section course-automation-settings'>
+        <header>
+          <span>Course Automation</span>
+          <h3>课程自动化</h3>
+        </header>
 
-      <div className='system-connection-table'>
-        <div>
-          <span>
-            <strong>每日课程扫描</strong>
-            <small>GitHub Actions</small>
-          </span>
-          <span className='system-state-pill is-ok'>
-            <i />每日 02:00（北京时间）
-          </span>
-        </div>
-        <div>
-          <span>
-            <strong>课程 AI</strong>
-            <small>个人模型配置</small>
-          </span>
-          <span className={`system-state-pill ${ai?.effective?.source === 'user' ? 'is-ok' : 'is-warn'}`}>
-            <i />
-            {ai?.effective?.source === 'user'
-              ? '个人配置'
-              : '等待个人配置'}
-          </span>
-        </div>
-        <div>
-          <span>
-            <strong>费用策略</strong>
-            <small>大纲、写作、审查与简报共用</small>
-          </span>
-          <span className='system-state-pill is-ok'>
-            <i />{MODE_LABELS[mode] || MODE_LABELS.economy}
-          </span>
-        </div>
-      </div>
+        <form className='settings-form' onSubmit={save}>
+          <label className='settings-check-row'>
+            <input
+              type='checkbox'
+              checked={form.enabled}
+              onChange={event => update('enabled', event.target.checked)}
+              disabled={disabled}
+            />
+            <span>
+              <strong>启用课程自动化</strong>
+              <small>发现回放、转写、生成简报与完整笔记。</small>
+            </span>
+          </label>
 
-      <p className='settings-muted'>
-        新回放会依次完成发现、媒体处理、转录、简报和完整笔记。
-        普通状态保持安静，只有失败或需要重新授权时才提示。
-      </p>
+          <label className='settings-check-row'>
+            <input
+              type='checkbox'
+              checked={form.briefEnabled}
+              onChange={event => update('briefEnabled', event.target.checked)}
+              disabled={disabled || !form.enabled}
+            />
+            <span>
+              <strong>生成课程简报</strong>
+              <small>完整笔记完成后生成五至十分钟阅读版，并写入阅读资料库。</small>
+            </span>
+          </label>
 
-      <div className='settings-actions'>
-        <Link className='settings-link-button is-primary' href='/desk/courses'>
-          打开课程中心
-        </Link>
-        <Link className='settings-link-button' href='/desk/library'>
-          查看课程笔记
-        </Link>
-      </div>
-    </section>
+          <div className='settings-form-grid'>
+            <label>
+              <span>每日扫描时间</span>
+              <input
+                type='time'
+                value={form.scanTime}
+                onChange={event => update('scanTime', event.target.value)}
+                disabled={disabled || !form.enabled}
+              />
+              <small>
+                当前生产 Action 仍在北京时间 02:00 唤醒；该值同时作为控制面计划，
+                下一轮 Action 改为高频唤醒后将直接按此时间执行。
+              </small>
+            </label>
+            <label>
+              <span>AI 调用策略</span>
+              <select
+                value={form.courseCostMode}
+                onChange={event => update('courseCostMode', event.target.value)}
+                disabled={disabled || !form.enabled}
+              >
+                <option value='economy'>经济模式 · 严格错峰</option>
+                <option value='standard'>标准模式 · 高峰外运行</option>
+                <option value='immediate'>立即处理 · 忽略价格窗口</option>
+              </select>
+            </label>
+            <label>
+              <span>边界缓冲（分钟）</span>
+              <input
+                type='number'
+                min='0'
+                max='60'
+                value={form.courseBoundaryBufferMinutes}
+                onChange={event => update('courseBoundaryBufferMinutes', event.target.value)}
+                disabled={
+                  disabled ||
+                  !form.enabled ||
+                  form.courseCostMode !== 'economy'
+                }
+              />
+            </label>
+          </div>
+
+          <div className='settings-subsection'>
+            <div>
+              <h4>各阶段模型</h4>
+              <p>只在这里管理课程专用模型；通用 API Key 和默认模型留在“模型与 API”。</p>
+            </div>
+          </div>
+
+          <div className='settings-form-grid course-model-grid'>
+            {[
+              ['briefModel', '课程简报'],
+              ['outlineModel', '课程大纲'],
+              ['writerModel', '节点写作'],
+              ['reviewerModel', '独立审查'],
+              ['revisionModel', '局部修订'],
+              ['finalReviewModel', '最终审查']
+            ].map(([key, label]) => (
+              <label key={key}>
+                <span>{label}</span>
+                <input
+                  value={form[key]}
+                  onChange={event => update(key, event.target.value)}
+                  disabled={disabled || !form.enabled}
+                  placeholder='deepseek-v4-pro'
+                />
+              </label>
+            ))}
+          </div>
+
+          <label className='settings-check-row'>
+            <input
+              type='checkbox'
+              checked={form.autoApproveOutline}
+              onChange={event => update('autoApproveOutline', event.target.checked)}
+              disabled={disabled || !form.enabled}
+            />
+            <span>
+              <strong>自动批准大纲</strong>
+              <small>保留人工查看入口，但不让普通课程卡在确认门口。</small>
+            </span>
+          </label>
+
+          <label className='settings-check-row'>
+            <input
+              type='checkbox'
+              checked={form.cleanupMedia}
+              onChange={event => update('cleanupMedia', event.target.checked)}
+              disabled={disabled || !form.enabled}
+            />
+            <span>
+              <strong>成功后清理原始媒体</strong>
+              <small>保留转录、简报、完整笔记与来源信息，不长期保存课程视频。</small>
+            </span>
+          </label>
+
+          <div className='settings-actions'>
+            <button className='is-primary' type='submit' disabled={disabled}>
+              {state === 'saving' ? '保存中…' : '保存课程设置'}
+            </button>
+            <button type='button' onClick={backfillBriefs} disabled={disabled || !form.briefEnabled}>
+              {state === 'backfilling' ? '正在补齐…' : '补齐历史课程简报'}
+            </button>
+            <Link className='settings-link-button' href='/desk/courses'>课程中心</Link>
+            <Link className='settings-link-button' href='/desk/library'>完整笔记</Link>
+          </div>
+
+          {backfill?.results?.length ? (
+            <div className='course-backfill-result'>
+              {backfill.results.map(item => (
+                <span key={`${item.jobId}-${item.lessonKey}`}>
+                  {item.courseName} · {item.lessonTitle}：{item.status}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          {message ? (
+            <p className={`settings-message ${state === 'error' ? 'is-error' : ''}`}>
+              {message}
+            </p>
+          ) : null}
+        </form>
+      </section>
+
+      <section className='settings-section'>
+        <header>
+          <span>Course Delivery</span>
+          <h3>课程简报发送</h3>
+        </header>
+        <WechatSettings courseOnly />
+      </section>
+    </div>
   )
 }

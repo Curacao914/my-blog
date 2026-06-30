@@ -82,3 +82,43 @@ handleWechatInbound(envelope)
 3. 线上 curl 验证 `/api/schedule/capture`；
 4. 微信端到端验证；
 5. 再购买或迁移到低配长期服务器。
+
+
+## 主动发送
+
+日程摘要和课程简报不经过 Agent，也不使用邮件过渡。站内将确定好的短消息写入 `message_deliveries`，本机 Relay 周期性执行：
+
+```text
+POST /api/messages/outbound/prepare
+→ POST /api/messages/outbound/claim
+→ openclaw message send --channel openclaw-weixin
+→ POST /api/messages/outbound/:id/ack
+```
+
+本机环境变量：
+
+```env
+LAW_TECH_BASE_URL=https://law-tech.dev
+WECHAT_CAPTURE_TOKEN=<与站内一致>
+LAW_TECH_WECHAT_TARGET=<已配对的微信私聊目标>
+```
+
+先验证通道，不发送真实消息：
+
+```bash
+npm run outbound:probe
+```
+
+单轮发送：
+
+```bash
+npm run outbound:once
+```
+
+持续运行：
+
+```bash
+npm run outbound
+```
+
+Relay 只执行队列中的确定文本，不调用模型，不允许 Agent 改写通知。

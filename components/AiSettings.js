@@ -5,28 +5,7 @@ const empty = {
   baseUrl: 'https://api.deepseek.com/v1',
   apiKey: '',
   defaultModel: 'deepseek-v4-pro',
-  scheduleModel: '',
-  briefModel: '',
-  outlineModel: '',
-  writerModel: '',
-  reviewerModel: '',
-  revisionModel: '',
-  finalReviewModel: '',
-  courseCostMode: 'economy',
-  courseTimezone: 'Asia/Shanghai',
-  coursePeakWindows: [
-    { start: '09:00', end: '12:00' },
-    { start: '14:00', end: '18:00' }
-  ],
-  courseBoundaryBufferMinutes: 10,
-  inputPricePerMillion: 0,
-  outputPricePerMillion: 0
-}
-
-const COST_MODE_LABELS = {
-  economy: '经济模式',
-  standard: '标准模式',
-  immediate: '立即处理'
+  scheduleModel: 'deepseek-v4-flash'
 }
 
 export function AiSettings() {
@@ -41,27 +20,18 @@ export function AiSettings() {
       credentials: 'same-origin'
     })
     const data = await response.json().catch(() => ({}))
-    if (!response.ok) {
-      throw new Error(data.error || '读取 AI 配置失败')
-    }
+    if (!response.ok) throw new Error(data.error || '读取 AI 配置失败')
     const config = data.integration?.config || {}
-    const costControl = data.effective?.costControl || {}
     setMeta({ ...data.integration, effective: data.effective })
     setForm(current => ({
       ...current,
       enabled: data.integration?.enabled !== false,
-      baseUrl:
-        data.integration?.baseUrl ||
-        current.baseUrl,
-      ...config,
-      courseCostMode:
-        config.courseCostMode ||
-        costControl.mode ||
-        current.courseCostMode,
-      courseBoundaryBufferMinutes:
-        config.courseBoundaryBufferMinutes ??
-        costControl.boundaryBufferMinutes ??
-        current.courseBoundaryBufferMinutes,
+      baseUrl: data.integration?.baseUrl || current.baseUrl,
+      defaultModel: config.defaultModel || current.defaultModel,
+      scheduleModel:
+        config.scheduleModel ||
+        config.defaultModel ||
+        current.scheduleModel,
       apiKey: ''
     }))
     setState('ready')
@@ -91,9 +61,7 @@ export function AiSettings() {
         body: JSON.stringify(form)
       })
       const data = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(data.error || '保存 AI 配置失败')
-      }
+      if (!response.ok) throw new Error(data.error || '保存 AI 配置失败')
       setMeta(data.integration || {})
       setForm(current => ({ ...current, apiKey: '' }))
       setState('ready')
@@ -105,26 +73,26 @@ export function AiSettings() {
   }
 
   async function remove() {
-    if (!window.confirm('删除当前 AI 配置？')) return
+    if (!window.confirm('删除当前 AI 配置？课程自动化将停止使用模型。')) return
     const response = await fetch('/api/settings/ai', {
       method: 'DELETE',
       credentials: 'same-origin'
     })
-    if (!response.ok) return setMessage('删除失败')
+    if (!response.ok) {
+      setMessage('删除失败')
+      return
+    }
     setForm(empty)
     setMeta({})
     setMessage('已删除')
   }
 
   const disabled = state === 'loading' || state === 'saving'
-  const modeLabel =
-    COST_MODE_LABELS[form.courseCostMode] ||
-    COST_MODE_LABELS.economy
 
   return (
     <section className='settings-section'>
       <header>
-        <span>AI</span>
+        <span>AI Provider</span>
         <h3>模型与 API</h3>
       </header>
 
@@ -160,209 +128,47 @@ export function AiSettings() {
             type='password'
             value={form.apiKey}
             onChange={event => update('apiKey', event.target.value)}
-            placeholder={
-              meta.secretHint
-                ? '留空保留原密钥'
-                : 'sk-…'
-            }
+            placeholder={meta.secretHint ? '留空保留原密钥' : 'sk-…'}
           />
         </label>
 
         <div className='settings-form-grid'>
           <label>
-            <span>默认模型</span>
+            <span>通用默认模型</span>
             <input
               disabled={disabled}
               value={form.defaultModel}
-              onChange={event =>
-                update('defaultModel', event.target.value)
-              }
+              onChange={event => update('defaultModel', event.target.value)}
               placeholder='deepseek-v4-pro'
             />
           </label>
           <label>
-            <span>日程解析</span>
+            <span>日程解析模型</span>
             <input
               disabled={disabled}
               value={form.scheduleModel}
-              onChange={event =>
-                update('scheduleModel', event.target.value)
-              }
-              placeholder='默认模型'
-            />
-          </label>
-          <label>
-            <span>课程简报</span>
-            <input
-              disabled={disabled}
-              value={form.briefModel}
-              onChange={event =>
-                update('briefModel', event.target.value)
-              }
-              placeholder='默认模型'
-            />
-          </label>
-          <label>
-            <span>课程大纲</span>
-            <input
-              disabled={disabled}
-              value={form.outlineModel}
-              onChange={event =>
-                update('outlineModel', event.target.value)
-              }
-              placeholder='默认模型'
-            />
-          </label>
-          <label>
-            <span>节点写作</span>
-            <input
-              disabled={disabled}
-              value={form.writerModel}
-              onChange={event =>
-                update('writerModel', event.target.value)
-              }
-              placeholder='默认模型'
-            />
-          </label>
-          <label>
-            <span>独立审查</span>
-            <input
-              disabled={disabled}
-              value={form.reviewerModel}
-              onChange={event =>
-                update('reviewerModel', event.target.value)
-              }
-              placeholder='默认模型'
-            />
-          </label>
-          <label>
-            <span>局部修订</span>
-            <input
-              disabled={disabled}
-              value={form.revisionModel}
-              onChange={event =>
-                update('revisionModel', event.target.value)
-              }
-              placeholder='默认模型'
-            />
-          </label>
-          <label>
-            <span>最终审查</span>
-            <input
-              disabled={disabled}
-              value={form.finalReviewModel}
-              onChange={event =>
-                update('finalReviewModel', event.target.value)
-              }
-              placeholder='默认模型'
+              onChange={event => update('scheduleModel', event.target.value)}
+              placeholder='deepseek-v4-flash'
             />
           </label>
         </div>
 
-        <div className='settings-form-grid'>
-          <label>
-            <span>课程调用策略</span>
-            <select
-              disabled={disabled}
-              value={form.courseCostMode}
-              onChange={event =>
-                update('courseCostMode', event.target.value)
-              }
-            >
-              <option value='economy'>
-                经济模式 · 严格错峰
-              </option>
-              <option value='standard'>
-                标准模式 · 官方高峰外运行
-              </option>
-              <option value='immediate'>
-                立即处理 · 忽略价格窗口
-              </option>
-            </select>
-          </label>
-
-          <label>
-            <span>边界缓冲（分钟）</span>
-            <input
-              disabled={
-                disabled ||
-                form.courseCostMode !== 'economy'
-              }
-              min='0'
-              max='60'
-              type='number'
-              value={form.courseBoundaryBufferMinutes}
-              onChange={event =>
-                update(
-                  'courseBoundaryBufferMinutes',
-                  event.target.value
-                )
-              }
-            />
-          </label>
-        </div>
-
-        <div className='settings-form-grid ai-pricing-grid'>
-          <label>
-            <span>输入单价（元 / 百万 Token）</span>
-            <input
-              min='0'
-              step='0.0001'
-              type='number'
-              disabled={disabled}
-              value={form.inputPricePerMillion}
-              onChange={event =>
-                update('inputPricePerMillion', event.target.value)
-              }
-            />
-          </label>
-          <label>
-            <span>输出单价（元 / 百万 Token）</span>
-            <input
-              min='0'
-              step='0.0001'
-              type='number'
-              disabled={disabled}
-              value={form.outputPricePerMillion}
-              onChange={event =>
-                update('outputPricePerMillion', event.target.value)
-              }
-            />
-          </label>
-        </div>
-
-        <div className='settings-status-line'>
-          <b>{modeLabel}</b>
-          <span>
-            北京时间 09:00–12:00、14:00–18:00
-          </span>
-        </div>
+        <p className='settings-muted'>
+          课程简报、大纲、写作、审查、错峰和媒体清理都已移到“课程自动化”，
+          这里仅保留通用供应商与密钥。
+        </p>
 
         <div className='settings-actions'>
-          <button
-            className='is-primary'
-            disabled={disabled}
-            type='submit'
-          >
+          <button className='is-primary' disabled={disabled} type='submit'>
             {state === 'saving' ? '保存中…' : '保存'}
           </button>
           {meta.configured ? (
-            <button
-              disabled={disabled}
-              type='button'
-              onClick={remove}
-            >
-              删除
-            </button>
+            <button disabled={disabled} type='button' onClick={remove}>删除</button>
           ) : null}
         </div>
 
         {message ? (
-          <p
-            className={`settings-message ${
-              state === 'error' ? 'is-error' : ''
-            }`}
-          >
+          <p className={`settings-message ${state === 'error' ? 'is-error' : ''}`}>
             {message}
           </p>
         ) : null}

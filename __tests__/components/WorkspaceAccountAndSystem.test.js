@@ -38,7 +38,7 @@ describe('workspace account and settings surface', () => {
   it('centralizes personal and owner settings in a compact section layout', () => {
     expect(system).toContain("{ key: 'ai', label: '模型与 API' }")
     expect(system).toContain("{ key: 'ai-usage', label: '用量与费用' }")
-    expect(system).toContain("{ key: 'messaging', label: '邮件与提醒' }")
+    expect(system).toContain("{ key: 'wechat', label: '微信与提醒' }")
     expect(system).toContain("{ key: 'courses', label: '课程自动化' }")
     expect(system).toContain("{ key: 'content', label: '内容与同步' }")
     expect(system).toContain("{ key: 'members', label: '成员与权限' }")

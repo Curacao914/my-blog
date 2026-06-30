@@ -19,6 +19,7 @@ const requiredTables = [
   { name: 'reminders', probeColumn: 'id' },
   { name: 'reminder_events', probeColumn: 'id' },
   { name: 'reminder_preferences', probeColumn: 'owner_id' },
+  { name: 'message_deliveries', probeColumn: 'id' },
   { name: 'course_jobs', probeColumn: 'id' },
   { name: 'course_assets', probeColumn: 'id' }
 ]
@@ -77,6 +78,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       ...basePayload,
       databaseReachable: tables.every(table => table.ok),
+      messageDeliveriesReady: Boolean(tables.find(table => table.table === 'message_deliveries')?.ok),
       tables
     })
   } catch (error) {
