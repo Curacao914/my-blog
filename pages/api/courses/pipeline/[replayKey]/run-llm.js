@@ -9,11 +9,25 @@ import {
   courseBatchDirective,
   runCourseWorkerBatch
 } from '@/lib/course/runBatch'
-import { getTextPackCourseJobForOwner } from '@/lib/courseRepository'
+import {
+  getCurrentCourseError,
+  formatCourseWorkflowError
+} from '@/lib/course/errorState'
+import {
+  applyCourseWorkflowAction,
+  getTextPackCourseJobForOwner
+} from '@/lib/courseRepository'
 
 export const config = {
   maxDuration: 300
 }
+
+const MAX_WORKFLOW_AUTO_RETRIES = 3
+const NODE_TASK_TYPES = new Set([
+  'write-node',
+  'review-node',
+  'revise-node'
+])
 
 function authError(res, auth) {
   return res.status(auth.status || 401).json({
@@ -23,21 +37,94 @@ function authError(res, auth) {
   })
 }
 
-function attentionMessage(reason, workflow = {}) {
-  const lesson = (workflow.lessons || []).find(item => item.status !== 'completed')
-  if (lesson?.finalReviewAttention?.message) return lesson.finalReviewAttention.message
+function workflowFailure(result = {}) {
+  const current = getCurrentCourseError(result.workflow)
+  const globalFailure = (result.failures || []).find(
+    failure => !NODE_TASK_TYPES.has(String(failure?.task || ''))
+  )
+
+  if (!current && !globalFailure) return null
+
+  const step = String(
+    current?.step ||
+    globalFailure?.task ||
+    ''
+  )
+  const rawMessage = current?.message ||
+    globalFailure?.error ||
+    '课程工作流技术任务失败'
+  const message = current
+    ? formatCourseWorkflowError(
+        current,
+        '课程工作流技术任务失败'
+      )
+    : [
+        String(rawMessage),
+        step ? `阶段：${step}` : ''
+      ].filter(Boolean).join(' · ')
+
+  return {
+    step,
+    rawMessage: String(rawMessage),
+    message,
+    retryable: current
+      ? current.retryable !== false
+      : true
+  }
+}
+
+function isTransientWorkflowFailure(failure) {
+  if (!failure?.retryable) return false
+  return (
+    /timeout|timed out|network|socket|temporar|overload|rate.?limit/i.test(
+      failure.rawMessage
+    ) ||
+    /\b429\b|\b5\d\d\b/i.test(failure.rawMessage) ||
+    /ECONNRESET|ECONNREFUSED|EAI_AGAIN|ETIMEDOUT|fetch failed|connection reset|aborted/i.test(
+      failure.rawMessage
+    )
+  )
+}
+
+function legacyRecoveryAllowed(task = {}) {
+  return (
+    String(task.stage || '') === 'needs_attention' &&
+    String(task.last_error?.kind || '') === 'llm_workflow_attention' &&
+    String(task.last_error?.code || '') === 'failed'
+  )
+}
+
+function attentionMessage(reason, workflow = {}, result = {}) {
+  const failure = workflowFailure({
+    ...result,
+    workflow
+  })
+  if (failure?.message) return failure.message
+
+  const lesson = (workflow.lessons || []).find(
+    item => item.status !== 'completed'
+  )
+  if (lesson?.finalReviewAttention?.message) {
+    return lesson.finalReviewAttention.message
+  }
   const node = (lesson?.nodes || []).find(item =>
     ['node_human_review', 'node_failed'].includes(item.status)
   )
   if (node?.taskError?.message) return node.taskError.message
-  const latestIssue = node?.reviewerReports?.at?.(-1)?.value?.issues?.[0]
+  const latestIssue =
+    node?.reviewerReports?.at?.(-1)?.value?.issues?.[0]
   if (latestIssue?.message) return latestIssue.message
   return ({
-    'waiting-final-human-review': '最终检查发现无法自动处理的重大异常。',
-    'waiting-node-human-review': '节点审查发现需要人工判断的来源冲突或实质异常。',
-    'waiting-node-retry': '节点技术任务已达到自动重试边界。',
-    'waiting-preflight': '课程偏好尚未形成，自动流程无法继续。',
-    'waiting-outline-approval': '大纲未按自动化设置批准。',
+    'waiting-final-human-review':
+      '最终检查发现无法自动处理的重大异常。',
+    'waiting-node-human-review':
+      '节点审查发现需要人工判断的来源冲突或实质异常。',
+    'waiting-node-retry':
+      '节点技术任务已达到自动重试边界。',
+    'waiting-preflight':
+      '课程偏好尚未形成，自动流程无法继续。',
+    'waiting-outline-approval':
+      '大纲未按自动化设置批准。',
     paused: '课程工作流被暂停。',
     failed: '课程工作流处理失败。'
   })[reason] || `课程工作流停止于 ${reason || 'unknown'}。`
@@ -57,7 +144,10 @@ function retryableError(error) {
 
 export default async function handler(req, res) {
   const requestId = crypto.randomUUID()
-  const auth = await requireCoursePipelineAccess(req, { workerOnly: true })
+  const auth = await requireCoursePipelineAccess(
+    req,
+    { workerOnly: true }
+  )
   if (!auth.ok) return authError(res, auth)
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -93,7 +183,9 @@ export default async function handler(req, res) {
       })
     }
 
-    const jobId = String(task.artifacts?.courseJobId || '').trim()
+    const jobId = String(
+      task.artifacts?.courseJobId || ''
+    ).trim()
     if (!jobId) {
       const updated = await updateCoursePipelineTaskStage(
         auth.ownerId,
@@ -105,7 +197,8 @@ export default async function handler(req, res) {
           error: {
             kind: 'llm_handoff',
             code: 'course_job_missing',
-            message: 'TextPack 已上传，但课程任务标识缺失，无法启动后半段整理。',
+            message:
+              'TextPack 已上传，但课程任务标识缺失，无法启动后半段整理。',
             retryable: false
           },
           markAttempt: false,
@@ -123,9 +216,36 @@ export default async function handler(req, res) {
       })
     }
 
-    await getTextPackCourseJobForOwner(auth.ownerId, jobId)
+    await getTextPackCourseJobForOwner(
+      auth.ownerId,
+      jobId
+    )
 
-    const batchNumber = Number(task.runtime?.llmBatchCount || 0) + 1
+    const recoveryRequested =
+      req.body?.recoverFailedWorkflow === true
+    if (recoveryRequested) {
+      if (!legacyRecoveryAllowed(task)) {
+        return res.status(409).json({
+          ok: false,
+          error:
+            'The task is not an eligible failed LLM workflow',
+          code: 'llm_workflow_recovery_not_allowed',
+          task,
+          nextAction: 'wait',
+          reason: 'recovery-not-allowed',
+          retryAfterMs: 0,
+          requestId
+        })
+      }
+      await applyCourseWorkflowAction(
+        auth.ownerId,
+        jobId,
+        { type: 'retry' }
+      )
+    }
+
+    const batchNumber =
+      Number(task.runtime?.llmBatchCount || 0) + 1
     task = await updateCoursePipelineTaskStage(
       auth.ownerId,
       replayKey,
@@ -135,84 +255,188 @@ export default async function handler(req, res) {
         runtime: {
           ...(task.runtime || {}),
           llmBatchCount: batchNumber,
-          llmLastStartedAt: new Date().toISOString()
+          llmLastStartedAt: new Date().toISOString(),
+          llmRecoveryRequestedAt: recoveryRequested
+            ? new Date().toISOString()
+            : (
+                task.runtime?.llmRecoveryRequestedAt ||
+                ''
+              )
         },
         markAttempt: false,
-        reason: 'begin-llm-batch'
+        reason: recoveryRequested
+          ? 'begin-recovered-llm-batch'
+          : 'begin-llm-batch'
       }
     )
 
-    const result = await runCourseWorkerBatch(jobId, {
-      requestId,
-      leaseSeconds: 240,
-      costMode: String(req.body?.costMode || '')
-    })
+    const result = await runCourseWorkerBatch(
+      jobId,
+      {
+        requestId,
+        leaseSeconds: 240,
+        costMode: String(req.body?.costMode || '')
+      }
+    )
     const directive = courseBatchDirective(result)
-    const workflowStatus = String(result.workflow?.status || '')
+    const workflowStatus = String(
+      result.workflow?.status || ''
+    )
+    const previousWorkflowRetryCount = Number(
+      task.runtime?.llmWorkflowRetryCount || 0
+    )
+    const technicalFailure = workflowFailure(result)
+    let responseWorkflow = result.workflow
     const runtime = {
       ...(task.runtime || {}),
       llmBatchCount: batchNumber,
       llmLastRequestId: requestId,
-      llmLastReason: String(directive.reason || result.reason || ''),
-      llmLastCompletedSteps: result.completedSteps || [],
+      llmLastReason: String(
+        directive.reason || result.reason || ''
+      ),
+      llmLastCompletedSteps:
+        result.completedSteps || [],
       llmLastFinishedAt: new Date().toISOString(),
-      noteWorkflowStatus: workflowStatus
+      noteWorkflowStatus: workflowStatus,
+      llmLastFailureStep:
+        technicalFailure?.step || ''
     }
 
     let stage = 'writing'
     let error = null
     let nextAttemptAt = null
     let reason = 'continue-llm'
+    let nextAction = directive.nextAction
+    let retryAfterMs = directive.retryAfterMs || 0
 
     if (directive.nextAction === 'done') {
       stage = 'completed'
       reason = 'llm-completed'
-    } else if (directive.reason === 'waiting-llm-window') {
+    } else if (
+      directive.reason === 'waiting-llm-window'
+    ) {
       stage = 'awaiting_llm_window'
-      nextAttemptAt = directive.nextAllowedAt || null
+      nextAttemptAt =
+        directive.nextAllowedAt || null
       reason = 'llm-window-closed'
-    } else if (directive.nextAction === 'wait') {
+    } else if (
+      directive.nextAction === 'wait' &&
+      directive.reason === 'failed' &&
+      isTransientWorkflowFailure(
+        technicalFailure
+      ) &&
+      previousWorkflowRetryCount <
+        MAX_WORKFLOW_AUTO_RETRIES
+    ) {
+      const retryCount =
+        previousWorkflowRetryCount + 1
+      const resumed =
+        await applyCourseWorkflowAction(
+          auth.ownerId,
+          jobId,
+          { type: 'retry' }
+        )
+      responseWorkflow =
+        resumed?.workflow || result.workflow
+      stage = 'writing'
+      reason = 'llm-workflow-auto-retry'
+      nextAction = 'busy'
+      retryAfterMs = 5000
+      nextAttemptAt = new Date(
+        Date.now() + retryAfterMs
+      ).toISOString()
+      runtime.llmWorkflowRetryCount =
+        retryCount
+      runtime.noteWorkflowStatus = String(
+        responseWorkflow?.status || 'retrying'
+      )
+      error = {
+        kind: 'llm_transient',
+        code: technicalFailure.step
+          ? `workflow_${technicalFailure.step}`
+          : 'workflow_failed',
+        message: technicalFailure.message,
+        retryable: true
+      }
+    } else if (
+      directive.nextAction === 'wait'
+    ) {
       stage = 'needs_attention'
-      reason = `llm-${directive.reason || workflowStatus || 'attention'}`
+      reason =
+        `llm-${directive.reason ||
+          workflowStatus ||
+          'attention'}`
+      runtime.llmWorkflowRetryCount =
+        directive.reason === 'failed'
+          ? previousWorkflowRetryCount
+          : 0
       error = {
         kind: 'llm_workflow_attention',
-        code: String(directive.reason || workflowStatus || 'llm_attention'),
-        message: attentionMessage(directive.reason || workflowStatus, result.workflow),
+        code: String(
+          directive.reason ||
+          workflowStatus ||
+          'llm_attention'
+        ),
+        message: attentionMessage(
+          directive.reason || workflowStatus,
+          result.workflow,
+          result
+        ),
         retryable: false
       }
-    } else if (directive.nextAction === 'busy') {
-      reason = directive.reason || 'llm-busy'
+    } else if (
+      directive.nextAction === 'busy'
+    ) {
+      reason =
+        directive.reason || 'llm-busy'
       if (directive.retryAfterMs) {
         nextAttemptAt = new Date(
-          Date.now() + Math.max(1000, Number(directive.retryAfterMs))
+          Date.now() +
+            Math.max(
+              1000,
+              Number(
+                directive.retryAfterMs
+              )
+            )
         ).toISOString()
       }
     }
 
-    const updated = await updateCoursePipelineTaskStage(
-      auth.ownerId,
-      replayKey,
-      {
-        stage,
-        artifacts: task.artifacts || {},
-        runtime,
-        error,
-        nextAttemptAt,
-        markAttempt: false,
-        reason
-      }
-    )
+    if (directive.reason !== 'failed') {
+      runtime.llmWorkflowRetryCount = 0
+    }
+
+    const updated =
+      await updateCoursePipelineTaskStage(
+        auth.ownerId,
+        replayKey,
+        {
+          stage,
+          artifacts: task.artifacts || {},
+          runtime,
+          error,
+          nextAttemptAt,
+          markAttempt: false,
+          reason
+        }
+      )
 
     return res.status(200).json({
       ok: true,
       task: updated,
-      workflow: result.workflow,
-      completedSteps: result.completedSteps || [],
-      partialFailures: result.failures || [],
-      nextAction: directive.nextAction,
-      reason: directive.reason || '',
-      retryAfterMs: directive.retryAfterMs || 0,
-      nextAllowedAt: directive.nextAllowedAt || null,
+      workflow: responseWorkflow,
+      completedSteps:
+        result.completedSteps || [],
+      partialFailures:
+        result.failures || [],
+      nextAction,
+      reason:
+        reason === 'llm-workflow-auto-retry'
+          ? reason
+          : (directive.reason || ''),
+      retryAfterMs,
+      nextAllowedAt:
+        directive.nextAllowedAt || null,
       requestId
     })
   } catch (error) {
@@ -222,42 +446,65 @@ export default async function handler(req, res) {
       : 'Course LLM worker failed'
     let updated = task
     if (task) {
-      updated = await updateCoursePipelineTaskStage(
-        auth.ownerId,
-        replayKey,
-        {
-          stage: retryable ? 'writing' : 'needs_attention',
-          artifacts: task.artifacts || {},
-          runtime: {
-            ...(task.runtime || {}),
-            llmLastRequestId: requestId,
-            llmLastFinishedAt: new Date().toISOString()
-          },
-          error: {
-            kind: retryable ? 'llm_transient' : 'llm_execution',
-            code: String(error?.code || ''),
-            message,
-            retryable
-          },
-          nextAttemptAt: retryable
-            ? new Date(Date.now() + 5 * 60 * 1000).toISOString()
-            : null,
-          markAttempt: false,
-          reason: retryable
-            ? 'llm-transient-retry'
-            : 'llm-execution-needs-attention'
-        }
-      ).catch(() => task)
+      updated =
+        await updateCoursePipelineTaskStage(
+          auth.ownerId,
+          replayKey,
+          {
+            stage: retryable
+              ? 'writing'
+              : 'needs_attention',
+            artifacts:
+              task.artifacts || {},
+            runtime: {
+              ...(task.runtime || {}),
+              llmLastRequestId: requestId,
+              llmLastFinishedAt:
+                new Date().toISOString()
+            },
+            error: {
+              kind: retryable
+                ? 'llm_transient'
+                : 'llm_execution',
+              code: String(
+                error?.code || ''
+              ),
+              message,
+              retryable
+            },
+            nextAttemptAt: retryable
+              ? new Date(
+                  Date.now() +
+                    5 * 60 * 1000
+                ).toISOString()
+              : null,
+            markAttempt: false,
+            reason: retryable
+              ? 'llm-transient-retry'
+              : 'llm-execution-needs-attention'
+          }
+        ).catch(() => task)
     }
-    return res.status(retryable ? 503 : 500).json({
+    return res.status(
+      retryable ? 503 : 500
+    ).json({
       ok: false,
       error: message,
-      code: String(error?.code || 'course_llm_worker_failed'),
+      code: String(
+        error?.code ||
+        'course_llm_worker_failed'
+      ),
       retryable,
       task: updated,
-      nextAction: retryable ? 'busy' : 'wait',
-      reason: retryable ? 'llm-transient-retry' : 'llm-execution-needs-attention',
-      retryAfterMs: retryable ? 5 * 60 * 1000 : 0,
+      nextAction: retryable
+        ? 'busy'
+        : 'wait',
+      reason: retryable
+        ? 'llm-transient-retry'
+        : 'llm-execution-needs-attention',
+      retryAfterMs: retryable
+        ? 5 * 60 * 1000
+        : 0,
       requestId
     })
   }
