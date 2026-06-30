@@ -114,3 +114,24 @@ yarn course:pipeline:e2e-pilot \\
   --course "国际法学" \\
   --title "2026-06-03"
 ```
+
+## Final resilient E2E
+
+```bash
+yarn course:pipeline:e2e-final \
+  --course "国际法学" \
+  --title "2026-06-03" \
+  --replay-key "replay-d65da69830f79ffb30fd089f"
+```
+
+该入口提供稳定 workerId、单实例锁、启动宽限、停滞重启、断点复用、
+逐次降并发和新鲜报告判断。默认将 PKU 媒体直连，外部控制面与云服务跟随代理。
+
+```text
+COURSE_MEDIA_ROUTE=direct   默认
+COURSE_MEDIA_ROUTE=proxy    PKU 也跟随代理
+COURSE_PROXY_MODE=off       远程 Worker 固定出口直连
+```
+
+生产发布前必须通过 `docs/course-worker-v009c-handoff-2026-06-30.md`
+列明的单任务和双任务验收门槛。

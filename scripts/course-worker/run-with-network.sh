@@ -6,10 +6,26 @@ ROOT="$(
   pwd
 )"
 MODE="${COURSE_PROXY_MODE:-auto}"
+MEDIA_ROUTE="${COURSE_MEDIA_ROUTE:-direct}"
 
 append_no_proxy() {
   local current="${NO_PROXY:-${no_proxy:-}}"
   local required="localhost,127.0.0.1,::1"
+
+  case "$MEDIA_ROUTE" in
+    direct)
+      required="$required,pku.edu.cn,.pku.edu.cn"
+      ;;
+    proxy)
+      ;;
+    inherit)
+      ;;
+    *)
+      echo "✗ COURSE_MEDIA_ROUTE must be direct, proxy, or inherit."
+      exit 1
+      ;;
+  esac
+
   if [ -n "$current" ]; then
     export NO_PROXY="$current,$required"
   else
@@ -23,9 +39,8 @@ mask_proxy() {
 from urllib.parse import urlsplit
 import sys
 
-value = sys.argv[1]
 try:
-    parsed = urlsplit(value)
+    parsed = urlsplit(sys.argv[1])
     host = parsed.hostname or ""
     port = f":{parsed.port}" if parsed.port else ""
     print(f"{parsed.scheme}://{host}{port}")
@@ -44,6 +59,7 @@ has_explicit_proxy() {
 detect_macos_proxy() {
   [ "$(uname -s)" = "Darwin" ] || return 1
   [ -x /usr/sbin/scutil ] || return 1
+
   local exports
   exports="$(
     /usr/sbin/scutil --proxy |
@@ -55,7 +71,7 @@ detect_macos_proxy() {
 
 case "$MODE" in
   off)
-    echo "· Network proxy: disabled by COURSE_PROXY_MODE=off"
+    echo "· Network proxy: disabled"
     ;;
   auto|required)
     if has_explicit_proxy; then
@@ -66,19 +82,20 @@ case "$MODE" in
       proxy_value="${HTTPS_PROXY:-${HTTP_PROXY:-}}"
       echo "· Network proxy: macOS system $(mask_proxy "$proxy_value")"
     elif [ "$MODE" = "required" ]; then
-      echo "✗ COURSE_PROXY_MODE=required，但没有检测到 HTTP/HTTPS 代理。"
+      echo "✗ Proxy required but none was detected."
       exit 1
     else
       echo "· Network proxy: direct"
     fi
     ;;
   *)
-    echo "✗ Unsupported COURSE_PROXY_MODE: $MODE"
+    echo "✗ COURSE_PROXY_MODE must be auto, required, or off."
     exit 1
     ;;
 esac
 
 append_no_proxy
+echo "· PKU media route: $MEDIA_ROUTE"
 
 [ "$#" -gt 0 ] || {
   echo "✗ run-with-network.sh requires a command."
@@ -90,8 +107,7 @@ if [ "$1" = "node" ] && [ "${NODE_USE_ENV_PROXY:-}" = "1" ]; then
   if node --help 2>&1 | grep -q -- '--use-env-proxy'; then
     exec node --use-env-proxy "$@"
   fi
-  echo "✗ 当前 Node 版本不支持 --use-env-proxy。"
-  echo "  请使用 Node 24.5+ 或 22.21+。"
+  echo "✗ Node does not support --use-env-proxy."
   exit 1
 fi
 

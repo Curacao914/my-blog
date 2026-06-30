@@ -31,9 +31,10 @@ import {
 } from './hls-core.mjs'
 
 const START_URL = process.env.COURSE_START_URL || 'https://course.pku.edu.cn/'
-const CONCURRENCY = Math.max(2, Math.min(8, Number(process.env.COURSE_DOWNLOAD_CONCURRENCY || 6)))
-const FETCH_ATTEMPTS = 4
-const SEGMENT_TIMEOUT_MS = 90_000
+const CONCURRENCY = Math.max(1, Math.min(8, Number(process.env.COURSE_DOWNLOAD_CONCURRENCY || 6)))
+const FETCH_ATTEMPTS = Math.max(1, Math.min(8, Number(process.env.COURSE_FETCH_ATTEMPTS || 4)))
+const SEGMENT_TIMEOUT_MS = Math.max(10_000, Math.min(180_000, Number(process.env.COURSE_SEGMENT_TIMEOUT_MS || 90_000)))
+const PROGRESS_EVERY = Math.max(1, Math.min(100, Number(process.env.COURSE_DOWNLOAD_PROGRESS_EVERY || 5)))
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -498,7 +499,7 @@ async function runPool(jobs, concurrency, worker, heartbeat, log) {
       if (index >= jobs.length) return
       await worker(jobs[index])
       done += 1
-      if (done === jobs.length || done % 25 === 0) log(`HLS_PROGRESS ${done}/${jobs.length}`)
+      if (done === jobs.length || done % PROGRESS_EVERY === 0) log(`HLS_PROGRESS ${done}/${jobs.length}`)
       if (heartbeat && done % 20 === 0) await heartbeat()
     }
   }
@@ -684,6 +685,7 @@ export function createValidatedAcquisitionRuntime(input = {}) {
     const fragmentsDir = path.join(taskRoot, 'fragments')
     const outputDir = path.join(taskRoot, 'output')
     const outputFile = path.join(outputDir, 'media.mp4')
+    const progressPath = path.join(taskRoot, 'download-progress.json')
     fs.mkdirSync(fragmentsDir, { recursive: true })
     fs.mkdirSync(outputDir, { recursive: true })
 
@@ -756,6 +758,20 @@ export function createValidatedAcquisitionRuntime(input = {}) {
     let downloadedResources = 0
     let reusedResources = 0
     let resourceBytes = 0
+    let completedResources = 0
+    const writeProgress = status => writeJsonAtomic(progressPath, {
+      schemaVersion: 1,
+      replayKey: replayKeyValue,
+      status,
+      totalResources: jobs.length,
+      completedResources,
+      downloadedResources,
+      reusedResources,
+      bytes: resourceBytes,
+      concurrency: CONCURRENCY,
+      updatedAt: new Date().toISOString()
+    })
+    writeProgress('downloading')
     await runPool(jobs, CONCURRENCY, async ({ track, resource }) => {
       const result = await downloadResource(
         browser.context,
@@ -766,11 +782,19 @@ export function createValidatedAcquisitionRuntime(input = {}) {
       if (result.downloaded) downloadedResources += 1
       else reusedResources += 1
       resourceBytes += result.bytes
+      completedResources += 1
+      writeProgress(
+        completedResources === jobs.length
+          ? 'downloaded'
+          : 'downloading'
+      )
     }, runtime.heartbeat, log)
+    writeProgress('assembling')
 
     fs.rmSync(outputFile, { force: true })
     const media = await assemble(tracks, fragmentsDir, outputFile)
     const checksum = await fileSha256(outputFile)
+    writeProgress('completed')
     writeJsonAtomic(path.join(taskRoot, 'download-summary.json'), {
       schemaVersion: 1,
       replayKey: replayKeyValue,
