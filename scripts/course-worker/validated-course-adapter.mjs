@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { createValidatedAcquisitionRuntime } from './runtime/acquisition-runtime.mjs'
 import { writeTranscriptTextPack } from './runtime/textpack-runtime.mjs'
 import { createWorkerTextPackClient } from './runtime/textpack-client.mjs'
+import { reserveAsrBudget } from './asr-budget.mjs'
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = path.resolve(MODULE_DIR, '../..')
@@ -80,6 +81,12 @@ async function transcribe(task) {
     }
   }
 
+  const budget = reserveAsrBudget({
+    scratchRoot: SCRATCH_ROOT,
+    replayKey: task.replay_key,
+    durationSeconds: Number(task.runtime?.durationSeconds || 0)
+  })
+
   await runProcess(process.env.COURSE_PYTHON || 'python3', [
     path.join(MODULE_DIR, 'python', 'paraformer_worker.py'),
     '--source', mediaPath,
@@ -99,7 +106,11 @@ async function transcribe(task) {
       sentenceCount: summary.sentenceCount,
       transcriptCharacters: summary.transcriptCharacterCount,
       speechDurationMilliseconds: summary.speechDurationMilliseconds,
-      estimatedAsrCostCny: summary.estimatedCostCnyBeforeFreeQuota
+      estimatedAsrCostCny: summary.estimatedCostCnyBeforeFreeQuota,
+      asrBudgetDate: budget.date,
+      asrReservedSeconds: budget.durationSeconds,
+      asrDailyReservedSeconds: budget.dailyReservedSeconds || budget.durationSeconds,
+      asrPaidAllowed: budget.paidAllowed
     }
   }
 }

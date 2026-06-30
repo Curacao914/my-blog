@@ -134,6 +134,7 @@ test('summary marks attention and exit code', () => {
     ]
   })
 
+  assert.equal(summary.counts.awaitingLlm, 1)
   assert.equal(
     summary.status,
     'attention'

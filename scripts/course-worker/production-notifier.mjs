@@ -42,15 +42,40 @@ export function notificationPayload(
           stage:
             safeText(task.stage),
           reason:
-            safeText(task.reason)
+            safeText(task.reason),
+          errorKind:
+            safeText(task.errorKind),
+          errorMessage:
+            safeText(task.errorMessage),
+          retryable:
+            Boolean(task.retryable),
+          suggestedAction:
+            safeText(task.suggestedAction)
         }))
   }
+}
+
+export function shouldNotifyCycle(summary, options = {}) {
+  const notifySuccesses =
+    options.notifySuccesses === true ||
+    String(process.env.COURSE_NOTIFY_SUCCESSES || '') === '1'
+  return (
+    notifySuccesses ||
+    ['attention', 'error'].includes(String(summary?.status || ''))
+  )
 }
 
 export async function sendCycleNotification(
   summary,
   options = {}
 ) {
+  if (!shouldNotifyCycle(summary, options)) {
+    return {
+      sent: false,
+      reason: 'not-needed'
+    }
+  }
+
   const url = String(
     options.url ||
     process.env

@@ -196,6 +196,8 @@ export function buildCycleSummary(
   const counts = {
     processed: results.length,
     completed: 0,
+    awaitingLlm: 0,
+    writing: 0,
     queued: 0,
     failed: 0,
     needsAttention: 0,
@@ -208,10 +210,12 @@ export function buildCycleSummary(
       result.status ||
       ''
     )
-    if (
-      stage === 'awaiting_llm_window'
-    ) {
+    if (stage === 'completed') {
       counts.completed += 1
+    } else if (stage === 'awaiting_llm_window') {
+      counts.awaitingLlm += 1
+    } else if (stage === 'writing') {
+      counts.writing += 1
     } else if (stage === 'queued') {
       counts.queued += 1
     } else if (stage === 'failed') {
@@ -229,7 +233,9 @@ export function buildCycleSummary(
     counts.needsAttention > 0 ||
     counts.failed > 0
       ? 'attention'
-      : counts.queued > 0
+      : counts.queued > 0 ||
+        counts.awaitingLlm > 0 ||
+        counts.writing > 0
         ? 'partial'
         : 'ok'
 
@@ -275,7 +281,22 @@ export function buildCycleSummary(
         ),
       reason:
         text(result.reason)
-          .slice(0, 300)
+          .slice(0, 300),
+      errorKind:
+        text(result.task?.last_error?.kind),
+      errorMessage:
+        text(result.task?.last_error?.message)
+          .slice(0, 500),
+      retryable:
+        Boolean(result.task?.last_error?.retryable),
+      suggestedAction:
+        result.task?.last_error?.kind === 'authentication'
+          ? '更新教学网登录信息后重试。'
+          : result.task?.last_error?.kind === 'asr_budget'
+            ? '检查免费额度或调整 ASR 费用保护设置。'
+            : result.task?.stage === 'needs_attention'
+              ? '打开课程工作台查看异常原因。'
+              : ''
     }))
   }
 }
@@ -317,6 +338,8 @@ export function markdownCycleSummary(
     `- Newly added: ${summary.discovery.newlyAdded}`,
     `- Processed: ${summary.counts.processed}`,
     `- Completed: ${summary.counts.completed}`,
+    `- Awaiting LLM: ${summary.counts.awaitingLlm}`,
+    `- Writing: ${summary.counts.writing}`,
     `- Queued: ${summary.counts.queued}`,
     `- Failed: ${summary.counts.failed}`,
     `- Needs attention: ${summary.counts.needsAttention}`,

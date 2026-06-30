@@ -6,7 +6,17 @@ cd /app
 case "${1:-cycle}" in
   cycle)
     exec node \
+      scripts/course-worker/production-supercycle.mjs \
+      "${@:2}"
+    ;;
+  media-cycle)
+    exec node \
       scripts/course-worker/production-cycle.mjs \
+      "${@:2}"
+    ;;
+  llm)
+    exec node \
+      scripts/course-worker/llm-drain.mjs \
       "${@:2}"
     ;;
   health)

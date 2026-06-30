@@ -75,11 +75,15 @@ export function createCoursePipelineWorkerClient(
     timeoutMs
   })
 
-  async function request(path, body) {
+  async function request(path, body, requestOptions = {}) {
     const controller = new AbortController()
+    const requestTimeoutMs = Math.max(
+      1_000,
+      Number(requestOptions.timeoutMs || timeoutMs)
+    )
     const timer = setTimeout(
       () => controller.abort(),
-      timeoutMs
+      requestTimeoutMs
     )
 
     const headers = {
@@ -119,7 +123,7 @@ export function createCoursePipelineWorkerClient(
     } catch (error) {
       if (error?.name === 'AbortError') {
         throw new CoursePipelineClientError(
-          `Control plane request timed out after ${timeoutMs}ms`,
+          `Control plane request timed out after ${requestTimeoutMs}ms`,
           {
             code: 'control_plane_timeout',
             retryable: true
@@ -165,6 +169,27 @@ export function createCoursePipelineWorkerClient(
         {
           workerId: cleanWorkerId(input.workerId),
           leaseSeconds: input.leaseSeconds
+        }
+      )
+    },
+
+    async runLlm(replayKey, input = {}) {
+      return request(
+        `/api/courses/pipeline/${encodeURIComponent(
+          cleanReplayKey(replayKey)
+        )}/run-llm`,
+        {
+          costMode: String(input.costMode || '')
+        },
+        {
+          timeoutMs: Math.max(
+            30_000,
+            Number(
+              input.timeoutMs ||
+              process.env.COURSE_LLM_CONTROL_PLANE_TIMEOUT_MS ||
+              300_000
+            )
+          )
         }
       )
     }

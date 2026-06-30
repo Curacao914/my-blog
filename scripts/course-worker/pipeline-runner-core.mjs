@@ -91,6 +91,29 @@ export function classifyPipelineRunnerError(error) {
   const status = Number(error?.status || 0)
 
   if (
+    error?.code === 'COURSE_ASR_DAILY_BUDGET_DEFERRED'
+  ) {
+    return {
+      stage: 'queued',
+      kind: 'asr_daily_budget',
+      retryable: true,
+      markAttempt: false
+    }
+  }
+
+  if (
+    error?.code === 'COURSE_ASR_TASK_BUDGET_EXCEEDED' ||
+    error?.code === 'COURSE_ASR_PAID_DISABLED'
+  ) {
+    return {
+      stage: 'needs_attention',
+      kind: 'asr_budget',
+      retryable: false,
+      markAttempt: false
+    }
+  }
+
+  if (
     error?.code === 'AUTH_EXPIRED' ||
     /password|credential|login|unauthori[sz]ed|forbidden/i.test(
       message
