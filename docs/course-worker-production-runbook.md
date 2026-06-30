@@ -100,3 +100,17 @@ Worker 会自动读取：
 
 推荐将真实回归专用密钥放在 `.env.course-worker.local`。该文件已加入
 `.gitignore` 且准备脚本会设置为 `600` 权限。终端 `export` 仍具有最高优先级。
+
+## Worker 网络入口
+
+本地 Worker 的所有联网命令统一经由 `scripts/course-worker/run-with-network.sh`。
+
+默认自动读取 macOS 系统 HTTP/HTTPS 代理。远程 Worker 可设置 `COURSE_PROXY_MODE=off` 使用固定出口直连。
+
+真实单课回归：
+
+```bash
+yarn course:pipeline:e2e-pilot \\
+  --course "国际法学" \\
+  --title "2026-06-03"
+```
