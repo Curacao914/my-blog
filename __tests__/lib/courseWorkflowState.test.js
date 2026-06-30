@@ -11,6 +11,7 @@ import {
   retryNode,
   resumeWorkflow,
   saveCourseSpec,
+  saveFinalNoteRevision,
   saveNodeDraft,
   startOutlineReview
 } from '@/lib/course/workflowState'
@@ -242,6 +243,56 @@ describe('controlled course workflow', () => {
     expect(second.transcript).toContain('第二课第一行')
     expect(second.status).toBe('outline_pending')
     expect(merged.feedback.at(-1)).toEqual(expect.objectContaining({ type: 'materials-supplemented' }))
+  })
+
+  it('runs final review automatically and only falls back to a human after the automatic whole-note revision is exhausted', () => {
+    const spec = saveCourseSpec(sampleWorkflow(), { qualityThreshold: 75, maxFinalAutoRevisions: 1 })
+    const outline = startOutlineReview(spec, { lessonKey: 'lesson-01', outline: [{ title: '总论', lineRange: [1, 5], slideRange: [1, 1], rationale: '主线' }] })
+    const planned = planNodesFromOutline(approveOutline(outline, 'lesson-01'), 'lesson-01')
+    const approved = approveAllNodes(planned, 'lesson-01')
+    const assembled = assembleFinalNote(approved, 'lesson-01')
+
+    expect(assembled.status).toBe('final_review')
+    expect(assembled.lessons[0].status).toBe('final_review')
+
+    const queued = completeFinalReview(assembled, 'lesson-01', {
+      coverage: 70, grounding: 90, logic: 90, detail: 90, sourceCoverage: 90,
+      issues: [{ severity: 'high', message: '存在跨节点重复，需要统一整理。' }],
+      decision: 'revise'
+    })
+    expect(queued.status).toBe('final_revision_required')
+    expect(queued.lessons[0].finalReviewAttention).toBeNull()
+    expect(queued.lessons[0].finalRevisionRequests.at(-1).value.source).toBe('final-review')
+
+    const revised = saveFinalNoteRevision(queued, 'lesson-01', `${queued.lessons[0].finalNote.markdown}\n\n已统一跨节点表述。`)
+    expect(revised.status).toBe('final_review')
+    expect(revised.lessons[0].finalRevisionCount).toBe(1)
+
+    const exhausted = completeFinalReview(revised, 'lesson-01', {
+      coverage: 70, grounding: 90, logic: 90, detail: 90, sourceCoverage: 90,
+      issues: [{ severity: 'high', message: '仍存在无法定位的整体结构问题。' }],
+      decision: 'revise'
+    })
+    expect(exhausted.status).toBe('final_review_human')
+    expect(exhausted.lessons[0].finalReviewAttention).toEqual(expect.objectContaining({
+      code: 'final-revision-exhausted',
+      lessonKey: 'lesson-01'
+    }))
+  })
+
+  it('keeps explicit source conflicts as an exceptional human-review state with a structured reason', () => {
+    const spec = saveCourseSpec(sampleWorkflow(), { qualityThreshold: 75 })
+    const outline = startOutlineReview(spec, { lessonKey: 'lesson-01', outline: [{ title: '总论', lineRange: [1, 5], slideRange: [1, 1], rationale: '主线' }] })
+    const planned = planNodesFromOutline(approveOutline(outline, 'lesson-01'), 'lesson-01')
+    const assembled = assembleFinalNote(approveAllNodes(planned, 'lesson-01'), 'lesson-01')
+    const human = completeFinalReview(assembled, 'lesson-01', {
+      coverage: 90, grounding: 90, logic: 90, detail: 90, sourceCoverage: 90,
+      issues: [{ severity: 'important', requiresHuman: true, message: '课堂转录与课件在核心结论上冲突。' }],
+      decision: 'human_review'
+    })
+
+    expect(human.status).toBe('final_review_human')
+    expect(human.lessons[0].finalReviewAttention.message).toContain('核心结论上冲突')
   })
 
 })

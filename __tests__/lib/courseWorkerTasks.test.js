@@ -91,4 +91,25 @@ describe('course worker task planner', () => {
     expect(task.node.writerBrief.nextNodeTarget).toBe('进入案例分析')
   })
 
+  it('claims automatic final review and resumes legacy unconditional human gates without duplicating a current report', () => {
+    const finalLesson = {
+      key: 'lesson-01', order: 1, title: '第1课', status: 'final_review',
+      nodes: [], finalNote: { markdown: '# 最终笔记' }, finalNoteVersions: [{ value: '# 最终笔记' }], finalReviewReports: []
+    }
+    expect(getNextCourseWorkerTask(workflowWith('final_review', [finalLesson]))).toEqual(expect.objectContaining({ type: 'final-review' }))
+
+    const legacy = { ...finalLesson, status: 'final_review_human' }
+    expect(getNextCourseWorkerTask(workflowWith('final_review_human', [legacy]))).toEqual(expect.objectContaining({ type: 'final-review' }))
+
+    const exceptional = {
+      ...legacy,
+      finalReviewAttention: { code: 'source-conflict', message: '来源冲突' },
+      finalReviewReports: [{ value: { decision: 'human_review', reviewedDraftVersion: 1 } }]
+    }
+    expect(getNextCourseWorkerTask(workflowWith('final_review_human', [exceptional]))).toEqual(expect.objectContaining({
+      type: 'idle',
+      reason: 'waiting-final-human-review'
+    }))
+  })
+
 })

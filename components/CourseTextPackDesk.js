@@ -29,7 +29,7 @@ const ROLE_OPTIONS = [
   ['existing_note', '已有笔记']
 ]
 const KIND_LABELS = { transcript: '课堂转录', deck: '课件', document: '文档', markdown: 'Markdown', note: '已有笔记', ocr: '扫描资料' }
-const AUTO_STATUSES = new Set(['preflight_approved', 'outline_pending', 'outline_generating', 'outline_approved', 'node_planning', 'node_pending', 'node_generating', 'node_review', 'node_revision_required', 'assembly_pending', 'assembling', 'final_revision_required'])
+const AUTO_STATUSES = new Set(['preflight_approved', 'outline_pending', 'outline_generating', 'outline_approved', 'node_planning', 'node_pending', 'node_generating', 'node_review', 'node_revision_required', 'assembly_pending', 'assembling', 'final_revision_required', 'final_review'])
 
 function formatNumber(value) {
   return new Intl.NumberFormat('zh-CN').format(Number(value || 0))
@@ -54,7 +54,7 @@ function humanStatus(status) {
     preflight_required: '等待确认偏好', preflight_approved: '准备生成大纲', outline_pending: '等待生成大纲', outline_generating: '正在生成大纲',
     outline_review: '等待确认大纲', outline_approved: '大纲已确认', node_planning: '正在准备正文', node_pending: '等待整理正文',
     node_generating: '正在整理正文', node_review: '审查处理中', node_revision_required: '修改处理中', node_human_review: '需要人工处理', node_failed: '节点处理失败', assembly_pending: '等待整理全文',
-    assembling: '正在整理全文', final_revision_required: '修改最终笔记', note_removed: '最终笔记已删除', final_review: '等待最终确认', final_review_human: '等待最终确认', completed: '已完成', paused: '已暂停', failed: '处理失败', cancelled: '已取消'
+    assembling: '正在整理全文', final_revision_required: '修改最终笔记', note_removed: '最终笔记已删除', final_review: '正在进行最终检查', final_review_human: '最终检查异常', completed: '已完成', paused: '已暂停', failed: '处理失败', cancelled: '已取消'
   })[status] || '准备中'
 }
 
@@ -355,7 +355,7 @@ function RemovedNoteStage({ lesson, onAction, busy }) {
     <div className='course-note-trash-meta'>
       <span>可以继续</span>
       <strong>从已经批准的节点重新拼装最终笔记</strong>
-      <small>重新生成会调用一次接缝整理模型，完成后仍由你确认。</small>
+      <small>重新生成会调用一次接缝整理模型，完成后会自动检查并结束。</small>
     </div>
     <div className='course-primary-row'>
       <button className='soft-button primary' type='button' disabled={busy} onClick={() => onAction({ type: 'regenerate-lesson-note', lessonKey: lesson.key }, '最终笔记已进入重新生成队列。')}>重新生成笔记</button>
@@ -370,7 +370,8 @@ function FinalNoteStage({ jobId, lesson, onAction, busy }) {
   const savedMarkdown = lesson.finalNote?.markdown || ''
   const dirty = markdown !== savedMarkdown
   const charCount = countCourseNoteChars(markdown)
-  const awaitingConfirmation = ['final_review', 'final_review_human'].includes(lesson.status)
+  const awaitingConfirmation = lesson.status === 'final_review_human'
+  const reviewing = lesson.status === 'final_review'
   const canRequestRevision = awaitingConfirmation || lesson.status === 'completed'
   const revising = lesson.status === 'final_revision_required'
 
@@ -410,12 +411,14 @@ function FinalNoteStage({ jobId, lesson, onAction, busy }) {
     <div className='course-stage-heading'>
       <div>
         <span>最终成果</span>
-        <h3>{lesson.status === 'completed' ? '本课笔记已完成' : revising ? '正在按要求修改最终笔记' : '通读并确认最终笔记'}</h3>
+        <h3>{lesson.status === 'completed' ? '本课笔记已完成' : revising ? '正在修改最终笔记' : reviewing ? '正在进行最终检查' : '最终检查需要处理'}</h3>
       </div>
-      <p>{lesson.status === 'completed' ? '仍可继续编辑或导出 Markdown。' : revising ? '修改完成后会回到你的确认页面。' : '你可以直接修改、提出修改要求，或者确认完成。'}</p>
+      <p>{lesson.status === 'completed' ? '仍可继续编辑或导出 Markdown。' : revising ? '修改完成后会自动重新检查。' : reviewing ? '系统会检查跨节点矛盾、严重重复和整体结构，通过后自动完成本课。' : '仅在系统无法继续处理时才会停在这里，并显示具体原因。'}</p>
     </div>
 
-    {revising ? <LoadingLine label='正在按你的意见修改…' detail='不会重新执行整套最终审查' /> : null}
+    {revising ? <LoadingLine label='正在修改最终笔记…' detail='修改完成后会自动重新检查' /> : null}
+    {reviewing ? <LoadingLine label='正在进行最终检查…' detail='正常通过后会自动完成，无需确认' /> : null}
+    {awaitingConfirmation ? <div className='course-diagnostics'><strong>需要人工处理</strong><p>{lesson.finalReviewAttention?.message || '最终检查发现无法自动处理的重大异常。'}</p></div> : null}
 
     <div className='course-final-toolbar'>
       <div className='course-final-mode' role='tablist' aria-label='最终笔记视图'>
@@ -434,7 +437,7 @@ function FinalNoteStage({ jobId, lesson, onAction, busy }) {
       <button className='soft-button' type='button' onClick={() => navigator.clipboard?.writeText(markdown)}>复制</button>
       <button className='soft-button' data-course-export type='button' onClick={exportMarkdown}>导出 Markdown</button>
       <a className='soft-button' href={`/desk/publish?job=${encodeURIComponent(jobId)}&lesson=${encodeURIComponent(lesson.key)}`}>转入发布</a>
-      {awaitingConfirmation ? <button className='soft-button primary' type='button' disabled={busy || dirty} title={dirty ? '请先保存修改' : ''} onClick={() => onAction({ type: 'approve-final-review', lessonKey: lesson.key }, '最终笔记已由你确认。')}>确认无误，完成本课</button> : null}
+      {awaitingConfirmation ? <button className='soft-button primary' type='button' disabled={busy || dirty} title={dirty ? '请先保存修改' : ''} onClick={() => onAction({ type: 'approve-final-review', lessonKey: lesson.key }, '最终笔记已由你确认。')}>确认异常已处理，完成本课</button> : null}
     </div>
 
     {canRequestRevision ? <details className='course-final-revision-box'>

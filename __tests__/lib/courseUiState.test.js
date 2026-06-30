@@ -19,4 +19,25 @@ describe('course product UI state', () => {
     expect(final.stage).toBe('assemble')
     expect(final.primaryAction.type).toBe('approve-final-review')
   })
+  it('treats normal final review as automatic and exposes the reason only for exceptional human review', () => {
+    const automatic = getCourseUiState(
+      { status: 'final_review', errors: [] },
+      { status: 'final_review', nodes: [], finalNote: { markdown: '# 笔记' } }
+    )
+    expect(automatic.requiresHuman).toBe(false)
+    expect(automatic.primaryAction.type).toBe('refresh')
+    expect(automatic.explanation).toContain('自动最终检查')
+
+    const exceptional = getCourseUiState(
+      { status: 'final_review_human', errors: [] },
+      {
+        status: 'final_review_human',
+        nodes: [],
+        finalReviewAttention: { message: '课堂转录与课件在核心结论上冲突。' }
+      }
+    )
+    expect(exceptional.requiresHuman).toBe(true)
+    expect(exceptional.blockedReason).toContain('核心结论上冲突')
+  })
+
 })
