@@ -1,0 +1,166 @@
+name: Course Worker Remote Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Health check only, or one complete production cycle
+        required: true
+        default: health
+        type: choice
+        options:
+          - health
+          - cycle
+      allowlist:
+        description: Exact course names separated by commas
+        required: true
+        default: 刑法分论
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: course-worker-production
+  cancel-in-progress: false
+
+jobs:
+  remote-worker:
+    name: Remote course worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    env:
+      COURSE_CONTROL_PLANE_URL: ${{ secrets.COURSE_CONTROL_PLANE_URL }}
+      COURSE_WORKER_SECRET: ${{ secrets.COURSE_WORKER_SECRET }}
+      COURSE_WORKER_OWNER_ID: ${{ secrets.COURSE_WORKER_OWNER_ID }}
+      PKU_USERNAME: ${{ secrets.PKU_USERNAME }}
+      PKU_PASSWORD: ${{ secrets.PKU_PASSWORD }}
+      DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      COURSE_PIPELINE_ALLOWLIST: ${{ inputs.allowlist }}
+      COURSE_PIPELINE_MAX_TASKS: "1"
+      COURSE_LLM_MAX_TASKS_PER_CYCLE: "1"
+      COURSE_LLM_MAX_BATCHES_PER_TASK: "160"
+      COURSE_LLM_MAX_BATCHES_PER_CYCLE: "160"
+      COURSE_LLM_COST_MODE: economy
+      COURSE_ASR_ALLOW_PAID: "1"
+      COURSE_ASR_MAX_TASK_SECONDS: "14400"
+      COURSE_ASR_DAILY_MAX_SECONDS: "14400"
+      COURSE_ASR_MAX_TASK_COST_CNY: "2"
+      COURSE_ASR_DAILY_MAX_COST_CNY: "2"
+      COURSE_CONTROL_PLANE_TIMEOUT_MS: "120000"
+      COURSE_LLM_CONTROL_PLANE_TIMEOUT_MS: "300000"
+      COURSE_DOWNLOAD_CONCURRENCY: "4"
+      COURSE_HEADLESS: "1"
+      COURSE_PROXY_MODE: off
+      COURSE_MEDIA_ROUTE: inherit
+      COURSE_WORKER_ID: gha:${{ github.run_id }}
+
+    steps:
+      - name: Check out worker branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/course-worker-v009c
+          persist-credentials: false
+
+      - name: Validate remote-worker configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            COURSE_CONTROL_PLANE_URL
+            COURSE_WORKER_SECRET
+            COURSE_WORKER_OWNER_ID
+            PKU_USERNAME
+            PKU_PASSWORD
+            DASHSCOPE_API_KEY
+            R2_ACCESS_KEY_ID
+            R2_SECRET_ACCESS_KEY
+            R2_ENDPOINT
+            R2_BUCKET
+          )
+          missing=()
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              missing+=("$name")
+            fi
+          done
+          if (( ${#missing[@]} )); then
+            printf 'Missing GitHub Actions secrets:\n'
+            printf ' - %s\n' "${missing[@]}"
+            exit 1
+          fi
+          if [[ -z "${COURSE_PIPELINE_ALLOWLIST:-}" ]]; then
+            echo 'Course allowlist is empty.'
+            exit 1
+          fi
+          echo 'Required remote-worker configuration is present.'
+
+      - name: Build worker image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build             --file deploy/course-worker/Dockerfile             --tag law-tech-course-worker:remote-test             .
+
+      - name: Prepare ephemeral worker storage
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/course-worker-data"
+          chmod 700 "$RUNNER_TEMP/course-worker-data"
+
+      - name: Run remote health check
+        shell: bash
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/course-worker-health.log"
+          set +e
+          docker run --rm             -v "$RUNNER_TEMP/course-worker-data:/data"             -e COURSE_CONTROL_PLANE_URL             -e COURSE_WORKER_SECRET             -e COURSE_WORKER_OWNER_ID             -e PKU_USERNAME             -e PKU_PASSWORD             -e DASHSCOPE_API_KEY             -e R2_ACCESS_KEY_ID             -e R2_SECRET_ACCESS_KEY             -e R2_ENDPOINT             -e R2_BUCKET             -e COURSE_PIPELINE_ALLOWLIST             -e COURSE_HEADLESS             -e COURSE_PROXY_MODE             -e COURSE_MEDIA_ROUTE             -e COURSE_WORKER_ID             -e COURSE_CONTROL_PLANE_TIMEOUT_MS             law-tech-course-worker:remote-test             health >"$log" 2>&1
+          status=$?
+          set -e
+          health_json="$RUNNER_TEMP/course-worker-data/scratch/health/latest.json"
+          if [[ -f "$health_json" ]]; then
+            jq '{ok, checks}' "$health_json"
+          fi
+          if (( status != 0 )); then
+            echo 'Remote health check failed. Detailed output was kept out of this public workflow log.'
+            exit "$status"
+          fi
+
+      - name: Run one complete production cycle
+        if: ${{ inputs.mode == 'cycle' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/course-worker-cycle.log"
+          set +e
+          docker run --rm             -v "$RUNNER_TEMP/course-worker-data:/data"             -e COURSE_CONTROL_PLANE_URL             -e COURSE_WORKER_SECRET             -e COURSE_WORKER_OWNER_ID             -e PKU_USERNAME             -e PKU_PASSWORD             -e DASHSCOPE_API_KEY             -e R2_ACCESS_KEY_ID             -e R2_SECRET_ACCESS_KEY             -e R2_ENDPOINT             -e R2_BUCKET             -e COURSE_PIPELINE_ALLOWLIST             -e COURSE_PIPELINE_MAX_TASKS             -e COURSE_LLM_MAX_TASKS_PER_CYCLE             -e COURSE_LLM_MAX_BATCHES_PER_TASK             -e COURSE_LLM_MAX_BATCHES_PER_CYCLE             -e COURSE_LLM_COST_MODE             -e COURSE_ASR_ALLOW_PAID             -e COURSE_ASR_MAX_TASK_SECONDS             -e COURSE_ASR_DAILY_MAX_SECONDS             -e COURSE_ASR_MAX_TASK_COST_CNY             -e COURSE_ASR_DAILY_MAX_COST_CNY             -e COURSE_CONTROL_PLANE_TIMEOUT_MS             -e COURSE_LLM_CONTROL_PLANE_TIMEOUT_MS             -e COURSE_DOWNLOAD_CONCURRENCY             -e COURSE_HEADLESS             -e COURSE_PROXY_MODE             -e COURSE_MEDIA_ROUTE             -e COURSE_WORKER_ID             law-tech-course-worker:remote-test             cycle --max-tasks 1 --since-days 14 --cost-mode economy >"$log" 2>&1
+          status=$?
+          set -e
+          latest_summary="$(
+            find "$RUNNER_TEMP/course-worker-data/scratch/runs"               -name summary.json -type f -print 2>/dev/null |
+              sort |
+              tail -1 || true
+          )"
+          if [[ -n "$latest_summary" && -f "$latest_summary" ]]; then
+            jq '{
+              status: (.status // ""),
+              counts: (.counts // {}),
+              discovery: (
+                if .discovery then {
+                  scannedCourses: (.discovery.scannedCourses // 0),
+                  selectedReplays: (.discovery.selectedReplays // 0),
+                  newlyAdded: (.discovery.newlyAdded // 0)
+                } else {} end
+              ),
+              errorCode: (.error.code // "")
+            }' "$latest_summary"
+          fi
+          if (( status != 0 )); then
+            echo 'Remote production cycle failed or needs hard attention. Detailed course content was kept out of this public workflow log.'
+            exit "$status"
+          fi
+          echo 'Remote production cycle completed without a hard failure.'
