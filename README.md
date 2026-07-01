@@ -74,6 +74,6 @@ Notion是一个能让效率暴涨的生产力引擎，可以帮你书写文档�
 
 The MIT License.
 
-## Star History
+## Star History 
 
 [![Star History Chart](https://api.star-history.com/svg?repos=tangly1024/NotionNext&type=Date)](https://star-history.com/#tangly1024/NotionNext&Date)
