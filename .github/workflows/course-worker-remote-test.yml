@@ -1,9 +1,10 @@
 name: Course Worker Production
 
 on:
-  # 18:00 UTC = 02:00 Asia/Shanghai = 03:00 Asia/Tokyo
+  # Lightweight control-plane check every 30 minutes. The heavy worker
+  # starts only once after the user-configured Asia/Shanghai time.
   schedule:
-    - cron: '0 18 * * *'
+    - cron: '*/30 * * * *'
   workflow_dispatch:
     inputs:
       mode:
@@ -49,6 +50,8 @@ jobs:
       COURSE_LLM_MAX_BATCHES_PER_TASK: "160"
       COURSE_LLM_MAX_BATCHES_PER_CYCLE: "600"
       COURSE_LLM_COST_MODE: economy
+      COURSE_CLEANUP_MEDIA: "1"
+      COURSE_AUTO_APPROVE_OUTLINE: "1"
       COURSE_ASR_ALLOW_PAID: "1"
       COURSE_ASR_MAX_TASK_SECONDS: "16200"
       COURSE_ASR_DAILY_MAX_SECONDS: "0"
@@ -101,7 +104,35 @@ jobs:
           fi
           echo 'Required remote-worker configuration is present.'
 
+      - name: Resolve course automation plan
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          trigger='scheduled'
+          if [[ "$GITHUB_EVENT_NAME" == 'workflow_dispatch' ]]; then
+            if [[ "${{ inputs.mode }}" == 'cycle' ]]; then
+              trigger='manual-cycle'
+            else
+              trigger='health'
+            fi
+          fi
+          response="$(curl -fsS             -H "Authorization: Bearer $COURSE_WORKER_SECRET"             -H "x-law-tech-owner-id: $COURSE_WORKER_OWNER_ID"             -H 'content-type: application/json'             -d "$(jq -nc --arg trigger "$trigger" '{action:"plan",trigger:$trigger}')"             "${COURSE_CONTROL_PLANE_URL%/}/api/courses/pipeline/schedule-plan")"
+          echo "run_cycle=$(jq -r '.plan.runCycle // false' <<<"$response")" >> "$GITHUB_OUTPUT"
+          echo "date_key=$(jq -r '.plan.dateKey // empty' <<<"$response")" >> "$GITHUB_OUTPUT"
+          cost_mode="$(jq -r '.plan.costMode // "economy"' <<<"$response")"
+          cleanup_media="$(jq -r 'if .plan.cleanupMedia == false then "0" else "1" end' <<<"$response")"
+          auto_approve_outline="$(jq -r 'if .plan.autoApproveOutline == false then "0" else "1" end' <<<"$response")"
+          echo "cost_mode=$cost_mode" >> "$GITHUB_OUTPUT"
+          echo "cleanup_media=$cleanup_media" >> "$GITHUB_OUTPUT"
+          echo "auto_approve_outline=$auto_approve_outline" >> "$GITHUB_OUTPUT"
+          echo "COURSE_LLM_COST_MODE=$cost_mode" >> "$GITHUB_ENV"
+          echo "COURSE_CLEANUP_MEDIA=$cleanup_media" >> "$GITHUB_ENV"
+          echo "COURSE_AUTO_APPROVE_OUTLINE=$auto_approve_outline" >> "$GITHUB_ENV"
+          jq '{ok, plan}' <<<"$response"
+
       - name: Build worker image
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.plan.outputs.run_cycle == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -111,6 +142,7 @@ jobs:
             .
 
       - name: Prepare ephemeral worker storage
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.plan.outputs.run_cycle == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -118,6 +150,7 @@ jobs:
           chmod 700 "$RUNNER_TEMP/course-worker-data"
 
       - name: Run remote health check
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.plan.outputs.run_cycle == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -159,7 +192,7 @@ jobs:
           fi
 
       - name: Run one complete production cycle
-        if: ${{ github.event_name == 'schedule' || inputs.mode == 'cycle' }}
+        if: ${{ (github.event_name == 'schedule' && steps.plan.outputs.run_cycle == 'true') || (github.event_name == 'workflow_dispatch' && inputs.mode == 'cycle') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -167,7 +200,7 @@ jobs:
           cycle_args=(
             --max-tasks 20
             --since-days 14
-            --cost-mode economy
+            --cost-mode "${{ steps.plan.outputs.cost_mode }}"
           )
           if [[ "$GITHUB_EVENT_NAME" == "schedule" || "${{ inputs.allowlist }}" == "*" ]]; then
             cycle_args+=(--all)
@@ -191,6 +224,8 @@ jobs:
             -e COURSE_LLM_MAX_BATCHES_PER_TASK \
             -e COURSE_LLM_MAX_BATCHES_PER_CYCLE \
             -e COURSE_LLM_COST_MODE \
+            -e COURSE_CLEANUP_MEDIA \
+            -e COURSE_AUTO_APPROVE_OUTLINE \
             -e COURSE_ASR_ALLOW_PAID \
             -e COURSE_ASR_MAX_TASK_SECONDS \
             -e COURSE_ASR_DAILY_MAX_SECONDS \
@@ -281,3 +316,10 @@ jobs:
             exit "$status"
           fi
           echo 'Remote production cycle completed without a hard failure.'
+
+      - name: Record scheduled cycle completion
+        if: ${{ success() && github.event_name == 'schedule' && steps.plan.outputs.run_cycle == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS             -H "Authorization: Bearer $COURSE_WORKER_SECRET"             -H "x-law-tech-owner-id: $COURSE_WORKER_OWNER_ID"             -H 'content-type: application/json'             -d "$(jq -nc --arg dateKey "${{ steps.plan.outputs.date_key }}" '{action:"ack",dateKey:$dateKey}')"             "${COURSE_CONTROL_PLANE_URL%/}/api/courses/pipeline/schedule-plan" | jq '{ok, acknowledged, dateKey}'
