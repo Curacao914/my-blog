@@ -9,6 +9,10 @@ const baseUrl = String(
   process.env.LAW_TECH_CAPTURE_URL ||
   'https://preview.law-tech.dev'
 ).replace(/\/api\/schedule\/capture\/?$/, '').replace(/\/$/, '')
+const publicSiteUrl = String(
+  process.env.LAW_TECH_PUBLIC_URL ||
+  'https://law-tech.dev'
+).replace(/\/$/, '')
 const token = String(process.env.WECHAT_CAPTURE_TOKEN || '').trim()
 const target = String(
   process.env.LAW_TECH_WECHAT_TARGET ||
@@ -168,6 +172,59 @@ async function acknowledge(delivery, result, error = null) {
   })
 }
 
+function absoluteObjectUrl(value = '') {
+  const objectUrl = String(value || '').trim()
+  if (!objectUrl) return ''
+  return objectUrl.startsWith('http')
+    ? objectUrl
+    : `${publicSiteUrl}${
+        objectUrl.startsWith('/') ? objectUrl : `/${objectUrl}`
+      }`
+}
+
+function deliveryLinkLabel(delivery = {}) {
+  if (delivery.purpose === 'daily-schedule') {
+    return '打开今日工作台'
+  }
+  if (delivery.purpose === 'course-brief') {
+    return '打开课程简报'
+  }
+  return '打开 Law-Tech'
+}
+
+function bodyAlreadyContainsTarget(body = '', targetUrl = '') {
+  if (!targetUrl) return true
+  if (String(body).includes(targetUrl)) return true
+  try {
+    const target = new URL(targetUrl)
+    return Boolean(
+      target.pathname &&
+      target.pathname !== '/' &&
+      String(body).includes(target.pathname)
+    )
+  } catch {
+    return false
+  }
+}
+
+function buildDeliveryMessage(delivery = {}) {
+  const body = String(delivery.body_text || '').trim()
+  const targetUrl = absoluteObjectUrl(delivery.object_url)
+
+  if (
+    !targetUrl ||
+    bodyAlreadyContainsTarget(body, targetUrl)
+  ) {
+    return body
+  }
+
+  return [
+    body,
+    '',
+    `[${deliveryLinkLabel(delivery)}](${targetUrl})`
+  ].filter(Boolean).join('\\n')
+}
+
 async function cycle() {
   try {
     await syncRuntime()
@@ -179,14 +236,7 @@ async function cycle() {
   while (true) {
     const delivery = await claim()
     if (!delivery) break
-    const message = [
-      delivery.body_text,
-      delivery.object_url
-        ? `\n${String(delivery.object_url).startsWith('http')
-            ? delivery.object_url
-            : `${baseUrl}${delivery.object_url}`}`
-        : ''
-    ].filter(Boolean).join('\n')
+    const message = buildDeliveryMessage(delivery)
     try {
       const result = await runOpenClawMessage(message)
       await acknowledge(delivery, result)
