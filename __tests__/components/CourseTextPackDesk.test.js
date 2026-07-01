@@ -27,6 +27,18 @@ function response(body, ok = true) {
   return Promise.resolve({ ok, json: () => Promise.resolve(body) })
 }
 
+async function openCourseJob() {
+  await waitFor(() => expect(screen.getAllByText('证据法').length).toBeGreaterThan(0))
+  const folder = screen.getAllByRole('button').find(button =>
+    String(button.className || '').includes('course-folder-card') &&
+    String(button.textContent || '').includes('证据法')
+  )
+  expect(folder).toBeTruthy()
+  fireEvent.click(folder)
+  const openButton = await screen.findByRole('button', { name: /继续整理|继续确认|查看笔记/ })
+  fireEvent.click(openButton)
+}
+
 describe('CourseTextPackDesk', () => {
   beforeEach(() => {
     fetch.mockImplementation((url, options = {}) => {
@@ -41,8 +53,7 @@ describe('CourseTextPackDesk', () => {
 
   it('shows one understandable current stage instead of every internal panel', async () => {
     render(<CourseTextPackDesk />)
-    await waitFor(() => expect(screen.getAllByText('证据法').length).toBeGreaterThan(0))
-    fireEvent.click(screen.getByRole('button', { name: '继续整理' }))
+    await openCourseJob()
 
     await waitFor(() => expect(screen.getByText('确定笔记整理方式')).toBeInTheDocument())
     expect(screen.getByRole('button', { name: '保存偏好并继续' })).toBeInTheDocument()
@@ -89,8 +100,7 @@ describe('CourseTextPackDesk', () => {
     })
 
     render(<CourseTextPackDesk />)
-    await waitFor(() => expect(screen.getAllByText('证据法').length).toBeGreaterThan(0))
-    fireEvent.click(screen.getByRole('button', { name: '继续整理' }))
+    await openCourseJob()
     await waitFor(() => expect(screen.getByText('逐节点整理')).toBeInTheDocument())
 
     expect(screen.queryByRole('button', { name: '确认本节点' })).not.toBeInTheDocument()
@@ -125,8 +135,7 @@ describe('CourseTextPackDesk', () => {
     })
 
     render(<CourseTextPackDesk />)
-    await waitFor(() => expect(screen.getAllByText('证据法').length).toBeGreaterThan(0))
-    fireEvent.click(screen.getByRole('button', { name: '继续整理' }))
+    await openCourseJob()
     await waitFor(() => expect(screen.getByText('审查发现实质问题，本节点已自动进入修改队列；其他节点仍会继续处理。')).toBeInTheDocument())
     expect(screen.getByText('补充修改要求（可选）')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '确认本节点' })).not.toBeInTheDocument()
@@ -173,8 +182,7 @@ describe('CourseTextPackDesk', () => {
     })
 
     render(<CourseTextPackDesk />)
-    await waitFor(() => expect(screen.getAllByText('证据法').length).toBeGreaterThan(0))
-    fireEvent.click(screen.getByRole('button', { name: '继续整理' }))
+    await openCourseJob()
 
     await waitFor(() => expect(screen.getByText('Model response must be valid JSON · 阶段：审查正文')).toBeInTheDocument())
     expect(screen.getAllByText(/Model response must be valid JSON/)).toHaveLength(1)

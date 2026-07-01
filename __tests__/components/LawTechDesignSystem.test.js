@@ -23,12 +23,13 @@ describe('law-tech visual system', () => {
     expect(css).toMatch(/\.course-editor-pane\s*\{[\s\S]*?overflow:\s*hidden/)
   })
 
-  it('uses the warm glass language without turning the homepage into a poster', () => {
+  it('uses the warm glass language while keeping the homepage content-led', () => {
     const home = read('pages/index.js')
     const header = read('components/law-tech/PublicHeader.js')
     const css = read('components/LawTechDeskStyles.js')
-    expect(home).toContain('home-masthead')
-    expect(home).toContain('home-updates-grid')
+    expect(home).toContain('home-dashboard')
+    expect(home).toContain('home-update-list')
+    expect(home).toContain("href='/content'")
     expect(home).not.toContain('public-portrait-card')
     expect(home).not.toContain('public-entry-grid')
     expect(header).toContain('public-header-actions')

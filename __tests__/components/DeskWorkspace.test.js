@@ -152,16 +152,54 @@ const items = [
   }
 ]
 
-function mockScheduleFetch(nextItems = items) {
-  fetch.mockImplementation((url) => {
-    if (String(url).includes('/api/schedule/items')) {
+const generatedScheduleIds = {
+  'course-briefs': '70000000-0000-4000-8000-000000000001',
+  'public-articles': '70000000-0000-4000-8000-000000000002',
+  'other-reading': '70000000-0000-4000-8000-000000000003',
+  'reading-inbox': '70000000-0000-4000-8000-000000000004'
+}
+
+function persistedScheduleItem(item, index) {
+  if (item.id) return item
+  const systemKey = item.aiTrace?.systemKey || ''
+  return {
+    ...item,
+    id: generatedScheduleIds[systemKey] || `70000000-0000-4000-8000-${String(index + 10).padStart(12, '0')}`
+  }
+}
+
+function mockScheduleFetch(nextItems = items, { noteId = '' } = {}) {
+  let stored = nextItems.map(persistedScheduleItem)
+  fetch.mockImplementation((url, options = {}) => {
+    if (String(url).includes('/api/notes') && options.method === 'POST') {
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ items: nextItems })
+        json: () => Promise.resolve({
+          note: noteId ? { id: noteId } : null,
+          existing: false
+        })
+      })
+    }
+    if (String(url).includes('/api/schedule/items')) {
+      if (options.method === 'PUT') {
+        const payload = JSON.parse(options.body || '{}')
+        stored = (payload.items || []).map(persistedScheduleItem)
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ items: stored })
       })
     }
     return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
   })
+}
+
+async function openReadingDocument(title = '待读长文章') {
+  const folder = await screen.findByRole('button', { name: /未分类/ })
+  fireEvent.click(folder)
+  const itemTitle = await screen.findByText(title)
+  fireEvent.click(itemTitle.closest('button'))
+  await screen.findByRole('button', { name: /存为笔记草稿|需要真实来源/ })
 }
 
 describe('workspace desk views', () => {
@@ -240,57 +278,44 @@ describe('workspace desk views', () => {
     expect(screen.getAllByText('编辑').length).toBeGreaterThan(0)
   })
 
-  it('renders Reading as list plus detail with reliable note action state', async () => {
+  it('renders Reading as folders plus a document detail with reliable note action state', async () => {
     mockScheduleFetch()
     render(<ReadingBox />)
 
-    await waitFor(() => expect(screen.getAllByText('待读长文章').length).toBeGreaterThan(0))
+    await openReadingDocument()
 
-    expect(screen.getByText('微信')).toBeInTheDocument()
+    expect(screen.getByText(/微信 · 待读/)).toBeInTheDocument()
     expect(screen.getAllByText('民法').length).toBeGreaterThan(0)
     expect(screen.queryByText('none')).not.toBeInTheDocument()
     expect(screen.queryByText('null')).not.toBeInTheDocument()
     expect(screen.queryByText('undefined')).not.toBeInTheDocument()
     expect(screen.getByText('原文')).toHaveAttribute('href', longUrl)
     expect(screen.getByRole('button', { name: '存为笔记草稿' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: /已读 1/ })).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByText('已读旧文章')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /已读 1/ }))
-    expect(screen.getByText('已读旧文章')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '移回待读' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '读完' })).toBeInTheDocument()
   })
 
   it('does not show a working note-draft action for local-only reading items', async () => {
     mockScheduleFetch([{ ...items[6], id: 'local-reading-id' }])
     render(<ReadingBox />)
 
-    await waitFor(() => expect(screen.getAllByText('待读长文章').length).toBeGreaterThan(0))
+    await openReadingDocument()
     expect(screen.getByRole('button', { name: '需要真实来源' })).toBeDisabled()
   })
 
   it('opens a real note draft link after Reading creates one', async () => {
-    fetch.mockImplementation((url, options = {}) => {
-      if (String(url).includes('/api/schedule/items') && options.method === 'PUT') {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ items }) })
-      }
-      if (String(url).includes('/api/schedule/items')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ items }) })
-      }
-      if (String(url).includes('/api/notes')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ note: { id: '77777777-7777-4777-8777-777777777777' }, existing: false })
-        })
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+    mockScheduleFetch(items, {
+      noteId: '77777777-7777-4777-8777-777777777777'
     })
     render(<ReadingBox />)
 
-    await waitFor(() => expect(screen.getByRole('button', { name: '存为笔记草稿' })).toBeEnabled())
+    await openReadingDocument()
     fireEvent.click(screen.getByRole('button', { name: '存为笔记草稿' }))
 
-    await waitFor(() => expect(screen.getByText('已生成笔记')).toBeInTheDocument())
-    expect(screen.getByText('打开笔记')).toHaveAttribute('href', '/desk/inbox?noteId=77777777-7777-4777-8777-777777777777')
+    await waitFor(() => expect(screen.getByText('已生成笔记草稿')).toBeInTheDocument())
+    expect(screen.getByText('打开笔记')).toHaveAttribute(
+      'href',
+      '/desk/inbox?noteId=77777777-7777-4777-8777-777777777777'
+    )
   })
 
   it('renders the inbox as persisted notes instead of the Today board', async () => {

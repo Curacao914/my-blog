@@ -10,6 +10,16 @@ jest.mock('next/router', () => ({
   useRouter: () => ({ push, pathname: '/desk/today' })
 }))
 
+jest.mock('@/hooks/useWorkspaceSession', () => ({
+  useWorkspaceSession: () => ({
+    loading: false,
+    session: {
+      profile: { id: 'profile-test-1', role: 'owner' },
+      actor: { id: 'profile-test-1', role: 'owner' }
+    }
+  })
+}))
+
 jest.mock('@/lib/course/clientApi', () => {
   const actual = jest.requireActual('@/lib/course/clientApi')
   return {

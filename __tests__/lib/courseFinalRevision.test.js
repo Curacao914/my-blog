@@ -6,7 +6,7 @@ import { getNextCourseWorkerTasks } from '@/lib/course/workerTasks'
 
 function fixture() {
   return {
-    status: 'final_review_human',
+    status: 'final_review',
     currentStep: 'final_review',
     progress: 90,
     steps: [],
@@ -15,7 +15,7 @@ function fixture() {
       key: 'lesson-1',
       order: 1,
       title: '第一课',
-      status: 'final_review_human',
+      status: 'final_review',
       nodes: [{ id: 'node-1', status: 'node_approved' }],
       finalNote: { markdown: '# 第一课\n\n原始正文。', updatedAt: '2026-06-27T00:00:00.000Z' },
       finalNoteVersions: [{ version: 1, value: '# 第一课\n\n原始正文。' }],
@@ -39,7 +39,7 @@ describe('user-controlled final note revision', () => {
   it('returns to human confirmation after the revision result is saved', () => {
     const queued = requestFinalNoteRevision(fixture(), 'lesson-1', '补足第二部分。')
     const revised = saveFinalNoteRevision(queued, 'lesson-1', '# 第一课\n\n修订后的正文。')
-    expect(revised.status).toBe('final_review_human')
+    expect(revised.status).toBe('final_review')
     expect(revised.lessons[0].finalNote.markdown).toContain('修订后的正文')
     expect(revised.lessons[0].finalNoteVersions.at(-1).source).toBe('final-revision')
   })

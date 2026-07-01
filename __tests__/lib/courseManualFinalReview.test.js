@@ -1,6 +1,6 @@
 import {
-  approveFinalReviewHuman,
-  assembleFinalNote
+  assembleFinalNote,
+  completeFinalReview
 } from '@/lib/course/workflowState'
 import { getNextCourseWorkerTasks } from '@/lib/course/workerTasks'
 
@@ -46,29 +46,37 @@ function workflowFixture() {
   }
 }
 
-describe('manual final review', () => {
-  it('waits for the user immediately after assembling the final note', () => {
+describe('independent final review', () => {
+  it('queues an independent final review after assembling the final note', () => {
     const result = assembleFinalNote(workflowFixture(), 'lesson-1', {})
 
-    expect(result.status).toBe('final_review_human')
-    expect(result.lessons[0].status).toBe('final_review_human')
+    expect(result.status).toBe('final_review')
+    expect(result.lessons[0].status).toBe('final_review')
     expect(result.lessons[0].finalNote.markdown).toContain('已经通过节点审查')
   })
 
-  it('does not schedule the legacy final-review model task', () => {
+  it('schedules the final-review model task rather than silently completing', () => {
     const workflow = assembleFinalNote(workflowFixture(), 'lesson-1', {})
     expect(getNextCourseWorkerTasks(workflow)[0]).toMatchObject({
-      type: 'idle',
-      reason: 'waiting-final-human-review'
+      type: 'final-review',
+      lessonKey: 'lesson-1'
     })
   })
 
-  it('completes the lesson after explicit human confirmation', () => {
+  it('completes only after the independent final report approves the note', () => {
     const waiting = assembleFinalNote(workflowFixture(), 'lesson-1', {})
-    const completed = approveFinalReviewHuman(waiting, 'lesson-1')
+    const completed = completeFinalReview(waiting, 'lesson-1', {
+      decision: 'approve',
+      coverage: 90,
+      grounding: 90,
+      logic: 90,
+      detail: 90,
+      sourceCoverage: 90,
+      issues: []
+    })
 
     expect(completed.status).toBe('completed')
     expect(completed.lessons[0].status).toBe('completed')
-    expect(completed.lessons[0].qualityReport.decision).toBe('human_approved')
+    expect(completed.lessons[0].qualityReport.decision).toBe('approve')
   })
 })

@@ -93,7 +93,9 @@
     "course:pipeline:cycle": "bash scripts/course-worker/run-with-network.sh node scripts/course-worker/production-supercycle.mjs",
     "course:pipeline:media-cycle": "bash scripts/course-worker/run-with-network.sh node scripts/course-worker/production-cycle.mjs",
     "course:pipeline:llm": "bash scripts/course-worker/run-with-network.sh node scripts/course-worker/llm-drain.mjs",
-    "course:pipeline:test-production": "node --test scripts/course-worker/production-cycle-core.test.mjs scripts/course-worker/production-recovery.test.mjs scripts/course-worker/llm-drain-core.test.mjs scripts/course-worker/asr-budget.test.mjs"
+    "course:pipeline:test-production": "node --test scripts/course-worker/production-cycle-core.test.mjs scripts/course-worker/production-recovery.test.mjs scripts/course-worker/llm-drain-core.test.mjs scripts/course-worker/asr-budget.test.mjs",
+    "test:relay": "npm --prefix integrations/openclaw/law-tech-wechat-relay test",
+    "test:gate": "jest --runInBand && npm run test:relay"
   },
   "dependencies": {
     "@clerk/localizations": "^3.17.1",

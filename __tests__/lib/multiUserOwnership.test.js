@@ -24,7 +24,8 @@ describe('multi-user ownership contracts', () => {
   it('does not let members fall back to the administrators AI or email keys', () => {
     expect(integrations).toContain("if (profile.role === 'owner') return ownerGlobalAiConfig()")
     expect(integrations).toContain("if (profile.role === 'owner') return ownerGlobalEmailConfig()")
-    expect(integrations).toContain("return { apiKey: '', baseUrl: '', models: {}, source: 'missing' }")
+    expect(integrations).toContain("source: 'missing'")
+    expect(integrations).toContain('automation:')
     expect(integrations).toContain("return { apiKey: '', from: '', source: 'missing' }")
   })
 

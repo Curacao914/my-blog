@@ -1,26 +1,18 @@
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs'
+import path from 'path'
+
+const desk = fs.readFileSync(path.join(process.cwd(), 'components/CourseTextPackDesk.js'), 'utf8')
+const workflow = fs.readFileSync(path.join(process.cwd(), 'lib/course/workflowState.js'), 'utf8')
 
 describe('course final note reading view', () => {
-  const component = fs.readFileSync(
-    path.join(process.cwd(), 'components/CourseTextPackDesk.js'),
-    'utf8'
-  )
-  const css = fs.readFileSync(
-    path.join(process.cwd(), 'components/LawTechDeskStyles.js'),
-    'utf8'
-  )
-
-  it('renders Markdown and shows a restrained character count', () => {
-    expect(component).toContain("import ReactMarkdown from 'react-markdown'")
-    expect(component).toContain("className='course-final-preview'")
-    expect(component).toContain("className='course-final-count'")
-    expect(component).toContain('确认无误，完成本课')
-  })
-
-  it('keeps the reading surface scrollable without crowding the page', () => {
-    expect(css).toMatch(
-      /\.course-final-preview,[\s\S]*?max-height:\s*min\(68vh,760px\);[\s\S]*?overflow:\s*auto/
-    )
+  it('renders Markdown and keeps explicit save, revision and exceptional-review actions', () => {
+    expect(desk).toContain('ReactMarkdown')
+    expect(desk).toContain('countCourseNoteChars')
+    expect(desk).toContain("type: 'save-final-note'")
+    expect(desk).toContain("type: 'request-final-revision'")
+    expect(desk).toContain("type: 'approve-final-review'")
+    expect(desk).toContain('正常通过后会自动完成，无需确认')
+    expect(workflow).toContain("status: 'final_review'")
+    expect(workflow).toContain('completeFinalReview')
   })
 })

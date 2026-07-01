@@ -53,8 +53,8 @@ describe('course review reliability', () => {
       summary:'存在需要确认的问题。',
       issues:[{ severity:'blocking', message:'问题没有定位到具体节点。', nodeId:'' }]
     })
-    expect(result.status).toBe('final_review_human')
+    expect(result.status).toBe('final_revision_required')
     expect(result.lessons[0].nodes[0].status).toBe('node_approved')
-    expect(result.lessons[0].qualityReport.unmappedIssues).toBe(true)
+    expect(result.lessons[0].finalRevisionRequests.at(-1).value.source).toBe('final-review')
   })
 })
