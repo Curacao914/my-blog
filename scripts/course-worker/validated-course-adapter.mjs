@@ -144,7 +144,10 @@ async function upload(task) {
   const textPack = JSON.parse(fs.readFileSync(textpackPath, 'utf8'))
   const result = await createWorkerTextPackClient().importTextPack(textPack, {
     autoStart: process.env.COURSE_AUTO_START_NOTES !== '0',
-    courseSpec: { autoApproveOutline: true }
+    courseSpec: {
+      autoApproveOutline:
+        process.env.COURSE_AUTO_APPROVE_OUTLINE !== '0'
+    }
   })
   return {
     artifacts: {
@@ -160,6 +163,19 @@ async function upload(task) {
 
 async function cleanup(task) {
   const root = taskRoot(task)
+  if (process.env.COURSE_CLEANUP_MEDIA === '0') {
+    await acquisition?.close()
+    acquisition = null
+    return {
+      artifacts: {},
+      runtime: {
+        mediaDeleted: false,
+        fragmentsDeleted: false,
+        cleanupSkipped: true,
+        transcriptRetained: true
+      }
+    }
+  }
   if (task.artifacts?.mediaScratchKey) fs.rmSync(resolveScratchKey(task.artifacts.mediaScratchKey), { force: true })
   fs.rmSync(path.join(root, 'fragments'), { recursive: true, force: true })
   fs.rmSync(path.join(root, 'transcript', '.private'), { recursive: true, force: true })

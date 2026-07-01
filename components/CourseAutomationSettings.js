@@ -143,8 +143,7 @@ export function CourseAutomationSettings() {
                 disabled={disabled || !form.enabled}
               />
               <small>
-                当前生产 Action 仍在北京时间 02:00 唤醒；该值同时作为控制面计划，
-                下一轮 Action 改为高频唤醒后将直接按此时间执行。
+                GitHub Action 每 30 分钟轻量检查一次，只在设定时间之后且当天尚未运行时启动完整 Worker。
               </small>
             </label>
             <label>

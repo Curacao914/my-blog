@@ -1,11 +1,20 @@
 import { useEffect, useState } from 'react'
 
+const OPENCLAW_MODELS = [
+  ['deepseek/deepseek-v4-flash', 'DeepSeek V4 Flash · 日常默认'],
+  ['deepseek/deepseek-v4-pro', 'DeepSeek V4 Pro · 更强推理'],
+  ['deepseek/deepseek-chat', 'DeepSeek Chat · 兼容模式'],
+  ['deepseek/deepseek-reasoner', 'DeepSeek Reasoner · 长推理']
+]
+
 const empty = {
   enabled: true,
   baseUrl: 'https://api.deepseek.com/v1',
   apiKey: '',
   defaultModel: 'deepseek-v4-pro',
-  scheduleModel: 'deepseek-v4-flash'
+  scheduleModel: 'deepseek-v4-flash',
+  openclawSyncEnabled: true,
+  openclawModel: 'deepseek/deepseek-v4-flash'
 }
 
 export function AiSettings() {
@@ -32,6 +41,10 @@ export function AiSettings() {
         config.scheduleModel ||
         config.defaultModel ||
         current.scheduleModel,
+      openclawSyncEnabled: config.openclawSyncEnabled !== false,
+      openclawModel:
+        config.openclawModel ||
+        current.openclawModel,
       apiKey: ''
     }))
     setState('ready')
@@ -65,7 +78,7 @@ export function AiSettings() {
       setMeta(data.integration || {})
       setForm(current => ({ ...current, apiKey: '' }))
       setState('ready')
-      setMessage('已保存')
+      setMessage('已保存；OpenClaw 在线时会自动同步所选模型')
     } catch (error) {
       setState('error')
       setMessage(error.message)
@@ -153,17 +166,55 @@ export function AiSettings() {
           </label>
         </div>
 
+        <div className='settings-subsection'>
+          <div>
+            <h4>OpenClaw 默认模型</h4>
+            <p>
+              前端保存期望模型，本机 Relay 在线时自动同步。DeepSeek API Key
+              只保存在 OpenClaw 本机环境中，不通过网页接口回传。
+            </p>
+          </div>
+        </div>
+
+        <label className='settings-check-row'>
+          <input
+            type='checkbox'
+            checked={form.openclawSyncEnabled}
+            onChange={event => update('openclawSyncEnabled', event.target.checked)}
+            disabled={disabled}
+          />
+          <span>
+            <strong>由 Law-Tech 同步 OpenClaw 模型</strong>
+            <small>关闭后保留 OpenClaw 当前本地模型，不再自动改动。</small>
+          </span>
+        </label>
+
+        <label>
+          <span>OpenClaw 模型</span>
+          <select
+            disabled={disabled || !form.openclawSyncEnabled}
+            value={form.openclawModel}
+            onChange={event => update('openclawModel', event.target.value)}
+          >
+            {OPENCLAW_MODELS.map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </label>
+
         <p className='settings-muted'>
-          课程简报、大纲、写作、审查、错峰和媒体清理都已移到“课程自动化”，
-          这里仅保留通用供应商与密钥。
+          课程简报、大纲、写作、审查、错峰和媒体清理都在“课程自动化”中管理。
+          微信日程解析会优先使用这里保存的个人 DeepSeek 配置。
         </p>
 
         <div className='settings-actions'>
-          <button className='is-primary' disabled={disabled} type='submit'>
+          <button className='soft-button primary' disabled={disabled} type='submit'>
             {state === 'saving' ? '保存中…' : '保存'}
           </button>
           {meta.configured ? (
-            <button disabled={disabled} type='button' onClick={remove}>删除</button>
+            <button className='soft-button' disabled={disabled} type='button' onClick={remove}>
+              删除
+            </button>
           ) : null}
         </div>
 

@@ -122,3 +122,29 @@ npm run outbound
 ```
 
 Relay 只执行队列中的确定文本，不调用模型，不允许 Agent 改写通知。
+
+
+## 2026-07-01 current runtime
+
+The real installation is a Mac OpenClaw Gateway with `openclaw-weixin`, while
+Law-Tech APIs remain on Vercel. Cloudflare Tunnel exposes only the Gateway paths
+that were explicitly configured; it is not a second OpenClaw host.
+
+The relay now has two deterministic directions:
+
+```text
+WeChat inbound -> OpenClaw plugin -> /api/schedule/capture
+message_deliveries -> local outbound service -> openclaw message send -> WeChat
+```
+
+The System page stores the desired OpenClaw model. The local relay polls that
+non-secret setting, applies it with `openclaw models set`, and reports a heartbeat.
+`DEEPSEEK_API_KEY` remains in `~/.openclaw/.env`; it is never returned by the
+Law-Tech runtime-config endpoint.
+
+The macOS service installer is:
+
+```bash
+cd integrations/openclaw/law-tech-wechat-relay
+npm run outbound:install
+```

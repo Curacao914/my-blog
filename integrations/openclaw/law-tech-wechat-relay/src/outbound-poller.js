@@ -7,7 +7,7 @@ const probe = args.has('--probe')
 const baseUrl = String(
   process.env.LAW_TECH_BASE_URL ||
   process.env.LAW_TECH_CAPTURE_URL ||
-  'https://law-tech.dev'
+  'https://preview.law-tech.dev'
 ).replace(/\/api\/schedule\/capture\/?$/, '').replace(/\/$/, '')
 const token = String(process.env.WECHAT_CAPTURE_TOKEN || '').trim()
 const target = String(
@@ -23,6 +23,11 @@ const intervalMs = Math.max(
   10_000,
   Number(process.env.LAW_TECH_WECHAT_POLL_MS || 30_000)
 )
+const modelSyncMs = Math.max(
+  60_000,
+  Number(process.env.OPENCLAW_MODEL_SYNC_MS || 300_000)
+)
+let lastModelSyncAt = 0
 
 function headers() {
   return {
@@ -43,22 +48,12 @@ async function jsonRequest(pathname, options = {}) {
   return payload
 }
 
-function runOpenClaw(message, dryRun = false) {
+function runCommand(commandArgs, { dryRun = false } = {}) {
   return new Promise((resolve, reject) => {
     const command = process.env.OPENCLAW_BIN || 'openclaw'
-    const commandArgs = [
-      'message',
-      'send',
-      '--channel',
-      'openclaw-weixin',
-      '--target',
-      target,
-      '--message',
-      message,
-      '--json'
-    ]
-    if (dryRun) commandArgs.push('--dry-run')
-    const child = spawn(command, commandArgs, {
+    const finalArgs = [...commandArgs]
+    if (dryRun) finalArgs.push('--dry-run')
+    const child = spawn(command, finalArgs, {
       stdio: ['ignore', 'pipe', 'pipe']
     })
     let stdout = ''
@@ -68,7 +63,7 @@ function runOpenClaw(message, dryRun = false) {
     child.on('error', reject)
     child.on('close', code => {
       if (code !== 0) {
-        reject(new Error(stderr.trim() || `openclaw exited with ${code}`))
+        reject(new Error(stderr.trim() || `${command} exited with ${code}`))
         return
       }
       let parsed = null
@@ -76,6 +71,63 @@ function runOpenClaw(message, dryRun = false) {
       resolve({ stdout: stdout.trim(), parsed })
     })
   })
+}
+
+function runOpenClawMessage(message, dryRun = false) {
+  return runCommand([
+    'message',
+    'send',
+    '--channel',
+    'openclaw-weixin',
+    '--target',
+    target,
+    '--message',
+    message,
+    '--json'
+  ], { dryRun })
+}
+
+async function currentOpenClawModel() {
+  const result = await runCommand([
+    'config',
+    'get',
+    'agents.defaults.model.primary',
+    '--json'
+  ])
+  if (typeof result.parsed === 'string') return result.parsed
+  return String(result.parsed || result.stdout || '')
+    .replace(/^"|"$/g, '')
+    .trim()
+}
+
+async function heartbeat(currentModel) {
+  return jsonRequest('/api/integrations/openclaw/heartbeat', {
+    method: 'POST',
+    body: JSON.stringify({
+      currentModel,
+      workerId,
+      version: 'law-tech-relay-v2'
+    })
+  })
+}
+
+async function syncRuntime({ force = false } = {}) {
+  const now = Date.now()
+  if (!force && now - lastModelSyncAt < modelSyncMs) return null
+  lastModelSyncAt = now
+  const runtime = await jsonRequest('/api/integrations/openclaw/runtime-config')
+  let currentModel = await currentOpenClawModel().catch(() => '')
+  if (
+    runtime.enabled !== false &&
+    runtime.model &&
+    runtime.model !== currentModel
+  ) {
+    await runCommand(['models', 'set', runtime.model])
+    currentModel = runtime.model
+    console.log(`✓ OpenClaw 模型已同步：${runtime.model}`)
+  }
+  await heartbeat(currentModel)
+  return { runtime, currentModel }
 }
 
 async function prepare() {
@@ -117,6 +169,11 @@ async function acknowledge(delivery, result, error = null) {
 }
 
 async function cycle() {
+  try {
+    await syncRuntime()
+  } catch (error) {
+    console.error(`[openclaw-runtime] ${error.message}`)
+  }
   await prepare()
   let sent = 0
   while (true) {
@@ -131,7 +188,7 @@ async function cycle() {
         : ''
     ].filter(Boolean).join('\n')
     try {
-      const result = await runOpenClaw(message)
+      const result = await runOpenClawMessage(message)
       await acknowledge(delivery, result)
       sent += 1
       console.log(`✓ 微信已发送：${delivery.purpose} ${delivery.id}`)
@@ -148,8 +205,9 @@ async function main() {
   if (!target) throw new Error('LAW_TECH_WECHAT_TARGET or WECHAT_OWNER is required')
 
   if (probe) {
-    await runOpenClaw('law-tech.dev 微信发送通道探测（dry-run）', true)
-    console.log('✓ openclaw-weixin dry-run probe passed')
+    await syncRuntime({ force: true })
+    await runOpenClawMessage('law-tech.dev 微信发送通道探测（dry-run）', true)
+    console.log('✓ OpenClaw 模型同步与 openclaw-weixin dry-run 探测通过')
     return
   }
 

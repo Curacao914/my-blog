@@ -5,8 +5,12 @@ import {
   listScheduleRows,
   upsertScheduleRows
 } from '@/lib/server/supabase'
-import { POST as parseSchedulePost } from '@/pages/api/schedule/parse'
+import {
+  runScheduleParse,
+  shouldIgnoreCommand
+} from '@/pages/api/schedule/parse'
 import { syncRemindersForScheduleItems } from '@/lib/server/reminders'
+import { resolveUserAiConfig } from '@/lib/server/userIntegrations'
 
 function readBearerToken(req) {
   const authHeader = req.headers.authorization || ''
@@ -44,13 +48,18 @@ function ownerUserIdFor(source, senderId) {
   )
 }
 
-async function parseCommand(command, items) {
-  const request = new Request('http://law-tech.local/api/schedule/parse', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ command, items })
-  })
-  const response = await parseSchedulePost(request)
+async function parseCommand(command, items, modelConfig) {
+  const response = await runScheduleParse(
+    { command, items },
+    {
+      apiKey: modelConfig.apiKey,
+      baseUrl: modelConfig.baseUrl,
+      model:
+        modelConfig.models?.schedule ||
+        modelConfig.models?.default ||
+        ''
+    }
+  )
   const data = await response.json()
   if (!response.ok) {
     const error = new Error(data?.error || 'parse failed')
@@ -174,9 +183,20 @@ export default async function handler(req, res) {
   if (!command.trim()) {
     return res.status(400).json({ ok: false, error: 'Empty command' })
   }
+  if (shouldIgnoreCommand(command)) {
+    return res.status(200).json({
+      ok: true,
+      status: 'ignored',
+      action: 'ignored',
+      reason: 'not_actionable',
+      replyText: '未识别到需要保存的事项或阅读内容。',
+      items: []
+    })
+  }
 
   try {
     const { profile } = await ensureProfile({ clerkUserId, role: 'owner', status: 'active' })
+    const modelConfig = await resolveUserAiConfig(profile)
     const existingRows = await listScheduleRows(profile.id)
     const currentItems = (existingRows || []).map(fromDbScheduleItem)
     const captureKey = captureKeyFor(req)
@@ -197,7 +217,10 @@ export default async function handler(req, res) {
       })
     }
     const contextItems = selectRelevantItems(command, currentItems)
-    const parsed = preventAccidentalReplace(await parseCommand(command, contextItems), command)
+    const parsed = preventAccidentalReplace(
+      await parseCommand(command, contextItems, modelConfig),
+      command
+    )
 
     if (!Array.isArray(parsed.items) || !parsed.items.length) {
       return res.status(200).json({

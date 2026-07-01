@@ -345,7 +345,7 @@ function fallbackReadingSummary(command) {
   return text.length > 180 ? `${text.slice(0, 180)}…` : text
 }
 
-function shouldIgnoreCommand(command) {
+export function shouldIgnoreCommand(command) {
   const text = String(command || '').replace(/\s+/g, ' ').trim()
   if (!text) return true
   if (/^(hi|hello|你好|在吗|测试|test|ok|嗯+|啊+|收到|谢谢)$/i.test(text)) return true
@@ -417,23 +417,24 @@ function fallbackItemsFromCommand(command, { referenceDate, linkMetadata = [] })
   ], { referenceDate, linkMetadata })
 }
 
-async function callScheduleModel({ apiKey, baseUrl, model, messages }) {
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      'content-type': 'application/json'
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.1,
-      response_format: { type: 'json_object' },
-      messages
-    })
-  })
+async function readProviderFailure(response) {
+  const text = await response.text().catch(() => '')
+  try {
+    const payload = JSON.parse(text)
+    return String(
+      payload?.error?.message ||
+      payload?.message ||
+      payload?.error ||
+      ''
+    ).slice(0, 240)
+  } catch {
+    return text.replace(/\s+/g, ' ').trim().slice(0, 240)
+  }
+}
 
-  if (!response.ok) {
-    const fallbackResponse = await fetch(`${baseUrl}/chat/completions`, {
+async function callScheduleModel({ apiKey, baseUrl, model, messages }) {
+  const request = async includeResponseFormat => {
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         authorization: `Bearer ${apiKey}`,
@@ -442,27 +443,56 @@ async function callScheduleModel({ apiKey, baseUrl, model, messages }) {
       body: JSON.stringify({
         model,
         temperature: 0.1,
+        ...(includeResponseFormat
+          ? { response_format: { type: 'json_object' } }
+          : {}),
         messages
       })
     })
-    if (!fallbackResponse.ok) {
-      return { ok: false, status: fallbackResponse.status }
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        error: await readProviderFailure(response)
+      }
     }
-    return { ok: true, data: await fallbackResponse.json() }
+    return { ok: true, data: await response.json() }
   }
 
-  return { ok: true, data: await response.json() }
+  const first = await request(true)
+  if (first.ok) return first
+
+  // Retry without response_format only for compatibility failures. Billing,
+  // auth and rate-limit errors must not spend a second request.
+  if (![400, 404, 415, 422].includes(first.status)) return first
+  return request(false)
 }
 
-async function runScheduleParse(body, config) {
+export async function runScheduleParse(body, config) {
   const { apiKey, baseUrl, model } = config
   const referenceDate = body.referenceDate || getShanghaiToday()
+  const command = body.command || body.instruction || body.text || ''
+
+  if (shouldIgnoreCommand(command)) {
+    return Response.json({
+      mode: 'append',
+      status: 'ignored',
+      reason: 'not_actionable',
+      items: []
+    })
+  }
 
   if (!apiKey || !model) {
+    const fallback = fallbackItemsFromCommand(command, {
+      referenceDate,
+      linkMetadata: []
+    })
+    if (fallback.length) {
+      return Response.json({ mode: 'append', source: 'rules', items: fallback })
+    }
     return Response.json({ error: 'schedule model is not configured' }, { status: 503 })
   }
 
-  const command = body.command || body.instruction || body.text || ''
   const linkMetadata = await fetchCommandLinkMetadata(command)
   const userContent = `Reference date: ${referenceDate}
 Timezone: ${TIME_ZONE}
@@ -481,7 +511,25 @@ ${command}`
     { role: 'user', content: userContent }
   ]
   const response = await callScheduleModel({ apiKey, baseUrl, model, messages })
-  if (!response.ok) return Response.json({ error: 'schedule model request failed' }, { status: response.status })
+  if (!response.ok) {
+    const fallback = fallbackItemsFromCommand(command, {
+      referenceDate,
+      linkMetadata
+    })
+    if (fallback.length) {
+      return Response.json({
+        mode: 'append',
+        source: 'rules',
+        providerStatus: response.status,
+        items: fallback
+      })
+    }
+    return Response.json({
+      error: 'schedule model request failed',
+      providerStatus: response.status,
+      providerError: response.error || ''
+    }, { status: response.status })
+  }
 
   const data = response.data
   const text = data.choices?.[0]?.message?.content || ''

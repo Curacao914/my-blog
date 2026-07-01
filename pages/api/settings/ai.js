@@ -25,10 +25,20 @@ function cleanProviderConfig(body = {}, current = {}) {
   const value = key => provided(body, key)
     ? String(body[key] || '').trim()
     : String(current[key] || '').trim()
+  const openclawModel =
+    value('openclawModel') ||
+    'deepseek/deepseek-v4-flash'
+  if (!/^[a-z0-9._-]+\/[A-Za-z0-9._:/-]+$/.test(openclawModel)) {
+    throw new Error('OpenClaw 模型格式无效')
+  }
   return {
     ...current,
     defaultModel: value('defaultModel'),
-    scheduleModel: value('scheduleModel')
+    scheduleModel: value('scheduleModel'),
+    openclawSyncEnabled: provided(body, 'openclawSyncEnabled')
+      ? body.openclawSyncEnabled !== false
+      : current.openclawSyncEnabled !== false,
+    openclawModel
   }
 }
 

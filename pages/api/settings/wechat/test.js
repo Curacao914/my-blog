@@ -1,12 +1,11 @@
 import { requireWorkspaceRequest } from '@/lib/auth/serverAdmin'
-import { enqueueMessageDelivery } from '@/lib/server/messageDeliveries'
+import {
+  enqueueMessageDelivery,
+  getMessageDeliveryForOwner,
+  prunePendingWechatTests
+} from '@/lib/server/messageDeliveries'
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST')
-    return res.status(405).json({ ok: false, error: 'Method not allowed' })
-  }
-
   const auth = await requireWorkspaceRequest(req, { permission: 'reminders' })
   if (!auth.ok) {
     return res.status(auth.status).json({
@@ -16,7 +15,29 @@ export default async function handler(req, res) {
     })
   }
 
+  if (req.method === 'GET') {
+    const id = String(req.query?.id || '').trim()
+    if (!id) return res.status(400).json({ ok: false, error: 'Missing delivery id' })
+    try {
+      const delivery = await getMessageDeliveryForOwner(id, auth.profile.id)
+      if (!delivery) return res.status(404).json({ ok: false, error: 'Delivery not found' })
+      res.setHeader('Cache-Control', 'private, no-store')
+      return res.status(200).json({ ok: true, delivery })
+    } catch (error) {
+      return res.status(500).json({
+        ok: false,
+        error: error instanceof Error ? error.message : '读取测试状态失败'
+      })
+    }
+  }
+
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'GET, POST')
+    return res.status(405).json({ ok: false, error: 'Method not allowed' })
+  }
+
   try {
+    await prunePendingWechatTests(auth.profile.id)
     const now = new Date()
     const result = await enqueueMessageDelivery({
       ownerId: auth.profile.id,
@@ -36,7 +57,8 @@ export default async function handler(req, res) {
     return res.status(200).json({
       ok: true,
       queued: Boolean(result.row),
-      deliveryId: result.row?.id || null
+      deliveryId: result.row?.id || null,
+      status: result.row?.status || 'pending'
     })
   } catch (error) {
     const detail = error instanceof Error ? error.message : ''
