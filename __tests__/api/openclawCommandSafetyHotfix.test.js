@@ -11,8 +11,12 @@ describe('OpenClaw context safety hotfix', () => {
     expect(command).toContain('lastMutationObject')
     expect(command).toContain('lastQueryObject: queryResult.lastObject')
     expect(command).toContain('lastSelectedObject')
-    expect(command).not.toContain(
-      'state.lastMutationObject ||\\n              state.lastSelectedObject ||\\n              state.lastObject'
+    const compactCommand = command.replace(/\s+/g, ' ').trim()
+    expect(compactCommand).toContain(
+      'state.lastMutationObject || state.lastSelectedObject || null'
+    )
+    expect(compactCommand).not.toContain(
+      'state.lastMutationObject || state.lastSelectedObject || state.lastObject'
     )
   })
 
