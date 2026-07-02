@@ -4,6 +4,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { MarkdownDocument } from '@/components/content/MarkdownDocument'
 import { ReadingLibraryDialog } from '@/components/ReadingLibraryDialog'
+import { useWorkspaceSession } from '@/hooks/useWorkspaceSession'
+import {
+  fetchScheduleItems,
+  readScheduleItemsCache,
+  writeScheduleItemsCache
+} from '@/lib/client/scheduleItemsCache'
+import { prepareReadingLibraryItems } from '@/lib/reading/prepare'
 import {
   READING_ARCHIVE_VIEW,
   buildDefaultFolderDrafts,
@@ -120,7 +127,12 @@ export function ReadingBox() {
   const [dialog, setDialog] = useState(null)
   const [scheduleDate, setScheduleDate] = useState('today')
   const [scheduleTime, setScheduleTime] = useState('')
+  const [loadState, setLoadState] = useState('loading')
+  const [loadMessage, setLoadMessage] = useState('')
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const rootRef = useRef(null)
+  const { loading: sessionLoading, session } = useWorkspaceSession()
+  const profileId = session?.profile?.id || session?.actor?.id || ''
 
   async function requestSave(nextItems, deletedIds = []) {
     const response = await fetch('/api/schedule/items', {
@@ -130,7 +142,9 @@ export function ReadingBox() {
     })
     const payload = await response.json().catch(() => ({}))
     if (!response.ok) throw new Error(payload.error || '保存失败')
-    return payload.items || nextItems
+    const saved = payload.items || nextItems
+    if (profileId) writeScheduleItemsCache(profileId, saved)
+    return saved
   }
 
   function adopt(nextItems) {
@@ -147,32 +161,53 @@ export function ReadingBox() {
   }
 
   useEffect(() => {
+    if (sessionLoading || !profileId) return undefined
     let cancelled = false
-    async function load() {
-      const response = await fetch('/api/schedule/items')
-      if (!response.ok) return
-      const data = await response.json()
-      if (cancelled) return
-      let loaded = data.items || []
-      const defaults = buildDefaultFolderDrafts(loaded)
-      if (defaults.length) {
-        try {
-          loaded = await requestSave([...loaded, ...defaults])
-        } catch {}
-      }
+    const cached = readScheduleItemsCache(profileId)
 
-      const migration = migrateLegacyReadingItems(loaded)
-      if (migration.changed) {
-        try {
-          loaded = await requestSave(migration.items)
-        } catch {}
-      }
-
-      if (!cancelled) adopt(loaded)
+    if (cached !== null) {
+      const prepared = prepareReadingLibraryItems(cached)
+      adopt(prepared.items)
+      setLoadState('ready')
+    } else {
+      setLoadState('loading')
     }
+    setLoadMessage('')
+
+    setIsRefreshing(true)
+    async function load() {
+      try {
+        const cloudItems = await fetchScheduleItems(profileId, { force: true })
+        if (cancelled) return
+
+        const prepared = prepareReadingLibraryItems(cloudItems)
+        adopt(prepared.items)
+        setLoadState('ready')
+
+        if (prepared.changed) {
+          try {
+            const saved = await requestSave(prepared.items)
+            if (!cancelled) adopt(saved)
+          } catch {
+            if (!cancelled) setStatus('整理状态将在下次保存时同步')
+          }
+        }
+      } catch (error) {
+        if (cancelled) return
+        if (cached !== null) {
+          setStatus('云端暂时不可用，显示最近内容')
+          return
+        }
+        setLoadMessage(error instanceof Error ? error.message : '阅读资料读取失败')
+        setLoadState('error')
+      } finally {
+        if (!cancelled) setIsRefreshing(false)
+      }
+    }
+
     load()
     return () => { cancelled = true }
-  }, [])
+  }, [profileId, sessionLoading])
 
   useEffect(() => {
     function closeMenu(event) {
@@ -249,6 +284,10 @@ export function ReadingBox() {
   }, [folders, dialog])
 
   async function persist(nextItems, deletedIds = [], message = '已保存') {
+    if (isRefreshing) {
+      setStatus('正在同步最新内容')
+      return null
+    }
     setBusy(true)
     setStatus('')
     try {
@@ -295,7 +334,7 @@ export function ReadingBox() {
     setDialog({
       type: 'create-folder',
       title: activeFolder ? `在“${folderName(activeFolder)}”中新建文件夹` : '新建阅读文件夹',
-      description: '文件夹只负责整理位置，不改变文章内容或已读状态。',
+      description: '新建一个阅读文件夹。',
       value: '',
       destination: activeFolder?.id || '__root__'
     })
@@ -305,7 +344,7 @@ export function ReadingBox() {
     setDialog({
       type: 'rename-folder',
       title: '重命名文件夹',
-      description: '已有文章和子文件夹会留在原位。',
+      description: '修改文件夹名称。',
       target: folder,
       value: folderName(folder)
     })
@@ -315,7 +354,7 @@ export function ReadingBox() {
     setDialog({
       type: isReadingFolder(target) ? 'move-folder' : 'move-item',
       title: isReadingFolder(target) ? '移动文件夹' : '移动阅读内容',
-      description: '选择新的整理位置。',
+      description: '选择目标文件夹。',
       target,
       destination: isReadingFolder(target)
         ? (folderParentId(target) || '__root__')
@@ -614,6 +653,25 @@ export function ReadingBox() {
       ? folderName(activeFolder)
       : '阅读资料库'
 
+  if (sessionLoading || !profileId || loadState === 'loading') {
+    return (
+      <div className='desk-loading-state' aria-live='polite'>
+        <i />
+        <span>正在读取…</span>
+      </div>
+    )
+  }
+
+  if (loadState === 'error') {
+    return (
+      <div className='course-empty-state'>
+        <strong>阅读资料没有载入</strong>
+        <p>{loadMessage}</p>
+        <button type='button' onClick={() => window.location.reload()}>重新加载</button>
+      </div>
+    )
+  }
+
   if (activeItem) {
     return (
       <div className='reading-library reading-document-view' ref={rootRef}>
@@ -703,7 +761,7 @@ export function ReadingBox() {
           <div className='reading-schedule-box'>
             <div>
               <strong>安排阅读</strong>
-              <span>只在日程中创建关联任务，原文仍留在资料库。</span>
+              <span>为这篇内容安排阅读时间。</span>
             </div>
             <label>
               日期
@@ -732,7 +790,7 @@ export function ReadingBox() {
               onClick={() => saveNote(activeItem)}
               disabled={busy || !isUuid(activeItem.id)}
             >
-              {isUuid(activeItem.id) ? '存为笔记草稿' : '需要真实来源'}
+              {isUuid(activeItem.id) ? '存为笔记草稿' : '暂不可存为笔记'}
             </button>
             {noteLinks[activeItem.id] ? (
               <a className='reading-note-link' href={`/desk/inbox?noteId=${noteLinks[activeItem.id]}`}>
@@ -773,7 +831,7 @@ export function ReadingBox() {
           <p>
             {archivedMode
               ? '这里保存已经退出日常阅读视线的资料。内容、标注和笔记都还在，随时可以恢复。'
-              : activeFolder?.summary || '先进入文件夹，再打开文章；资料的位置和阅读状态彼此独立。'}
+              : activeFolder?.summary || '按文件夹整理阅读资料。'}
           </p>
         </div>
         <div className='reading-library-head-actions'>

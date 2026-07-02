@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 
+import { profileCan } from '@/lib/auth/permissions'
 import { requireWorkspaceRequest } from '@/lib/auth/serverAdmin'
 import { removeAlgoliaContent, upsertAlgoliaContent } from '@/lib/content/algoliaSearch'
 import { revalidatePublicContentSurfaces } from '@/lib/content/revalidation'
@@ -39,8 +40,28 @@ function readableSummary(markdown = '') {
     .slice(0, 160)
 }
 
-function isWritingNote(note = {}) {
-  return note.note_type === 'writing' || note.metadata?.originType === 'writing' || note.metadata?.origin_type === 'writing'
+function noteOrigin(note = {}) {
+  return String(
+    note.note_type ||
+    note.metadata?.originType ||
+    note.metadata?.origin_type ||
+    'quick_note'
+  )
+}
+
+function isPublishableNote(note = {}) {
+  return ['writing', 'reading', 'quick_note'].includes(noteOrigin(note))
+}
+
+function publicationDefaults(note = {}) {
+  const origin = noteOrigin(note)
+  if (origin === 'reading') {
+    return { type: 'reading-note', collection: '阅读摘录', prefix: 'reading' }
+  }
+  if (origin === 'writing') {
+    return { type: 'article', collection: '写作', prefix: 'writing' }
+  }
+  return { type: 'article', collection: '随手记', prefix: 'notes' }
 }
 
 async function relatedRows(itemId) {
@@ -75,15 +96,16 @@ function settingsFromRecord(note, record) {
   const item = record?.item
   const related = record?.related || {}
   const folder = related.display?.folder_path || []
-  const defaultSlug = `writing/${slugSegment(note.title || 'draft', 'draft')}`
+  const defaults = publicationDefaults(note)
+  const defaultSlug = `${defaults.prefix}/${slugSegment(note.title || 'draft', 'draft')}`
   return {
     title: item?.title || note.title || '未命名草稿',
     summary: item?.summary || readableSummary(note.body_markdown),
-    type: ALLOWED_TYPES.includes(item?.type) ? item.type : 'article',
+    type: ALLOWED_TYPES.includes(item?.type) ? item.type : defaults.type,
     slug: item?.slug || defaultSlug,
     cover: coverFromAssets(related.assets),
     category: related.display?.category || '遇事不决',
-    collection: folder[1] || '写作',
+    collection: folder[1] || defaults.collection,
     tags: related.display?.tags || [],
     accessMode: related.access?.mode || 'private',
     password: '',
@@ -101,7 +123,8 @@ function normalizeSettings(note, input = {}, record = null) {
   const accessMode = ['public', 'password', 'private'].includes(input.accessMode) ? input.accessMode : current.accessMode
   const category = text(input.category) || current.category || '未归档'
   const collection = text(input.collection) || current.collection || '写作'
-  const fallbackSlug = `writing/${slugSegment(input.title || note.title || 'draft', 'draft')}`
+  const defaults = publicationDefaults(note)
+  const fallbackSlug = `${defaults.prefix}/${slugSegment(input.title || note.title || 'draft', 'draft')}`
   return {
     title: text(input.title) || note.title || '未命名草稿',
     summary: text(input.summary) || readableSummary(note.body_markdown),
@@ -262,13 +285,19 @@ function publicItem(item, settings, version) {
 }
 
 export default async function handler(req, res) {
-  const auth = await requireWorkspaceRequest(req, { permission: 'writing' })
+  const auth = await requireWorkspaceRequest(req)
   if (!auth.ok) return res.status(auth.status).json({ ok: false, error: auth.error, code: auth.code })
 
   try {
     const noteId = String(req.method === 'GET' ? req.query.noteId || '' : req.body?.noteId || '')
     const note = await findNote(auth.profile.id, noteId)
-    if (!note || !isWritingNote(note)) return res.status(404).json({ ok: false, error: '找不到这篇写作草稿' })
+    if (!note || !isPublishableNote(note)) {
+      return res.status(404).json({ ok: false, error: '找不到这篇可发布草稿' })
+    }
+    const requiredPermission = noteOrigin(note) === 'writing' ? 'writing' : 'notes'
+    if (!profileCan(auth.profile, requiredPermission)) {
+      return res.status(403).json({ ok: false, error: '没有管理这篇草稿的权限' })
+    }
     const record = await existingRecord(auth.profile.id, noteId)
     const canPublish = auth.profile.role === 'owner' || Boolean(auth.publicProfile?.permissions?.publish)
 

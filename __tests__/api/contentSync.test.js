@@ -96,6 +96,25 @@ describe('/api/content/sync', () => {
     expect(syncAlgoliaContent).toHaveBeenCalledWith([item], { pruneNotion: false })
     expect(res.body.ok).toBe(false)
     expect(res.body.warnings.join(' ')).toContain('Notion')
+    expect(res.body.relay.promoted).toBe(true)
+  })
+
+  it('treats image mirror misses as a warning without discarding the refreshed batch', async () => {
+    requireAdminRequest.mockResolvedValue({ ok: true, userId: 'admin-1' })
+    syncNotionRelay.mockResolvedValueOnce({
+      enabled: true,
+      promoted: true,
+      pages: 1,
+      mirroredImages: 2,
+      imageFailures: 3
+    })
+    const res = createRes()
+    await handler({ method: 'POST', body: { path: '/content' } }, res)
+
+    expect(res.statusCode).toBe(200)
+    expect(res.body.ok).toBe(true)
+    expect(res.body.warnings.join(' ')).toContain('图片')
+    expect(res.body.relay.promoted).toBe(true)
   })
 
   it('returns a usable partial result when Algolia is temporarily unavailable', async () => {

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { TodayBoard } from '@/components/TodayBoard'
 import { ReadingBox } from '@/components/ReadingBox'
 import { NotesDesk } from '@/components/NotesDesk'
+import { clearScheduleItemsCache } from '@/lib/client/scheduleItemsCache'
 
 jest.mock('next/router', () => ({
   useRouter: () => ({
@@ -199,10 +200,14 @@ async function openReadingDocument(title = '待读长文章') {
   fireEvent.click(folder)
   const itemTitle = await screen.findByText(title)
   fireEvent.click(itemTitle.closest('button'))
-  await screen.findByRole('button', { name: /存为笔记草稿|需要真实来源/ })
+  await screen.findByRole('button', { name: /存为笔记草稿|暂不可存为笔记/ })
 }
 
 describe('workspace desk views', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+    clearScheduleItemsCache()
+  })
   const RealDate = Date
 
   beforeAll(() => {
@@ -299,7 +304,7 @@ describe('workspace desk views', () => {
     render(<ReadingBox />)
 
     await openReadingDocument()
-    expect(screen.getByRole('button', { name: '需要真实来源' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '暂不可存为笔记' })).toBeDisabled()
   })
 
   it('opens a real note draft link after Reading creates one', async () => {

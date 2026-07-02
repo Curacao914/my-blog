@@ -135,13 +135,21 @@ export default async function handler(req, res) {
     }
     const pages = await revalidatePaths(res, String(req.body?.path || '/'), items)
     const warnings = []
-    if (relayError) warnings.push(`Notion 稳定中继失败，继续使用上一批：${relayError}`)
-    if (clearedSites && !String(source || '').split('+').includes('notion')) warnings.push('Notion 内容未能重新读取，已保留其他公开来源')
+    const notionSourceAvailable = String(source || '').split('+').includes('notion')
+    if (relayError) warnings.push(`Notion 快照未更新：${relayError}`)
+    if (relay?.imageFailures) {
+      warnings.push(`${relay.imageFailures} 张图片暂未镜像，文章内容已经更新`)
+    }
+    if (clearedSites && !notionSourceAvailable) warnings.push('Notion 内容未能重新读取，已保留其他公开来源')
     if (notionSearch.failed) warnings.push(`${notionSearch.failed} 篇 Notion 正文未能更新索引`)
     if (algolia.error) warnings.push('Algolia 同步失败，站内索引仍可使用')
     if (pages.failed.length) warnings.push(`${pages.failed.length} 个页面刷新失败`)
     return res.status(200).json({
-      ok: warnings.length === 0,
+      ok: !relayError &&
+        (!clearedSites || notionSourceAvailable) &&
+        !notionSearch.failed &&
+        !algolia.error &&
+        pages.failed.length === 0,
       contentCount: items.length,
       source,
       clearedSites,
