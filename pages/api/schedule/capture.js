@@ -1,5 +1,6 @@
 import { fromDbScheduleItem, toDbScheduleItem } from '@/lib/domain/schedule'
 import { selectRelevantItems } from '@/lib/domain/schedule-context'
+import { applyResolvedScheduleCommand } from '@/lib/openclaw/scheduleCommandBridge'
 import {
   ensureProfile,
   listScheduleRows,
@@ -69,11 +70,50 @@ async function parseCommand(command, items, modelConfig) {
   return data
 }
 
+function formatShanghaiDateTime(value) {
+  if (!value || value === 'none') return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value).replace('T', ' ').slice(0, 16)
+  const parts = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(date)
+  const values = Object.fromEntries(parts.filter(part => part.type !== 'literal').map(part => [part.type, part.value]))
+  return `${values.year}-${values.month}-${values.day} ${values.hour}:${values.minute}`
+}
+
+function reminderLine(item) {
+  const reminders = Array.isArray(item.reminders) && item.reminders.length
+    ? item.reminders
+    : item.reminder
+      ? [item.reminder]
+      : []
+  const active = reminders.filter(reminder =>
+    reminder?.enabled !== false &&
+    reminder?.remindAt
+  )
+  return active.map((reminder, index) => {
+    const when = formatShanghaiDateTime(reminder.remindAt)
+    const lead = Number(reminder.leadMinutes)
+    const suffix = Number.isFinite(lead) && lead > 0
+      ? `（提前${lead}分钟）`
+      : ''
+    const label = active.length > 1 ? `提醒${index + 1}` : '提醒'
+    return `${label}：${reminder.channel === 'wechat' ? '微信' : reminder.channel || '提醒'}，${when}${suffix}`
+  }).join('\n')
+}
+
 function formatItemSummary(item) {
   const title = item.title || '未命名事项'
   const isReading = item.contentType === 'reading' || item.date === 'reading' || item.sectionKey === 'reading' || item.section === '阅读'
   const date = item.date && item.date !== 'none' && item.date !== 'reading' ? item.date : ''
   const when = [date, item.time].filter(Boolean).join(' ')
+  const reminder = reminderLine(item)
 
   if (item.status === 'done') {
     return {
@@ -95,28 +135,35 @@ function formatItemSummary(item) {
     return {
       type: 'reading',
       title,
-      replyText: `已保存到阅读：《${title}》${when ? `\n时间：${when}` : '\n未设置阅读时间'}`
+      replyText: [
+        `已保存到阅读：《${title}》${when ? `\n时间：${when}` : '\n未设置阅读时间'}`,
+        reminder
+      ].filter(Boolean).join('\n')
     }
   }
 
   return {
     type: 'schedule',
     title,
-    replyText: `已添加日程：${title}${when ? `\n时间：${when}` : ''}`
+    replyText: [
+      `已添加日程：${title}${when ? `\n时间：${when}` : ''}`,
+      reminder
+    ].filter(Boolean).join('\n')
   }
 }
 
 function formatReply(parsed, savedRows) {
-  const first = parsed.items?.[0] || {}
-  const summary = formatItemSummary(first)
+  const savedItem = savedRows[0]?.owner_id ? fromDbScheduleItem(savedRows[0]) : (parsed.items?.[0] || {})
+  const summary = formatItemSummary(savedItem)
   const action = parsed.mode === 'replace' ? 'updated' : 'created'
   return {
     ok: true,
     action,
     type: summary.type,
-    recordId: savedRows[0]?.id || null,
+    recordId: savedRows[0]?.id || savedItem.id || null,
     title: summary.title,
-    scheduledAt: null,
+    scheduledAt: savedItem.temporal?.startsAt || savedItem.temporal?.dueAt || null,
+    item: savedItem,
     replyText:
       action === 'updated'
         ? summary.replyText
@@ -142,7 +189,7 @@ function findExistingCapture(items, captureKey) {
 }
 
 function hasExplicitModifyIntent(command = '') {
-  return /修改|改到|改成|换到|延期|提前|完成|读完|取消|删掉|不用了|刚刚|刚才|上一条|上一个|这条|这篇|这个/.test(command)
+  return /修改|改到|改成|换到|延期|延后|推迟|提前|完成|读完|取消|删掉|不用了|刚刚|刚才|上一条|上一个|这条|这篇|这个/.test(command)
 }
 
 function preventAccidentalReplace(parsed, command) {
@@ -163,7 +210,7 @@ export default async function handler(req, res) {
   const source = req.body?.source || 'capture'
   const senderId = req.body?.senderId || ''
   if (!isAuthorized(req, source)) {
-      return res.status(401).json({
+    return res.status(401).json({
       ok: false,
       error: 'UNAUTHORIZED',
       replyText: '保存失败，请稍后重试。'
@@ -180,10 +227,11 @@ export default async function handler(req, res) {
   }
 
   const command = req.body?.command || req.body?.text || ''
+  const originalCommand = req.body?.originalCommand || command
   if (!command.trim()) {
     return res.status(400).json({ ok: false, error: 'Empty command' })
   }
-  if (shouldIgnoreCommand(command)) {
+  if (shouldIgnoreCommand(originalCommand)) {
     return res.status(200).json({
       ok: true,
       status: 'ignored',
@@ -209,6 +257,7 @@ export default async function handler(req, res) {
         type: existingCapture.contentType === 'reading' ? 'reading' : 'schedule',
         recordId: existingCapture.id,
         title: existingCapture.title,
+        item: existingCapture,
         replyText:
           existingCapture.contentType === 'reading'
             ? `已保存到阅读：《${existingCapture.title}》`
@@ -217,9 +266,12 @@ export default async function handler(req, res) {
       })
     }
     const contextItems = selectRelevantItems(command, currentItems)
-    const parsed = preventAccidentalReplace(
-      await parseCommand(command, contextItems, modelConfig),
-      command
+    const modelParsed = await parseCommand(command, contextItems, modelConfig)
+    const safeParsed = preventAccidentalReplace(modelParsed, originalCommand)
+    const parsed = applyResolvedScheduleCommand(
+      safeParsed,
+      req.body?.resolvedCommand,
+      currentItems
     )
 
     if (!Array.isArray(parsed.items) || !parsed.items.length) {

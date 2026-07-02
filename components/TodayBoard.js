@@ -22,6 +22,91 @@ const viewTabs = [
 const toneClasses = ['today-leaf', 'today-blue', 'today-honey', 'today-rose', 'today-lilac']
 const timeZone = 'Asia/Shanghai'
 
+function normalizedReminder(reminder = {}) {
+  if (!reminder || typeof reminder !== 'object') return null
+  return {
+    enabled: reminder.enabled !== false,
+    mode: reminder.mode || (Number(reminder.leadMinutes || 0) > 0 ? 'before' : 'at'),
+    channel: reminder.channel || 'wechat',
+    remindAt: reminder.remindAt || '',
+    leadMinutes: Number.isFinite(Number(reminder.leadMinutes))
+      ? Number(reminder.leadMinutes)
+      : 0,
+    explicitlyRequested: reminder.explicitlyRequested === true
+  }
+}
+
+function remindersFromItem(item = {}) {
+  const trace = item.aiTrace || item.ai_trace || {}
+  const raw = Array.isArray(item.reminders) && item.reminders.length
+    ? item.reminders
+    : Array.isArray(trace.reminders) && trace.reminders.length
+      ? trace.reminders
+      : item.reminder || trace.reminder
+        ? [item.reminder || trace.reminder]
+        : []
+  return raw.map(normalizedReminder).filter(Boolean)
+}
+
+function eventInstant(item = {}) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(item.date || ''))) return null
+  if (!/^\d{2}:\d{2}$/.test(String(item.time || ''))) return null
+  const value = new Date(`${item.date}T${item.time}:00+08:00`)
+  return Number.isNaN(value.getTime()) ? null : value
+}
+
+function reminderInputValue(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(date)
+  const values = Object.fromEntries(
+    parts.filter(part => part.type !== 'literal').map(part => [part.type, part.value])
+  )
+  return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}`
+}
+
+function inputToReminderIso(value) {
+  if (!value) return ''
+  const date = new Date(`${value}:00+08:00`)
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString()
+}
+
+function recalculateReminder(reminder, item) {
+  const event = eventInstant(item)
+  if (!event || reminder.mode === 'absolute') return reminder
+  const lead = reminder.mode === 'before'
+    ? Math.max(0, Number(reminder.leadMinutes || 0))
+    : 0
+  return {
+    ...reminder,
+    leadMinutes: lead,
+    remindAt: new Date(event.getTime() - lead * 60_000).toISOString()
+  }
+}
+
+function reminderDisplayLabel(reminder = {}) {
+  const when = reminderInputValue(reminder.remindAt).replace('T', ' ')
+  if (!when) return '提醒时间待设置'
+  const lead = Number(reminder.leadMinutes || 0)
+  if (reminder.mode === 'before' && lead > 0) {
+    const leadText = lead % 1440 === 0
+      ? `${lead / 1440}天`
+      : lead % 60 === 0
+        ? `${lead / 60}小时`
+        : `${lead}分钟`
+    return `${when} · 提前${leadText}`
+  }
+  return `${when} · ${reminder.mode === 'absolute' ? '指定时刻' : '到时'}`
+}
+
 function makeId() {
   return crypto.randomUUID()
 }
@@ -79,6 +164,8 @@ function normalizeItem(item) {
   const section = cleanDisplayText(item.section || item.kind) || '其他'
   const sectionKey = item.sectionKey || sectionKeyFrom(section)
   const contentType = inferContentType(item, section, sectionKey)
+  const aiTrace = item.aiTrace || item.ai_trace || {}
+  const normalizedReminders = remindersFromItem(item)
   return {
     id: item.id || makeId(sectionKey),
     title: item.title || '未命名事项',
@@ -104,7 +191,11 @@ function normalizeItem(item) {
     summary: cleanDisplayText(item.summary),
     note: item.note || '',
     tags: tagsFromItem(item, { limit: 3 }),
-    aiTrace: item.aiTrace || item.ai_trace || {}
+    reminder: normalizedReminders[0] || null,
+    reminders: normalizedReminders,
+    temporal: item.temporal || aiTrace.temporal || null,
+    recurrence: item.recurrence || aiTrace.recurrence || null,
+    aiTrace
   }
 }
 
@@ -203,6 +294,9 @@ function ItemCard({
     cleanDisplayText(item.section)
   ].filter(Boolean)
   const tags = tagsFromItem(item, { limit: 3 })
+  const reminderLabels = (item.reminders || [])
+    .filter(reminder => reminder.enabled !== false)
+    .map(reminderDisplayLabel)
   const badges = [
     item.isPinned ? '置顶' : '',
     item.importance === 'important' ? '重要' : '',
@@ -218,6 +312,70 @@ function ItemCard({
           onClick: () => setEditingId(editingId === item.id ? '' : item.id)
         }
   const hasActions = badges.length > 0 || Boolean(actionButton)
+
+  function commitReminders(nextReminders) {
+    const normalized = nextReminders.map(normalizedReminder).filter(Boolean)
+    updateItem(item.id, {
+      reminders: normalized,
+      reminder: normalized[0] || null
+    })
+  }
+
+  function updateEventField(field, value) {
+    const nextItem = { ...item, [field]: value }
+    const nextReminders = (item.reminders || []).map(reminder =>
+      recalculateReminder(reminder, nextItem)
+    )
+    const localInstant = /^\d{4}-\d{2}-\d{2}$/.test(String(nextItem.date || '')) &&
+      /^\d{2}:\d{2}$/.test(String(nextItem.time || ''))
+      ? `${nextItem.date}T${nextItem.time}:00+08:00`
+      : ''
+    const deadlineOnly = Boolean(item.temporal?.dueAt && !item.temporal?.startsAt)
+    const temporal = localInstant
+      ? {
+          ...(item.temporal || {}),
+          ...(deadlineOnly
+            ? { dueAt: localInstant }
+            : { startsAt: localInstant })
+        }
+      : null
+    updateItem(item.id, {
+      [field]: value,
+      temporal,
+      reminders: nextReminders,
+      reminder: nextReminders[0] || null
+    })
+  }
+
+  function addReminder() {
+    const event = eventInstant(item)
+    commitReminders([
+      ...(item.reminders || []),
+      {
+        enabled: true,
+        mode: 'at',
+        channel: 'wechat',
+        leadMinutes: 0,
+        remindAt: event?.toISOString() || '',
+        explicitlyRequested: true
+      }
+    ])
+  }
+
+  function updateReminderAt(index, patch) {
+    const next = (item.reminders || []).map((reminder, reminderIndex) => {
+      if (reminderIndex !== index) return reminder
+      const merged = { ...reminder, ...patch }
+      return ['at', 'before'].includes(merged.mode)
+        ? recalculateReminder(merged, item)
+        : merged
+    })
+    commitReminders(next)
+  }
+
+  function removeReminderAt(index) {
+    commitReminders((item.reminders || []).filter((_, reminderIndex) => reminderIndex !== index))
+  }
 
   return (
     <article
@@ -248,10 +406,13 @@ function ItemCard({
                 {item.title}
               </button>
             </div>
-            {meta.length || tags.length ? (
+            {meta.length || tags.length || reminderLabels.length ? (
               <div className="today-meta" data-testid="today-card-meta">
                 {meta.map((value) => (
                   <span key={`${item.id}-${value}`}>{value}</span>
+                ))}
+                {reminderLabels.map((value, index) => (
+                  <span className="today-reminder-meta" key={`${item.id}-reminder-${index}`}>提醒 {value}</span>
                 ))}
                 {tags.map((tag) => (
                   <span key={`${item.id}-tag-${tag}`}>{tag}</span>
@@ -283,8 +444,8 @@ function ItemCard({
                 <input value={item.title} onChange={(event) => updateItem(item.id, { title: event.target.value })} />
                 <div className="editor-grid">
                   <input value={item.section} onChange={(event) => updateItem(item.id, { section: event.target.value })} placeholder="类别" />
-                  <input value={item.date} onChange={(event) => updateItem(item.id, { date: event.target.value })} placeholder="YYYY-MM-DD / none" />
-                  <input value={item.time} onChange={(event) => updateItem(item.id, { time: event.target.value })} placeholder="时间" />
+                  <input value={item.date} onChange={(event) => updateEventField('date', event.target.value)} placeholder="YYYY-MM-DD / none" />
+                  <input value={item.time} onChange={(event) => updateEventField('time', event.target.value)} placeholder="时间" />
                   <input value={item.place} onChange={(event) => updateItem(item.id, { place: event.target.value })} placeholder="地点" />
                   <input value="事项" readOnly aria-label="内容类型" />
                   <select value={item.priority} onChange={(event) => updateItem(item.id, { priority: event.target.value })}>
@@ -310,6 +471,56 @@ function ItemCard({
                     <option value="cancelled">取消</option>
                   </select>
                 </div>
+                <section className="reminder-editor" aria-label="提醒设置">
+                  <header>
+                    <strong>微信提醒</strong>
+                    <button type="button" onClick={addReminder}>添加提醒</button>
+                  </header>
+                  {(item.reminders || []).length ? (item.reminders || []).map((reminder, index) => (
+                    <div className="reminder-row" key={`${item.id}-edit-reminder-${index}`}>
+                      <input
+                        aria-label={`提醒时间 ${index + 1}`}
+                        type="datetime-local"
+                        value={reminderInputValue(reminder.remindAt)}
+                        onChange={(event) => updateReminderAt(index, {
+                          remindAt: inputToReminderIso(event.target.value),
+                          mode: 'absolute',
+                          leadMinutes: 0
+                        })}
+                      />
+                      <select
+                        aria-label={`提醒方式 ${index + 1}`}
+                        value={reminder.mode || 'at'}
+                        onChange={(event) => {
+                          const mode = event.target.value
+                          updateReminderAt(index, {
+                            mode,
+                            leadMinutes: mode === 'before'
+                              ? Math.max(1, Number(reminder.leadMinutes || 30))
+                              : 0
+                          })
+                        }}
+                      >
+                        <option value="at">事项发生时</option>
+                        <option value="before">提前提醒</option>
+                        <option value="absolute">指定时刻</option>
+                      </select>
+                      {reminder.mode === 'before' ? (
+                        <input
+                          aria-label={`提前分钟 ${index + 1}`}
+                          min="1"
+                          step="5"
+                          type="number"
+                          value={Number(reminder.leadMinutes || 30)}
+                          onChange={(event) => updateReminderAt(index, {
+                            leadMinutes: Math.max(1, Number(event.target.value || 1))
+                          })}
+                        />
+                      ) : null}
+                      <button type="button" onClick={() => removeReminderAt(index)}>删除提醒</button>
+                    </div>
+                  )) : <p>尚未设置提醒。</p>}
+                </section>
                 <textarea value={item.summary} onChange={(event) => updateItem(item.id, { summary: event.target.value })} placeholder="摘要" />
                 <textarea value={item.note} onChange={(event) => updateItem(item.id, { note: event.target.value })} placeholder="备注" />
                 <button type="button" onClick={() => removeItem(item.id)}>
@@ -401,7 +612,8 @@ export function TodayBoard({ initialView = 'today' }) {
     writeScheduleItemsCache(profileId, items)
     if (!cloudEnabled) return
 
-    const timer = window.setTimeout(async () => {
+    const timer = window.setTimeout(() => {
+      void (async () => {
       try {
         const response = await fetch('/api/schedule/items', {
           method: 'PUT',
@@ -410,6 +622,7 @@ export function TodayBoard({ initialView = 'today' }) {
         })
         if (response.ok) deletedIdsRef.current = []
       } catch {}
+      })()
     }, 450)
 
     return () => window.clearTimeout(timer)
@@ -548,7 +761,7 @@ export function TodayBoard({ initialView = 'today' }) {
     <div className="today-board">
       <section className="command-bar">
         <textarea value={command} onChange={(event) => setCommand(event.target.value)} placeholder={commandPlaceholder} />
-        <button type="button" onClick={runCommand} disabled={isLoading}>
+        <button type="button" onClick={() => void runCommand()} disabled={isLoading}>
           {isLoading ? '处理中' : '执行'}
         </button>
       </section>

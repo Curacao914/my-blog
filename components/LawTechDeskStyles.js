@@ -885,6 +885,60 @@ textarea {
   font-size: 12px;
 }
 
+.today-reminder-meta {
+  color: #5f4306 !important;
+  background: rgba(244, 228, 184, 0.8) !important;
+}
+
+.reminder-editor {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid rgba(24, 63, 50, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.46);
+}
+
+.reminder-editor > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.reminder-editor > header button,
+.reminder-row button {
+  border: 1px solid rgba(24, 63, 50, 0.14);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: var(--leaf);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.reminder-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.3fr) minmax(130px, 0.8fr) minmax(90px, 0.45fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+@media (max-width: 760px) {
+  .reminder-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.reminder-row input,
+.reminder-row select {
+  min-width: 0;
+  border: 1px solid rgba(24, 63, 50, 0.14);
+  border-radius: 12px;
+  padding: 9px 10px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.72);
+}
+
 .today-meta,
 .link-chips {
   display: flex;

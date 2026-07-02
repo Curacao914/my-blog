@@ -5,6 +5,7 @@ import {
   upsertScheduleRows
 } from '@/lib/server/supabase'
 import { syncRemindersForScheduleItems } from '@/lib/server/reminders'
+import { cancelScheduleReminderDeliveries } from '@/lib/server/scheduleReminderDeliveries'
 import { getScheduleOwner } from '@/lib/auth/scheduleOwner'
 
 export default async function handler(req, res) {
@@ -24,6 +25,12 @@ export default async function handler(req, res) {
         ? req.body.deletedIds.filter(id => /^[0-9a-f-]{36}$/i.test(id))
         : []
 
+      if (deletedIds.length) {
+        await cancelScheduleReminderDeliveries({
+          ownerId: profile.id,
+          itemIds: deletedIds
+        })
+      }
       await deleteScheduleRows(profile.id, deletedIds)
       if (items.length) {
         const savedRows = await upsertScheduleRows(items.map(item => toDbScheduleItem(item, profile.id)))

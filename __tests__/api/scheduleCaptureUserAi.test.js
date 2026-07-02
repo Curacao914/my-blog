@@ -17,7 +17,7 @@ describe('WeChat capture AI routing', () => {
   })
 
   it('does not spend a model call on greetings', () => {
-    expect(capture).toContain('shouldIgnoreCommand(command)')
+    expect(capture).toContain('shouldIgnoreCommand(originalCommand)')
     expect(parse).toContain('if (shouldIgnoreCommand(command))')
   })
 
