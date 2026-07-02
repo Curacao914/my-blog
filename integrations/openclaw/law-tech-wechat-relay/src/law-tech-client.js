@@ -39,7 +39,11 @@ export async function sendToLawTech(message, config = {}) {
       payload = null
     }
 
-    if (!response.ok || !payload?.ok || !payload?.replyText) {
+    if (
+      !response.ok ||
+      !payload?.ok ||
+      (!payload?.replyText && !payload?.silent)
+    ) {
       return {
         ok: false,
         replyText: payload?.replyText || DEFAULT_FAILURE,
@@ -49,7 +53,8 @@ export async function sendToLawTech(message, config = {}) {
 
     return {
       ok: true,
-      replyText: payload.replyText,
+      replyText: payload.silent ? '' : payload.replyText,
+      silent: Boolean(payload.silent),
       payload
     }
   } catch {

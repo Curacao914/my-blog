@@ -159,6 +159,27 @@ export const lawTechWechatRelayPlugin = definePluginEntry({
         channelId: ctx.messageProvider || ctx.channel || ctx.channelId
       }, getRelayConfig())
 
+      const silent = Boolean(
+        handled?.result?.silent ||
+        handled?.result?.payload?.silent
+      )
+      if (silent) {
+        relayLog(api, 'suppress non-actionable reply', {
+          channel: message.channel,
+          senderId: message.senderId,
+          messageId: message.messageId,
+          ok: handled?.result?.ok,
+          hasReplyText: false,
+          reason: 'silent-noop'
+        })
+        return {
+          handled: true,
+          reply: {
+            text: ''
+          }
+        }
+      }
+
       const replyText = handled?.result?.replyText || '这条内容尚未添加成功，请稍后重试。'
       relayLog(api, 'replace agent reply', {
         channel: message.channel,

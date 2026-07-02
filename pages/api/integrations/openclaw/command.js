@@ -7,6 +7,7 @@ import {
   resolvedCommandForCapture,
   temporalFromScheduleItem
 } from '@/lib/openclaw/scheduleCommandBridge'
+import { normalizeOpenClawInput } from '@/lib/openclaw/inputNormalization'
 import { resolveTemporalSemantics } from '@/lib/openclaw/temporalSemantics'
 import {
   getOpenClawConversationState,
@@ -63,6 +64,12 @@ function isStandaloneCommand(text) {
 
 function exactPendingCancellation(text) {
   return /^(取消|不用了|算了|不执行)$/i.test(String(text || '').trim())
+}
+
+function incompleteUpdateCommand(text) {
+  return /^(?:改到|改成|换到|挪到|调整到)$/i.test(
+    String(text || '').replace(/\s+/g, '')
+  )
 }
 
 function lastObjectLabel(lastObject = {}) {
@@ -173,11 +180,11 @@ export default async function handler(req, res) {
     return res.status(401).json({ ok: false, error: 'UNAUTHORIZED', replyText: '处理失败，请稍后重试。' })
   }
 
-  const command = String(req.body?.command || req.body?.text || '').trim()
+  const rawCommand = String(req.body?.command || req.body?.text || '').trim()
   const senderId = String(req.body?.senderId || '')
   const threadId = String(req.body?.threadId || senderId || 'default')
   const messageId = String(req.body?.messageId || req.body?.sourceMessageId || '')
-  if (!command) return res.status(400).json({ ok: false, error: 'Empty command' })
+  if (!rawCommand) return res.status(400).json({ ok: false, error: 'Empty command' })
 
   const clerkUserId = ownerUserId(senderId)
   if (!clerkUserId) {
@@ -194,6 +201,13 @@ export default async function handler(req, res) {
     }
     const stored = await getOpenClawConversationState(conversationKey)
     const state = stored?.state || {}
+    const now = req.body?.receivedAt ? new Date(String(req.body.receivedAt)) : new Date()
+    const safeNow = Number.isNaN(now.getTime()) ? new Date() : now
+    const normalizedInput = normalizeOpenClawInput(rawCommand, {
+      now: safeNow,
+      timeZone: 'Asia/Shanghai'
+    })
+    const command = normalizedInput.text
 
     if (state.pendingAction && exactPendingCancellation(command)) {
       await saveOpenClawConversationState(conversationKey, {
@@ -208,20 +222,61 @@ export default async function handler(req, res) {
       })
     }
 
-    const rawClassification = classifyCommandText(command)
-    const confirmedPending = rawClassification.action === 'confirm' && state.pendingAction?.originalCommand
-    const originalCommand = confirmedPending ? state.pendingAction.originalCommand : command
+    const pendingContinuation =
+      ['missing_update_value', 'temporal_ambiguity'].includes(
+        state.pendingAction?.reason
+      ) &&
+      !isStandaloneCommand(command)
+    const completesPendingUpdate =
+      state.pendingAction?.reason === 'missing_update_value' &&
+      /^(?:改到|改成|换到|挪到|调整到).+/.test(command)
+    const continuedCommand =
+      pendingContinuation && !completesPendingUpdate
+        ? `${state.pendingAction.originalCommand} ${command}`.trim()
+        : command
+    const rawClassification = pendingContinuation
+      ? (
+          state.pendingAction.classification ||
+          classifyCommandText(continuedCommand)
+        )
+      : classifyCommandText(continuedCommand)
+    const confirmedPending =
+      rawClassification.action === 'confirm' &&
+      state.pendingAction?.originalCommand
+    const originalCommand = confirmedPending
+      ? state.pendingAction.originalCommand
+      : continuedCommand
     const classification = confirmedPending
-      ? (state.pendingAction.classification || classifyCommandText(originalCommand))
+      ? (
+          state.pendingAction.classification ||
+          classifyCommandText(originalCommand)
+        )
       : rawClassification
-
-    const now = req.body?.receivedAt ? new Date(String(req.body.receivedAt)) : new Date()
-    const safeNow = Number.isNaN(now.getTime()) ? new Date() : now
-    const temporal = resolveTemporalSemantics(confirmedPending ? originalCommand : command, {
+    const followUp =
+      isFollowUpCommand(originalCommand) ||
+      pendingContinuation ||
+      confirmedPending
+    const explicitCandidate = candidateFromCommand(
+      originalCommand,
+      state.candidates || []
+    )
+    const referenceObject =
+      state.pendingAction?.referenceObject ||
+      explicitCandidate ||
+      (
+        followUp
+          ? (
+              state.lastMutationObject ||
+              state.lastSelectedObject ||
+              null
+            )
+          : null
+      )
+    const temporal = resolveTemporalSemantics(originalCommand, {
       now: safeNow,
       timeZone: 'Asia/Shanghai',
       defaultReminderChannel: 'wechat',
-      baseTemporal: temporalFromScheduleItem(state.lastObject || {})
+      baseTemporal: temporalFromScheduleItem(referenceObject || {})
     })
 
     const protocol = buildSparseCommand({
@@ -237,10 +292,10 @@ export default async function handler(req, res) {
       },
       reminders: temporal.reminders,
       recurrence: temporal.recurrence,
-      conversation: state.lastObject || state.pendingAction
+      conversation: referenceObject || state.pendingAction
         ? {
-            mode: isFollowUpCommand(command) || confirmedPending ? 'follow_up' : 'standalone',
-            referencedObjectId: state.lastObject?.id,
+            mode: followUp ? 'follow_up' : 'standalone',
+            referencedObjectId: referenceObject?.id,
             pendingAction: Boolean(state.pendingAction)
           }
         : undefined
@@ -252,6 +307,7 @@ export default async function handler(req, res) {
         status: 'ignored',
         action: 'ignored',
         reason: 'not_actionable',
+        silent: true,
         replyText: '未识别到需要处理的命令。',
         protocol
       })
@@ -259,6 +315,41 @@ export default async function handler(req, res) {
 
     if (classification.action === 'help') {
       return res.status(200).json({ ok: true, status: 'help', action: 'help', replyText: helpReply(), protocol })
+    }
+
+    if (
+      classification.action === 'update' &&
+      incompleteUpdateCommand(originalCommand)
+    ) {
+      if (!referenceObject) {
+        return res.status(200).json({
+          ok: true,
+          status: 'needs_context',
+          action: 'clarify',
+          replyText: '请说明要修改哪一项，以及要改到什么时候。',
+          protocol
+        })
+      }
+      await saveOpenClawConversationState(conversationKey, {
+        lastMessageId: messageId,
+        state: {
+          ...state,
+          pendingAction: {
+            originalCommand,
+            classification,
+            reason: 'missing_update_value',
+            referenceObject,
+            createdAt: safeNow.toISOString()
+          }
+        }
+      })
+      return res.status(200).json({
+        ok: true,
+        status: 'needs_confirmation',
+        action: 'clarify',
+        replyText: `要把“${referenceObject.title || '该事项'}”改到什么时候？请直接回复具体日期或时间。`,
+        protocol
+      })
     }
 
     if (classification.action === 'select') {
@@ -277,6 +368,7 @@ export default async function handler(req, res) {
         state: {
           ...state,
           lastObject: candidate,
+          lastSelectedObject: candidate,
           pendingAction: null
         }
       })
@@ -309,6 +401,7 @@ export default async function handler(req, res) {
             originalCommand,
             classification,
             reason: 'temporal_ambiguity',
+            referenceObject,
             createdAt: safeNow.toISOString()
           }
         }
@@ -334,7 +427,8 @@ export default async function handler(req, res) {
         state: {
           ...state,
           lastCommand: protocol,
-          lastObject: queryResult.lastObject || state.lastObject || null,
+          lastQueryObject: queryResult.lastObject || null,
+          lastSelectedObject: null,
           candidates: queryResult.candidates || [],
           pendingAction: null
         }
@@ -346,8 +440,8 @@ export default async function handler(req, res) {
     }
 
     const referencedCandidate =
-      candidateFromCommand(command, state.candidates || []) ||
-      state.lastObject ||
+      explicitCandidate ||
+      state.lastSelectedObject ||
       null
 
     if (
@@ -370,6 +464,7 @@ export default async function handler(req, res) {
         state: {
           ...state,
           lastObject,
+          lastSelectedObject: lastObject,
           pendingAction: null
         }
       })
@@ -384,6 +479,15 @@ export default async function handler(req, res) {
     }
 
     if (classification.confirmation === 'explicit' && !confirmedPending) {
+      if (classification.action === 'delete' && !referenceObject) {
+        return res.status(200).json({
+          ok: true,
+          status: 'needs_context',
+          action: 'clarify',
+          replyText: '请先查询并选择要删除的事项，再发送删除命令。',
+          protocol
+        })
+      }
       await saveOpenClawConversationState(conversationKey, {
         lastMessageId: messageId,
         state: {
@@ -392,6 +496,7 @@ export default async function handler(req, res) {
             originalCommand,
             classification,
             reason: 'destructive_confirmation',
+            referenceObject,
             createdAt: safeNow.toISOString()
           }
         }
@@ -406,7 +511,7 @@ export default async function handler(req, res) {
     }
 
     if (classification.action === 'delete' && confirmedPending) {
-      const targetId = state.lastObject?.id
+      const targetId = referenceObject?.id
       if (!targetId || !/^[0-9a-f-]{36}$/i.test(targetId)) {
         return res.status(200).json({
           ok: true,
@@ -425,7 +530,17 @@ export default async function handler(req, res) {
         lastMessageId: messageId,
         state: {
           ...state,
-          lastObject: null,
+          lastObject:
+            state.lastObject?.id === targetId ? null : state.lastObject,
+          lastMutationObject:
+            state.lastMutationObject?.id === targetId
+              ? null
+              : state.lastMutationObject,
+          lastSelectedObject:
+            state.lastSelectedObject?.id === targetId
+              ? null
+              : state.lastSelectedObject,
+          candidates: [],
           pendingAction: null
         }
       })
@@ -434,12 +549,12 @@ export default async function handler(req, res) {
         status: 'completed',
         action: 'deleted',
         recordId: targetId,
-        replyText: `已删除：${state.lastObject?.title || '该事项'}`,
+        replyText: `已删除：${referenceObject?.title || '该事项'}`,
         protocol
       })
     }
 
-    if (isFollowUpCommand(command) && !state.lastObject && !state.pendingAction && !confirmedPending) {
+    if (followUp && !referenceObject && !state.pendingAction && !confirmedPending) {
       return res.status(200).json({
         ok: true,
         status: 'needs_confirmation',
@@ -449,15 +564,19 @@ export default async function handler(req, res) {
       })
     }
 
-    const contextualCommand = confirmedPending
-      ? originalCommand
-      : augmentWithConversation(command, state)
+    const contextualCommand =
+      confirmedPending || pendingContinuation
+        ? originalCommand
+        : augmentWithConversation(command, {
+            ...state,
+            lastObject: referenceObject || state.lastObject
+          })
     const resolvedCommand = {
       ...resolvedCommandForCapture({ protocol, temporal }),
-      context: {
-        originalCommand: command,
-        followUp: isFollowUpCommand(command) || confirmedPending
-      }
+              context: {
+          originalCommand,
+          followUp
+        }
     }
     const { response, payload } = await forwardToCapture(req, {
       ...req.body,
@@ -471,11 +590,19 @@ export default async function handler(req, res) {
     })
 
     if (response.ok && payload?.ok) {
+      const savedObject = lastObjectFromPayload(
+        payload,
+        referenceObject || state.lastMutationObject || state.lastObject
+      )
       await saveOpenClawConversationState(conversationKey, {
         lastMessageId: messageId,
         state: {
+          ...state,
           lastCommand: protocol,
-          lastObject: lastObjectFromPayload(payload, state.lastObject),
+          lastObject: savedObject,
+          lastMutationObject: savedObject,
+          lastSelectedObject: null,
+          candidates: [],
           pendingAction: null
         }
       })

@@ -121,7 +121,9 @@ export function CourseBriefReader({ jobId, lessonKey }) {
         >
           {busy ? '保存中…' : brief.read ? '已读 · 恢复未读' : '标记为读过'}
         </button>
-        {brief.noteUrl ? <Link href={brief.noteUrl}>打开完整笔记</Link> : null}
+        {brief.noteUrl
+          ? <Link className='course-note-full-link' href={brief.noteUrl}>打开完整笔记</Link>
+          : null}
       </div>
     </header>
 
@@ -150,5 +152,141 @@ export function CourseBriefReader({ jobId, lessonKey }) {
         <ReadingNavigator articleRef={articleRef} headings={headings} />
       </aside>
     </div>
+
+    <style jsx global>{`
+      .course-brief-reader .course-note-reader-tools > a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(17, 63, 49, .09);
+        border-radius: 999px;
+        padding: 6px 10px;
+        color: var(--leaf);
+        background: rgba(255, 255, 255, .72);
+        font-size: 10px;
+        line-height: 1.35;
+        white-space: nowrap;
+      }
+
+      .course-brief-reader .course-note-markdown,
+      .course-brief-reader .course-note-markdown p,
+      .course-brief-reader .course-note-markdown li,
+      .course-brief-reader .course-note-markdown h1,
+      .course-brief-reader .course-note-markdown h2,
+      .course-brief-reader .course-note-markdown h3,
+      .course-brief-reader .course-note-markdown h4 {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .course-brief-reader .course-note-markdown img,
+      .course-brief-reader .course-note-markdown video,
+      .course-brief-reader .course-note-markdown iframe {
+        max-width: 100%;
+        height: auto;
+      }
+
+      @media (max-width: 760px) {
+        .course-brief-reader {
+          width: 100%;
+          min-width: 0;
+        }
+
+        .course-brief-reader .course-note-reader-head {
+          gap: 10px;
+          padding: 10px;
+        }
+
+        .course-brief-reader .course-note-breadcrumbs {
+          width: 100%;
+          flex-wrap: wrap;
+          white-space: normal;
+          line-height: 1.5;
+        }
+
+        .course-brief-reader .course-note-reader-tools {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          gap: 8px;
+          width: 100%;
+        }
+
+        .course-brief-reader .course-note-reader-tools > button,
+        .course-brief-reader .course-note-reader-tools > a {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          min-width: 0;
+          min-height: 40px;
+          padding: 9px 10px;
+          text-align: center;
+          line-height: 1.3;
+          white-space: normal;
+        }
+
+        .course-brief-reader .course-note-reader-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .course-brief-reader .course-note-article {
+          order: 1;
+          width: 100%;
+          min-width: 0;
+          overflow: hidden;
+          padding: 22px 18px;
+        }
+
+        .course-brief-reader .course-note-toc {
+          position: static;
+          inset: auto;
+          order: 2;
+          width: 100%;
+          max-height: none;
+          overflow: visible;
+          padding: 14px;
+          box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,.7);
+        }
+
+        .course-brief-reader .reading-navigator nav {
+          max-height: none;
+          overflow: visible;
+        }
+
+        .course-brief-reader .course-note-article > header h1 {
+          font-size: clamp(28px, 9vw, 38px);
+          letter-spacing: -.03em;
+        }
+
+        .course-brief-reader .course-note-markdown,
+        .course-brief-reader .markdown-document {
+          font-size: 15px;
+          line-height: 1.85;
+        }
+
+        .course-brief-reader .course-note-markdown h1,
+        .course-brief-reader .markdown-document h1 {
+          font-size: 26px;
+        }
+
+        .course-brief-reader .course-note-markdown h2,
+        .course-brief-reader .markdown-document h2 {
+          font-size: 22px;
+        }
+
+        .course-brief-reader .course-note-markdown h3,
+        .course-brief-reader .markdown-document h3 {
+          font-size: 19px;
+        }
+      }
+
+      @media (max-width: 420px) {
+        .course-brief-reader .course-note-reader-tools {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+    `}</style>
   </section>
 }
