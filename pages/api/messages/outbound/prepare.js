@@ -3,11 +3,13 @@ import crypto from 'crypto'
 import { fromDbScheduleItem } from '@/lib/domain/schedule'
 import {
   enqueueMessageDelivery,
+  getMessageDeliveryByDedupe,
   listWechatIntegrations,
+  reviveMessageDelivery,
   publicWechatPreference,
   wechatLocalState
 } from '@/lib/server/messageDeliveries'
-import { listScheduleRows } from '@/lib/server/supabase'
+import { loadTodaySnapshot } from '@/lib/server/todaySnapshot'
 import { buildWechatScheduleDigest } from '@/lib/server/wechatDigest'
 
 function readToken(req) {
@@ -67,17 +69,36 @@ export default async function handler(req, res) {
       const local = wechatLocalState(now, preference.timezone)
       if (local.minute < minute(preference.dailyTime)) continue
 
-      const items = (await listScheduleRows(record.owner_id) || []).map(fromDbScheduleItem)
+      const dedupeKey = `daily-schedule:${local.dateKey}`
+      const existing = await getMessageDeliveryByDedupe(
+        record.owner_id,
+        'wechat',
+        dedupeKey
+      )
+      if (existing && !['failed', 'cancelled'].includes(existing.status)) {
+        results.push({
+          ownerId: record.owner_id,
+          created: false,
+          deliveryId: existing.id
+        })
+        continue
+      }
+
+      const snapshot = await loadTodaySnapshot({
+        ownerId: record.owner_id,
+        now,
+        timezone: preference.timezone
+      })
       const digest = buildWechatScheduleDigest({
-        items,
+        snapshot,
         now,
         timezone: preference.timezone,
         siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://law-tech.dev'
       })
-      const queued = await enqueueMessageDelivery({
+      const delivery = {
         ownerId: record.owner_id,
         purpose: 'daily-schedule',
-        dedupeKey: `daily-schedule:${digest.dateKey}`,
+        dedupeKey,
         subject: `${digest.dateKey} · 今日安排`,
         bodyText: digest.bodyText,
         objectType: 'schedule-digest',
@@ -88,7 +109,13 @@ export default async function handler(req, res) {
           timezone: preference.timezone,
           configuredTime: preference.dailyTime
         }
-      })
+      }
+      const queued = existing
+        ? {
+            row: await reviveMessageDelivery(existing.id, delivery),
+            created: true
+          }
+        : await enqueueMessageDelivery(delivery)
       results.push({
         ownerId: record.owner_id,
         created: queued.created,

@@ -212,6 +212,34 @@
     "text": "GitHub Action 每 30 分钟轻量检查一次，只在设定时间之后且当天尚未运行时启动完整 Worker。"
   },
   {
+    "file": "components/CourseBriefReader.js",
+    "text": "可以正常阅读，但已读状态暂时无法保存，请稍后重试。"
+  },
+  {
+    "file": "components/CourseBriefReader.js",
+    "text": "课程简报读取失败"
+  },
+  {
+    "file": "components/CourseBriefReader.js",
+    "text": "课程简报生成后会出现在这里。"
+  },
+  {
+    "file": "components/CourseBriefReader.js",
+    "text": "课程简报暂时打不开"
+  },
+  {
+    "file": "components/CourseBriefReader.js",
+    "text": "已读状态保存失败"
+  },
+  {
+    "file": "components/CourseBriefReader.js",
+    "text": "这节课还没有课程简报"
+  },
+  {
+    "file": "components/CourseBriefReader.js",
+    "text": "正在打开课程简报…"
+  },
+  {
     "file": "components/CourseNoteReader.js",
     "text": "将“$ ”移入回收站？正文和历史版本都会保留，可以随时恢复。"
   },

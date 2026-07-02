@@ -12,7 +12,16 @@ import {
   getOpenClawConversationState,
   saveOpenClawConversationState
 } from '@/lib/server/openclawConversation'
-import { ensureProfile } from '@/lib/server/supabase'
+import {
+  deleteScheduleRows,
+  ensureProfile
+} from '@/lib/server/supabase'
+import { cancelScheduleReminderDeliveries } from '@/lib/server/scheduleReminderDeliveries'
+import { setCourseBriefRead } from '@/lib/server/courseBriefReads'
+import {
+  describeOpenClawCandidate,
+  executeOpenClawQuery
+} from '@/lib/server/openclawQueries'
 
 function readBearerToken(req) {
   const authorization = String(req.headers.authorization || '')
@@ -61,6 +70,33 @@ function lastObjectLabel(lastObject = {}) {
   return `上一轮对象：《${lastObject.title}》${lastObject.id ? `（id: ${lastObject.id}）` : ''}`
 }
 
+function ordinalNumber(value = '') {
+  const text = String(value || '')
+  const digit = text.match(/第?(\d+)(?:个|份|条)?/)
+  if (digit) return Math.max(1, Number(digit[1]))
+  const chinese = text.match(/第?([一二三四五六七八九十]+)(?:个|份|条)?/)
+  if (!chinese) return 0
+  const values = {
+    一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5,
+    六: 6, 七: 7, 八: 8, 九: 9, 十: 10
+  }
+  const raw = chinese[1]
+  if (raw === '十') return 10
+  if (raw.startsWith('十')) return 10 + Number(values[raw.slice(1)] || 0)
+  if (raw.endsWith('十')) return Number(values[raw[0]] || 0) * 10
+  if (raw.includes('十')) {
+    const [left, right] = raw.split('十')
+    return Number(values[left] || 1) * 10 + Number(values[right] || 0)
+  }
+  return Number(values[raw] || 0)
+}
+
+function candidateFromCommand(command, candidates = []) {
+  const ordinal = ordinalNumber(command)
+  if (ordinal > 0) return candidates[ordinal - 1] || null
+  return null
+}
+
 function augmentWithConversation(command, state = {}) {
   const pending = state.pendingAction
   if (pending?.originalCommand && pending.reason === 'temporal_ambiguity') {
@@ -83,7 +119,8 @@ function helpReply() {
     '3. 使用“这个、上一条、提前一小时、改到……”继续上一轮操作',
     '4. 删除等危险操作会要求再次确认',
     '',
-    '“查看今天、搜索笔记、课程状态”等查询命令已经能被识别，真实数据查询将在下一闭环接通。'
+    '5. 查看今日概况、全部待处理、全部待读和未读课程简报',
+    '6. 查询课程简报后回复序号选择，再回复“读完了”标记已读'
   ].join('\n')
 }
 
@@ -225,11 +262,30 @@ export default async function handler(req, res) {
     }
 
     if (classification.action === 'select') {
+      const candidate = candidateFromCommand(command, state.candidates || [])
+      if (!candidate) {
+        return res.status(200).json({
+          ok: true,
+          status: 'needs_context',
+          action: 'clarify',
+          replyText: '当前没有对应的候选项，请先发出查询命令。',
+          protocol
+        })
+      }
+      await saveOpenClawConversationState(conversationKey, {
+        lastMessageId: messageId,
+        state: {
+          ...state,
+          lastObject: candidate,
+          pendingAction: null
+        }
+      })
       return res.status(200).json({
         ok: true,
-        status: 'needs_context',
-        action: 'clarify',
-        replyText: '当前没有待选择的候选项。请补充事项名称；候选列表选择会在查询闭环接通。',
+        status: 'selected',
+        action: 'select',
+        item: candidate,
+        replyText: describeOpenClawCandidate(candidate),
         protocol
       })
     }
@@ -267,12 +323,62 @@ export default async function handler(req, res) {
     }
 
     if (isQueryAction(classification.action)) {
+      const queryResult = await executeOpenClawQuery({
+        ownerId: profile.id,
+        classification,
+        now: safeNow,
+        siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://law-tech.dev'
+      })
+      await saveOpenClawConversationState(conversationKey, {
+        lastMessageId: messageId,
+        state: {
+          ...state,
+          lastCommand: protocol,
+          lastObject: queryResult.lastObject || state.lastObject || null,
+          candidates: queryResult.candidates || [],
+          pendingAction: null
+        }
+      })
+      return res.status(200).json({
+        ...queryResult,
+        protocol
+      })
+    }
+
+    const referencedCandidate =
+      candidateFromCommand(command, state.candidates || []) ||
+      state.lastObject ||
+      null
+
+    if (
+      classification.action === 'mark_read' &&
+      referencedCandidate?.type === 'course_brief'
+    ) {
+      const updated = await setCourseBriefRead({
+        ownerId: profile.id,
+        jobId: referencedCandidate.jobId,
+        lessonKey: referencedCandidate.lessonKey,
+        read: true
+      })
+      const lastObject = {
+        ...referencedCandidate,
+        ...updated,
+        type: 'course_brief'
+      }
+      await saveOpenClawConversationState(conversationKey, {
+        lastMessageId: messageId,
+        state: {
+          ...state,
+          lastObject,
+          pendingAction: null
+        }
+      })
       return res.status(200).json({
         ok: true,
-        status: 'recognized',
-        action: 'query',
-        route: `${classification.domain}.${classification.action}`,
-        replyText: '这是一条查询命令，已被正确识别。数据查询将在下一闭环接通。',
+        status: 'completed',
+        action: 'mark_read',
+        item: lastObject,
+        replyText: `已标记读过：${lastObject.title}`,
         protocol
       })
     }
@@ -299,6 +405,40 @@ export default async function handler(req, res) {
       })
     }
 
+    if (classification.action === 'delete' && confirmedPending) {
+      const targetId = state.lastObject?.id
+      if (!targetId || !/^[0-9a-f-]{36}$/i.test(targetId)) {
+        return res.status(200).json({
+          ok: true,
+          status: 'needs_context',
+          action: 'clarify',
+          replyText: '我还不知道你要删除哪一项，请先查询或明确事项名称。',
+          protocol
+        })
+      }
+      await cancelScheduleReminderDeliveries({
+        ownerId: profile.id,
+        itemIds: [targetId]
+      })
+      await deleteScheduleRows(profile.id, [targetId])
+      await saveOpenClawConversationState(conversationKey, {
+        lastMessageId: messageId,
+        state: {
+          ...state,
+          lastObject: null,
+          pendingAction: null
+        }
+      })
+      return res.status(200).json({
+        ok: true,
+        status: 'completed',
+        action: 'deleted',
+        recordId: targetId,
+        replyText: `已删除：${state.lastObject?.title || '该事项'}`,
+        protocol
+      })
+    }
+
     if (isFollowUpCommand(command) && !state.lastObject && !state.pendingAction && !confirmedPending) {
       return res.status(200).json({
         ok: true,
@@ -312,7 +452,13 @@ export default async function handler(req, res) {
     const contextualCommand = confirmedPending
       ? originalCommand
       : augmentWithConversation(command, state)
-    const resolvedCommand = resolvedCommandForCapture({ protocol, temporal })
+    const resolvedCommand = {
+      ...resolvedCommandForCapture({ protocol, temporal }),
+      context: {
+        originalCommand: command,
+        followUp: isFollowUpCommand(command) || confirmedPending
+      }
+    }
     const { response, payload } = await forwardToCapture(req, {
       ...req.body,
       command: contextualCommand,

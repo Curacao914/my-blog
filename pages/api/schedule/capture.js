@@ -88,12 +88,24 @@ function formatShanghaiDateTime(value) {
 }
 
 function reminderLine(item) {
-  const reminder = item.reminder || item.reminders?.[0]
-  if (!reminder?.enabled || !reminder.remindAt) return ''
-  const when = formatShanghaiDateTime(reminder.remindAt)
-  const lead = Number(reminder.leadMinutes)
-  const suffix = Number.isFinite(lead) && lead > 0 ? `（提前${lead}分钟）` : ''
-  return `提醒：${reminder.channel === 'wechat' ? '微信' : reminder.channel || '提醒'}，${when}${suffix}`
+  const reminders = Array.isArray(item.reminders) && item.reminders.length
+    ? item.reminders
+    : item.reminder
+      ? [item.reminder]
+      : []
+  const active = reminders.filter(reminder =>
+    reminder?.enabled !== false &&
+    reminder?.remindAt
+  )
+  return active.map((reminder, index) => {
+    const when = formatShanghaiDateTime(reminder.remindAt)
+    const lead = Number(reminder.leadMinutes)
+    const suffix = Number.isFinite(lead) && lead > 0
+      ? `（提前${lead}分钟）`
+      : ''
+    const label = active.length > 1 ? `提醒${index + 1}` : '提醒'
+    return `${label}：${reminder.channel === 'wechat' ? '微信' : reminder.channel || '提醒'}，${when}${suffix}`
+  }).join('\n')
 }
 
 function formatItemSummary(item) {
@@ -256,7 +268,11 @@ export default async function handler(req, res) {
     const contextItems = selectRelevantItems(command, currentItems)
     const modelParsed = await parseCommand(command, contextItems, modelConfig)
     const safeParsed = preventAccidentalReplace(modelParsed, originalCommand)
-    const parsed = applyResolvedScheduleCommand(safeParsed, req.body?.resolvedCommand)
+    const parsed = applyResolvedScheduleCommand(
+      safeParsed,
+      req.body?.resolvedCommand,
+      currentItems
+    )
 
     if (!Array.isArray(parsed.items) || !parsed.items.length) {
       return res.status(200).json({

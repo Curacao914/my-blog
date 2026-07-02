@@ -22,6 +22,14 @@ describe('OpenClaw temporal semantics', () => {
     expect(result.clarificationText).toContain('已经过去')
   })
 
+  it('also blocks an explicit past morning period on today', () => {
+    const result = resolveTemporalSemantics('今天上午6点提醒我去吃饭', {
+      now: new Date('2026-07-02T12:00:00.000Z')
+    })
+    expect(result.needsClarification).toBe(true)
+    expect(result.clarificationText).toContain('已经过去')
+  })
+
   it('treats early-morning 明天早上 as the current waking day', () => {
     const result = resolveTemporalSemantics('明天早上9点提醒我去面试', {
       now: new Date('2026-07-02T16:03:00.000Z')

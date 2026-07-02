@@ -29,7 +29,8 @@ describe('OpenClaw command core endpoint', () => {
 
   it('blocks queries from accidentally writing through the capture API', () => {
     expect(command).toContain('if (isQueryAction(classification.action))')
-    expect(command).toContain("status: 'recognized'")
+    expect(command).toContain('executeOpenClawQuery')
+    expect(command).toContain('candidates: queryResult.candidates')
   })
 
   it('uses short-lived transactional context instead of delaying messages for batching', () => {

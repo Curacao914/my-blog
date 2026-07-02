@@ -38,6 +38,51 @@ describe('OpenClaw schedule command bridge', () => {
     })
   })
 
+  it('forces a short follow-up onto the referenced object instead of a random item', () => {
+    const parsed = applyResolvedScheduleCommand({
+      mode: 'append',
+      items: [{ title: '提前半小时提醒我', contentType: 'action' }]
+    }, {
+      protocol: {
+        v: 1,
+        command: { domain: 'schedule', action: 'update' },
+        conversation: {
+          mode: 'follow_up',
+          referencedObjectId: 'target-1'
+        }
+      },
+      context: {
+        originalCommand: '提前半小时提醒我',
+        followUp: true
+      },
+      temporal: {
+        timezone: 'Asia/Shanghai',
+        startsAt: '2026-07-03T15:00:00+08:00'
+      },
+      reminders: [{
+        enabled: true,
+        mode: 'before',
+        leadMinutes: 30,
+        remindAt: '2026-07-03T06:30:00.000Z',
+        channel: 'wechat'
+      }]
+    }, [
+      { id: 'other-1', title: '做接机方案', date: '2026-06-30', time: '09:00' },
+      { id: 'target-1', title: '开会', date: '2026-07-03', time: '15:00' }
+    ])
+
+    expect(parsed.mode).toBe('replace')
+    expect(parsed.items[0]).toMatchObject({
+      id: 'target-1',
+      title: '开会',
+      date: '2026-07-03',
+      time: '15:00',
+      reminder: {
+        leadMinutes: 30
+      }
+    })
+  })
+
   it('keeps deadline metadata while using the due time for the current schedule UI', () => {
     const parsed = applyResolvedScheduleCommand({
       mode: 'append',

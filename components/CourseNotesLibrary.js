@@ -41,6 +41,10 @@ function noteReaderHref(courseId, lessonKey) {
   return `/desk/materials/${encodeURIComponent(courseId)}/${encodeURIComponent(lessonKey)}`
 }
 
+function briefReaderHref(courseId, lessonKey) {
+  return `/desk/briefs/${encodeURIComponent(courseId)}/${encodeURIComponent(lessonKey)}`
+}
+
 export function CourseNotesLibrary() {
   const router = useRouter()
   const [courses, setCourses] = useState([])
@@ -256,6 +260,7 @@ export function CourseNotesLibrary() {
                       <button type='button' disabled={trashBusy} onClick={() => restore(course, lesson)}>恢复笔记</button>
                       <button className='danger' type='button' disabled={trashBusy} onClick={() => purge(course, lesson)}>永久删除</button>
                     </> : <>
+                      {lesson.hasBrief ? <Link href={briefReaderHref(course.id, lesson.key)}>阅读课程简报</Link> : null}
                       <Link href={courseHref}>{lesson.hasNote ? '编辑原笔记' : lesson.status === 'note_removed' ? '重新生成' : '继续整理'}</Link>
                       {lesson.hasNote ? <Link href={`/desk/publish?job=${encodeURIComponent(course.id)}&lesson=${encodeURIComponent(lesson.key)}`}>转入发布</Link> : null}
                       {lesson.hasNote ? <button className='danger' type='button' disabled={trashBusy} onClick={() => trash(course, lesson)}>移入回收站</button> : null}
