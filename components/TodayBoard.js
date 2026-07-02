@@ -5,8 +5,11 @@ import { selectRelevantItems } from '@/lib/domain/schedule-context'
 import { cleanDisplayText, tagsFromItem } from '@/lib/domain/metadata'
 import { calendarDateInTimeZone, calendarDateLabel, isCalendarDate } from '@/lib/domain/calendarDate'
 import { useWorkspaceSession } from '@/hooks/useWorkspaceSession'
-
-const storageKey = profileId => `law-tech.schedule.v3:${profileId || 'unknown'}`
+import {
+  fetchScheduleItems,
+  readScheduleItemsCache,
+  writeScheduleItemsCache
+} from '@/lib/client/scheduleItemsCache'
 const commandPlaceholder = '写下今天要处理的事、阅读材料或提醒。'
 
 const viewTabs = [
@@ -344,6 +347,7 @@ export function TodayBoard({ initialView = 'today' }) {
   const [isLoading, setIsLoading] = useState(false)
   const [isReady, setIsReady] = useState(false)
   const [cloudEnabled, setCloudEnabled] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [notice, setNotice] = useState('')
   const [showCompleted, setShowCompleted] = useState(false)
   const deletedIdsRef = useRef([])
@@ -353,34 +357,39 @@ export function TodayBoard({ initialView = 'today' }) {
     if (sessionLoading || !profileId) return undefined
     let cancelled = false
     loadedProfileRef.current = ''
-    setItems([])
-    setIsReady(false)
     setCloudEnabled(false)
     deletedIdsRef.current = []
+
+    const cached = readScheduleItemsCache(profileId)
+    if (cached !== null) {
+      loadedProfileRef.current = profileId
+      setItems(sortItems(normalizeItems(cached)))
+      setIsReady(true)
+    } else {
+      setItems([])
+      setIsReady(false)
+    }
+
+    setIsRefreshing(true)
     async function loadItems() {
       try {
-        const response = await fetch('/api/schedule/items')
-        if (response.ok) {
-          const data = await response.json()
-          if (!cancelled) {
-            const loaded = normalizeItems(data.items || [])
-            loadedProfileRef.current = profileId
-            setItems(sortItems(loaded))
-            setCloudEnabled(true)
-            setIsReady(true)
-          }
-          return
-        }
-      } catch {}
-
-      const saved = window.localStorage.getItem(storageKey(profileId))
-      if (!cancelled) {
+        const loaded = await fetchScheduleItems(profileId, { force: true })
+        if (cancelled) return
         loadedProfileRef.current = profileId
-        setItems(saved ? sortItems(normalizeItems(JSON.parse(saved))) : [])
+        setItems(sortItems(normalizeItems(loaded)))
+        setCloudEnabled(true)
+        setNotice('')
+        setIsReady(true)
+      } catch {
+        if (cancelled) return
+        loadedProfileRef.current = profileId
         setNotice('云端暂时不可用')
         setIsReady(true)
+      } finally {
+        if (!cancelled) setIsRefreshing(false)
       }
     }
+
     loadItems()
     return () => {
       cancelled = true
@@ -389,7 +398,7 @@ export function TodayBoard({ initialView = 'today' }) {
 
   useEffect(() => {
     if (!isReady || !profileId || loadedProfileRef.current !== profileId) return
-    window.localStorage.setItem(storageKey(profileId), JSON.stringify(items))
+    writeScheduleItemsCache(profileId, items)
     if (!cloudEnabled) return
 
     const timer = window.setTimeout(async () => {
@@ -464,6 +473,10 @@ export function TodayBoard({ initialView = 'today' }) {
   }), [visibleItems])
 
   async function runCommand() {
+    if (isRefreshing) {
+      setNotice('正在同步最新数据')
+      return
+    }
     if (!command.trim()) return
     setIsLoading(true)
     setNotice('')
@@ -489,15 +502,27 @@ export function TodayBoard({ initialView = 'today' }) {
   }
 
   function updateItem(id, patch) {
+    if (isRefreshing) {
+      setNotice('正在同步最新数据')
+      return
+    }
     setItems((current) => sortItems(current.map((item) => (item.id === id ? normalizeItem({ ...item, ...patch }) : item))))
   }
 
   function removeItem(id) {
+    if (isRefreshing) {
+      setNotice('正在同步最新数据')
+      return
+    }
     if (/^[0-9a-f-]{36}$/i.test(id)) deletedIdsRef.current = [...new Set([...deletedIdsRef.current, id])]
     setItems((current) => current.filter((item) => item.id !== id))
   }
 
   function toggleChild(itemId, childId) {
+    if (isRefreshing) {
+      setNotice('正在同步最新数据')
+      return
+    }
     setItems((current) =>
       current.map((item) =>
         item.id === itemId
@@ -507,6 +532,15 @@ export function TodayBoard({ initialView = 'today' }) {
             }
           : item
       )
+    )
+  }
+
+  if (sessionLoading || !profileId || !isReady) {
+    return (
+      <div className="desk-loading-state" aria-live="polite">
+        <i />
+        <span>正在读取…</span>
+      </div>
     )
   }
 

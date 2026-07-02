@@ -14,7 +14,7 @@ const defaults = {
 }
 
 const STATUS_TEXT = {
-  pending: '等待 OpenClaw Relay 领取',
+  pending: '等待发送',
   claimed: '正在发送到微信',
   sent: '测试微信已发送',
   failed: '测试微信发送失败',
@@ -120,7 +120,7 @@ export function WechatSettings({ courseOnly = false }) {
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || '测试消息入队失败')
       if (!data.deliveryId) throw new Error('测试消息没有取得发送编号')
-      setMessage('测试消息已入队，等待 OpenClaw Relay')
+      setMessage('测试消息已加入发送队列')
       await watchDelivery(data.deliveryId)
     } catch (error) {
       setState('error')
@@ -142,7 +142,7 @@ export function WechatSettings({ courseOnly = false }) {
           />
           <span>
             <strong>课程简报发送到微信</strong>
-            <small>不再使用邮件作为中间方案。</small>
+            <small>课程简报将发送到微信。</small>
           </span>
         </label>
         <div className='settings-form-grid'>
@@ -201,7 +201,7 @@ export function WechatSettings({ courseOnly = false }) {
             ? `当前模型 ${form.relayCurrentModel}`
             : form.relayLastSeenAt
               ? `上次在线 ${new Date(form.relayLastSeenAt).toLocaleString('zh-CN')}`
-              : '等待本机 OpenClaw 服务上报'}
+              : '尚未连接'}
         </span>
       </div>
 
@@ -215,7 +215,7 @@ export function WechatSettings({ courseOnly = false }) {
           />
           <span>
             <strong>发送每日安排</strong>
-            <small>到点后由 OpenClaw Relay 拉取并发送，不经过大模型。</small>
+            <small>每天在设定时间发送今日安排。</small>
           </span>
         </label>
 
@@ -240,16 +240,6 @@ export function WechatSettings({ courseOnly = false }) {
               <option value='Asia/Tokyo'>日本时间</option>
             </select>
           </label>
-        </div>
-
-        <div className='settings-subsection'>
-          <div>
-            <h4>发送链路</h4>
-            <p>
-              站内消息队列 → OpenClaw Relay → openclaw-weixin → 微信私聊。
-              通知文本由站内确定，Agent 不参与改写。
-            </p>
-          </div>
         </div>
 
         <div className='settings-actions'>

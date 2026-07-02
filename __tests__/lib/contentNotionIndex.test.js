@@ -18,14 +18,27 @@ describe('Notion content index compatibility', () => {
       { slug: 'locked', type: 'Post', status: 'Published', title: '密码文章', password: 'secret' }
     ])
 
-    expect(items).toHaveLength(1)
+    expect(items).toHaveLength(2)
     expect(items[0]).toMatchObject({
       slug: 'article/market-failure',
       href: '/article/market-failure',
       source: 'notion',
       category: '法律之上',
       collection: '文章',
-      folder: { path: ['法律之上', '文章'] }
+      folder: { path: ['法律之上', '文章'] },
+      access: { mode: 'public', allowIndexing: true }
     })
+    expect(items[1]).toMatchObject({
+      slug: 'locked',
+      href: '/locked',
+      title: '密码文章',
+      access: {
+        mode: 'password',
+        allowIndexing: false,
+        allowRss: false,
+        allowSitemap: false
+      }
+    })
+    expect(items[1]).not.toHaveProperty('password')
   })
 })

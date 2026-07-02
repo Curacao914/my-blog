@@ -9,6 +9,7 @@ describe('multi-user ownership contracts', () => {
   const integrations = read('lib/server/userIntegrations.js')
   const taskReminders = read('lib/taskReminders.js')
   const today = read('components/TodayBoard.js')
+  const scheduleCache = read('lib/client/scheduleItemsCache.js')
   const courseTasks = read('components/CourseTaskManager.js')
   const migration = read('lib/db/migrations/20260628_multi_user_workspace.sql')
 
@@ -30,7 +31,8 @@ describe('multi-user ownership contracts', () => {
   })
 
   it('namespaces browser caches by the effective profile and prevents cross-profile writes', () => {
-    expect(today).toContain('law-tech.schedule.v3:${profileId')
+    expect(scheduleCache).toContain('law-tech.schedule.v3:${profileId')
+    expect(scheduleCache).toContain('if (!profileId')
     expect(today).toContain('loadedProfileRef.current !== profileId')
     expect(courseTasks).toContain('law-tech-course-active-tasks-v4:${profileId')
     expect(courseTasks).toContain('storageProfileRef.current === profileId')
