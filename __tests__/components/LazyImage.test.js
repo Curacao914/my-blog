@@ -1,138 +1,123 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import LazyImage from '@/components/LazyImage'
 
-// Mock IntersectionObserver
-const mockIntersectionObserver = jest.fn()
-mockIntersectionObserver.mockReturnValue({
-  observe: () => null,
-  unobserve: () => null,
-  disconnect: () => null
+let observerCallback
+const observe = jest.fn()
+const unobserve = jest.fn()
+const disconnect = jest.fn()
+const mockIntersectionObserver = jest.fn(callback => {
+  observerCallback = callback
+  return { observe, unobserve, disconnect }
 })
-window.IntersectionObserver = mockIntersectionObserver
+
+class MockImage {
+  set src(value) {
+    this._src = value
+    setTimeout(() => this.onload?.(), 0)
+  }
+
+  get src() {
+    return this._src
+  }
+}
 
 describe('LazyImage Component', () => {
   const defaultProps = {
     src: '/test-image.jpg',
     alt: 'Test image'
   }
+  const RealImage = global.Image
+
+  beforeAll(() => {
+    window.IntersectionObserver = mockIntersectionObserver
+    global.IntersectionObserver = mockIntersectionObserver
+    global.Image = MockImage
+  })
+
+  afterAll(() => {
+    global.Image = RealImage
+  })
 
   beforeEach(() => {
+    observerCallback = null
     mockIntersectionObserver.mockClear()
+    observe.mockClear()
+    unobserve.mockClear()
+    disconnect.mockClear()
   })
 
   it('renders with required props', () => {
     render(<LazyImage {...defaultProps} />)
-    
     const image = screen.getByAltText('Test image')
     expect(image).toBeInTheDocument()
     expect(image).toHaveAttribute('alt', 'Test image')
   })
 
   it('applies custom className', () => {
-    const customClass = 'custom-image-class'
-    render(<LazyImage {...defaultProps} className={customClass} />)
-    
-    const image = screen.getByAltText('Test image')
-    expect(image).toHaveClass(customClass)
+    render(<LazyImage {...defaultProps} className='custom-image-class' />)
+    expect(screen.getByAltText('Test image')).toHaveClass('custom-image-class')
   })
 
   it('sets width and height attributes', () => {
-    render(
-      <LazyImage 
-        {...defaultProps} 
-        width={300} 
-        height={200} 
-      />
-    )
-    
+    render(<LazyImage {...defaultProps} width={300} height={200} />)
     const image = screen.getByAltText('Test image')
     expect(image).toHaveAttribute('width', '300')
     expect(image).toHaveAttribute('height', '200')
   })
 
-  it('handles priority loading', () => {
+  it('handles priority loading without an observer', async () => {
     render(<LazyImage {...defaultProps} priority />)
-    
     const image = screen.getByAltText('Test image')
     expect(image).toHaveAttribute('loading', 'eager')
+    expect(mockIntersectionObserver).not.toHaveBeenCalled()
+    await waitFor(() => expect(image).toHaveAttribute('src', '/test-image.jpg'))
   })
 
-  it('uses lazy loading by default', () => {
+  it('uses lazy loading and observes the rendered image by default', () => {
     render(<LazyImage {...defaultProps} />)
-    
     const image = screen.getByAltText('Test image')
     expect(image).toHaveAttribute('loading', 'lazy')
+    expect(mockIntersectionObserver).toHaveBeenCalledTimes(1)
+    expect(observe).toHaveBeenCalledWith(image)
+  })
+
+  it('loads the real source after the image intersects', async () => {
+    render(<LazyImage {...defaultProps} />)
+    const image = screen.getByAltText('Test image')
+    observerCallback([{ isIntersecting: true, target: image }])
+    await waitFor(() => expect(image).toHaveAttribute('src', '/test-image.jpg'))
+    expect(unobserve).toHaveBeenCalledWith(image)
+  })
+
+  it('calls onLoad only when the real image has loaded', async () => {
+    const handleLoad = jest.fn()
+    render(<LazyImage {...defaultProps} priority onLoad={handleLoad} />)
+    await waitFor(() => expect(handleLoad).toHaveBeenCalledTimes(1))
   })
 
   it('handles click events', () => {
     const handleClick = jest.fn()
     render(<LazyImage {...defaultProps} onClick={handleClick} />)
-    
-    const image = screen.getByAltText('Test image')
-    image.click()
-    
+    screen.getByAltText('Test image').click()
     expect(handleClick).toHaveBeenCalledTimes(1)
-  })
-
-  it('sets up IntersectionObserver when not priority', () => {
-    render(<LazyImage {...defaultProps} />)
-    
-    expect(mockIntersectionObserver).toHaveBeenCalled()
-  })
-
-  it('does not set up IntersectionObserver for priority images', () => {
-    render(<LazyImage {...defaultProps} priority />)
-    
-    // Priority images should load immediately without IntersectionObserver
-    expect(mockIntersectionObserver).not.toHaveBeenCalled()
-  })
-
-  it('handles load event', async () => {
-    const handleLoad = jest.fn()
-    render(<LazyImage {...defaultProps} onLoad={handleLoad} />)
-    
-    const image = screen.getByAltText('Test image')
-    
-    // Simulate image load
-    Object.defineProperty(image, 'complete', { value: true })
-    image.dispatchEvent(new Event('load'))
-    
-    await waitFor(() => {
-      expect(handleLoad).toHaveBeenCalled()
-    })
   })
 
   it('handles error gracefully', () => {
     render(<LazyImage {...defaultProps} />)
-    
     const image = screen.getByAltText('Test image')
-    
-    // Simulate image error
     image.dispatchEvent(new Event('error'))
-    
-    // Component should still be in the document
     expect(image).toBeInTheDocument()
   })
 
-  it('applies correct decoding attribute', () => {
-    render(<LazyImage {...defaultProps} />)
-    
+  it('applies the async decoding attribute and custom styles', () => {
+    render(<LazyImage {...defaultProps} style={{ border: '1px solid red' }} />)
     const image = screen.getByAltText('Test image')
     expect(image).toHaveAttribute('decoding', 'async')
-  })
-
-  it('handles missing src gracefully', () => {
-    render(<LazyImage alt="Test image" />)
-    
-    const image = screen.getByAltText('Test image')
-    expect(image).toBeInTheDocument()
-  })
-
-  it('applies custom styles', () => {
-    const customStyle = { border: '1px solid red' }
-    render(<LazyImage {...defaultProps} style={customStyle} />)
-    
-    const image = screen.getByAltText('Test image')
     expect(image).toHaveStyle('border: 1px solid red')
+  })
+
+  it('renders nothing when src is missing', () => {
+    render(<LazyImage alt='Test image' />)
+    expect(screen.queryByAltText('Test image')).not.toBeInTheDocument()
   })
 })

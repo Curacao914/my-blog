@@ -66,10 +66,13 @@ jobs:
       COURSE_WORKER_ID: gha:${{ github.run_id }}
 
     steps:
+      # Scheduled workflows are discovered from the default branch. During the
+      # pre-production transition, COURSE_WORKER_REF may point at the canonical
+      # integration branch; the legacy worker branch remains the safe fallback.
       - name: Check out worker branch
         uses: actions/checkout@v5
         with:
-          ref: codex/course-worker-v009c
+          ref: ${{ vars.COURSE_WORKER_REF || 'codex/course-worker-v009c' }}
           persist-credentials: false
 
       - name: Validate remote-worker configuration

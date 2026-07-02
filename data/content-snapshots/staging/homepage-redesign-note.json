@@ -1,0 +1,33 @@
+{
+  "id": "manual-homepage-redesign-note",
+  "slug": "project/homepage-redesign",
+  "title": "law-tech.dev 首页重构记录",
+  "type": "project",
+  "visibility": "public",
+  "status": "published",
+  "summary": "把 NotionNext 首页退为内容来源之一，先建立独立主页和后续中转层边界。",
+  "tags": ["网站", "项目"],
+  "category": "项目",
+  "access": {
+    "mode": "public",
+    "allowIndexing": true,
+    "allowRss": true,
+    "allowSitemap": true
+  },
+  "display": {
+    "category": "法与算法",
+    "tags": ["网站", "项目"],
+    "pinned": false,
+    "showInRecent": true
+  },
+  "folder": {
+    "path": ["项目", "个人主页"]
+  },
+  "date": "2026-06-23",
+  "updatedAt": "2026-06-23T00:00:00+08:00",
+  "source": "manual",
+  "sourceId": "phase-1",
+  "bodyMarkdown": "# law-tech.dev 首页重构记录\n\n第一阶段先把首页从 NotionNext 主题首页中拆出来，保留旧文章路由，同时准备内容中转层。\n",
+  "assets": [],
+  "checksum": "5b008705c57a1b39a88af973c65d52a8f43a84e3d93185a333815a9bc15cf8ed"
+}
