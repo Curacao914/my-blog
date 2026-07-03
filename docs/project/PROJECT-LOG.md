@@ -114,10 +114,12 @@
 - GitHub 集成读取正常，但创建 branch/ref 返回 403，因此文档变更继续采用本地一键包 + 用户 push/PR。
 
 
-### CI / Docker 优化 PR（待合并）
+### CI / Docker 优化 PR #9（已合并）
 
 - 保留 required job/check 名称 `build`，不使用 workflow-level paths-ignore；
 - 纯文档 PR 在 job 内快速成功；
 - 无数据库 Docker build 显式跳过静态预取；
 - 加入 BuildKit GHA cache 与 concurrency cancel-in-progress；
-- 本记录在 merge 前仅代表分支实现，最终 SHA 由 merge 后文档记录 PR 补齐。
+- merge commit：`6db4e8a8e4b216f95b1b5f330905a084929ae78d`；PR：https://github.com/Curacao914/my-blog/pull/9。
+- GHCR 发布解耦纠正 PR #10：https://github.com/Curacao914/my-blog/pull/10；merge：`f5f96ca71ead7c70606933ee1095f725630fe7ca`。
+- 随后的 docs-only 记录 PR 用于验证 `build` required job 在纯文档变更上快速成功。

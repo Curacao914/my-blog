@@ -52,10 +52,24 @@
   "ci": {
     "workflow": ".github/workflows/docker-ghcr.yaml",
     "required_job_name_preserved": "build",
-    "docs_only_fast_success": "implemented_in_ci_pr_pending_merge",
+    "docs_only_fast_success": "verification_pr_pending_checks",
     "static_prefetch_mode": "LAW_TECH_STATIC_PREFETCH_MODE=skip",
     "buildkit_gha_cache": true,
-    "cancel_in_progress": true
+    "cancel_in_progress": true,
+    "pull_request": 9,
+    "pull_request_url": "https://github.com/Curacao914/my-blog/pull/9",
+    "merge_commit": "6db4e8a8e4b216f95b1b5f330905a084929ae78d",
+    "effective_main_commit": "f5f96ca71ead7c70606933ee1095f725630fe7ca",
+    "ghcr_publication": {
+      "required_validation_publishes": false,
+      "publish_triggers": [
+        "version_tag",
+        "manual_publish"
+      ],
+      "repair_pull_request": 10,
+      "repair_pull_request_url": "https://github.com/Curacao914/my-blog/pull/10",
+      "repair_merge_commit": "f5f96ca71ead7c70606933ee1095f725630fe7ca"
+    }
   },
   "project_docs_main_merge": "85dfb514d9db5ae930b87b0f72b4124fad4b2ce7"
 }
