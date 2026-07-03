@@ -1,5 +1,10 @@
 import { cleanDisplayTags, cleanDisplayText } from '@/lib/domain/metadata'
 import { addCalendarDays } from '@/lib/domain/calendarDate'
+import {
+  assessCaptureIntent,
+  hasExplicitReadingIntent,
+  looksLikeAggregateStatus
+} from '@/lib/openclaw/mutationPolicy'
 import { profileCan } from '@/lib/auth/permissions'
 import { requireWorkspaceRequest } from '@/lib/auth/serverAdmin'
 import { resolveUserAiConfig } from '@/lib/server/userIntegrations'
@@ -9,6 +14,9 @@ export const runtime = 'nodejs'
 const schemaInstruction = `
 Return JSON only:
 {
+  "decision": "write | ignore | clarify",
+  "reason": "short machine-readable reason",
+  "clarification": "short Chinese question when decision=clarify; otherwise empty",
   "mode": "append | replace",
   "items": [
     {
@@ -207,9 +215,11 @@ function buildSystemPrompt({ referenceDate }) {
   return [
     '你是 Law-Tech 工作台的日程与阅读整理器，只输出 JSON，不要输出解释。',
     `当前日期是 ${referenceDate}，时区是 ${TIME_ZONE}。所有相对日期必须按这个日期换算。`,
-    '核心任务：把用户的中文自然语言输入整理为可直接写入数据库的日程项或阅读项。',
+    '核心任务：先判断用户是在要求写入、查询/陈述状态，还是表达不清。理解可以灵活，但写数据库必须谨慎。',
+    '只有明确要求创建或修改，或输入本身构成明确可行动安排时，decision=write。',
+    '普通陈述、系统状态、机器人回复、闲聊和无法确定的表达不得硬凑记录：分别返回 ignore 或 clarify，items=[]。',
     '',
-    '严格规则：',
+    '判定与整理规则：',
     '1. date 必须是具体 YYYY-MM-DD、reading 或 none。禁止输出 today、tomorrow、upcoming、later、后天 等相对或模糊日期。',
     '2. 用户说“今天/明天/后天/周几/下周/某月某日”时，换算为具体 YYYY-MM-DD。',
     '3. 有明确时间时，time 优先输出 24 小时制 HH:mm；只有无法归一时才保留原文。',
@@ -230,8 +240,13 @@ function buildSystemPrompt({ referenceDate }) {
     '18. 用户说“读完了/完成了”时 status=done；说“取消/不用了/删掉”时 status=cancelled；只改时间时保留原 title、section、links、summary、note、contentType。',
     '19. 用户明确说“提醒我/提前提醒/到时提醒/某时提醒”时，填写 reminder；提前半小时输出 leadMinutes=30，提前一天输出 1440；指定提醒时刻则输出具体 remindAt。',
     '20. 如果用户没有提提醒，不要为了普通新增事项编造 reminder；服务端会按默认策略处理。',
-    '21. 对纯寒暄、系统失败文案、没有保存意图也没有可行动内容的输入，返回 items: []。',
-    '22. 保留用户原意，不要在回复里扩写、开玩笑或自作主张添加不存在的安排。',
+    '21. 先做语义判定，不要只因出现“读、完成、提醒、课程”等关键词就写入。',
+    '22. “未读课程简报已全部读完”“今天没有待办”“系统同步完成”属于状态陈述：decision=ignore，items=[]。',
+    '23. “读完了”“改到明天”但没有上下文和对象时：decision=clarify，items=[]；不要创建标题等于整句话的新项目。',
+    '24. “《国际法笔记》读完了”“把周五会议改到三点”可以结合 Current relevant items 语义匹配并 replace；不要求用户必须先说固定模板。',
+    '25. “明天下午三点开会”“买牛奶”“提醒我周五交作业”以及单独 URL 均可按实际语义 decision=write。',
+    '26. 当你主动判断 decision=ignore 或 clarify 时，服务端会尊重空 items；不要为了满足 schema 虚构项目。',
+    '27. 保留用户原意，不要在回复里扩写、开玩笑或自作主张添加不存在的安排。',
     '',
     schemaInstruction
   ].join('\n')
@@ -350,6 +365,7 @@ export function shouldIgnoreCommand(command) {
   if (!text) return true
   if (/^(hi|hello|你好|在吗|测试|test|ok|嗯+|啊+|收到|谢谢)$/i.test(text)) return true
   if (/这条内容尚未添加成功，请稍后重试/.test(text)) return true
+  if (looksLikeAggregateStatus(text)) return true
   return false
 }
 
@@ -358,13 +374,16 @@ function looksLikeActionCommand(text) {
 }
 
 function looksLikeReadingCommand(text, links) {
-  const explicitReading = /阅读|读|看这篇|这篇|推文|文章|论文|paper|article|good faith|arbitration/i.test(text)
-  return explicitReading || (!looksLikeActionCommand(text) && (links.length > 0 || text.length > 120))
+  if (looksLikeAggregateStatus(text)) return false
+  return hasExplicitReadingIntent(text) ||
+    (!looksLikeActionCommand(text) && (links.length > 0 || text.length > 120))
 }
 
 function fallbackItemsFromCommand(command, { referenceDate, linkMetadata = [] }) {
   const text = String(command || '').trim()
   if (shouldIgnoreCommand(text)) return []
+  const intent = assessCaptureIntent({ text })
+  if (intent.decision !== 'allow') return []
   const links = extractUrls(text).map((url) => {
     const metadata = metadataForUrl(url, linkMetadata)
     return {
@@ -535,17 +554,42 @@ ${command}`
   const text = data.choices?.[0]?.message?.content || ''
   const parsed = extractJson(text)
   const items = normalizeItems(parsed.items, { referenceDate, linkMetadata })
-  const safeItems = items.length ? items : fallbackItemsFromCommand(command, { referenceDate, linkMetadata })
-  const errors = validateItems(safeItems)
+  const decision = ['write', 'ignore', 'clarify'].includes(parsed.decision)
+    ? parsed.decision
+    : items.length
+      ? 'write'
+      : 'ignore'
+
+  if (decision !== 'write') {
+    return Response.json({
+      mode: 'append',
+      status: decision === 'clarify' ? 'needs_confirmation' : 'ignored',
+      reason: parsed.reason || (decision === 'clarify' ? 'ambiguous_intent' : 'not_actionable'),
+      clarification: cleanDisplayText(parsed.clarification),
+      items: []
+    })
+  }
+
+  if (!items.length) {
+    return Response.json({
+      mode: 'append',
+      status: 'needs_confirmation',
+      reason: 'write_without_items',
+      clarification: '我理解到你可能想记录或修改内容，但还缺少足够信息。请补充具体事项。',
+      items: []
+    })
+  }
+
+  const errors = validateItems(items)
   if (errors.length) {
     return Response.json({ error: 'INVALID_MODEL_OUTPUT', details: errors }, { status: 422 })
   }
 
-  if (!safeItems.length) {
-    return Response.json({ mode: 'append', status: 'ignored', reason: 'not_actionable', items: [] })
-  }
-
-  return Response.json({ mode: parsed.mode === 'replace' ? 'replace' : 'append', items: safeItems })
+  return Response.json({
+    mode: parsed.mode === 'replace' ? 'replace' : 'append',
+    decision: 'write',
+    items
+  })
 }
 
 export async function POST(request) {

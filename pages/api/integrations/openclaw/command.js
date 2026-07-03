@@ -8,6 +8,7 @@ import {
   temporalFromScheduleItem
 } from '@/lib/openclaw/scheduleCommandBridge'
 import { normalizeOpenClawInput } from '@/lib/openclaw/inputNormalization'
+import { assessOpenClawMutation } from '@/lib/openclaw/mutationPolicy'
 import { resolveTemporalSemantics } from '@/lib/openclaw/temporalSemantics'
 import {
   getOpenClawConversationState,
@@ -272,6 +273,35 @@ export default async function handler(req, res) {
             )
           : null
       )
+    const mutationPolicy = assessOpenClawMutation({
+      text: originalCommand,
+      classification,
+      referenceObject,
+      pendingAction: state.pendingAction,
+      confirmedPending
+    })
+
+    if (mutationPolicy.decision === 'ignore') {
+      return res.status(200).json({
+        ok: true,
+        status: 'ignored',
+        action: 'ignored',
+        reason: mutationPolicy.reason,
+        silent: Boolean(mutationPolicy.silent),
+        replyText: ''
+      })
+    }
+
+    if (mutationPolicy.decision === 'clarify') {
+      return res.status(200).json({
+        ok: true,
+        status: 'needs_confirmation',
+        action: 'clarify',
+        reason: mutationPolicy.reason,
+        replyText: mutationPolicy.replyText
+      })
+    }
+
     const temporal = resolveTemporalSemantics(originalCommand, {
       now: safeNow,
       timeZone: 'Asia/Shanghai',
