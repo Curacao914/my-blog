@@ -1,5 +1,9 @@
 # law-tech → my-blog Migration Matrix
 
+> **Historical snapshot — not the current project status.**
+> 本矩阵冻结于 2026-06-26，保留用于迁移证据和历史追溯。当前事实请查看 [`docs/project/CURRENT-STATUS.md`](project/CURRENT-STATUS.md)，路线查看 [`docs/project/ROADMAP.md`](project/ROADMAP.md)，重要 PR 与事故查看 [`docs/project/PROJECT-LOG.md`](project/PROJECT-LOG.md)。任何新 PR 不应继续把本文件当作“当前 handoff”。
+
+
 Last audited: 2026-06-26 Asia/Shanghai.
 
 This matrix records implementation and verification status only. Do not treat "file migrated", "local API test", "build passed", and "real public end-to-end verified" as the same thing.

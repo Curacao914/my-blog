@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-07-03",
+  "repository": "Curacao914/my-blog",
+  "production": "https://law-tech.dev",
+  "vercel_project": "curacaos-projects/curacao-top",
+  "verified_functional_baseline": {
+    "commit": "6382b37a6d91c49be96861b4b29a6a39d85a3784",
+    "meaning": "PR #7 merge before documentation-governance change; verify origin/main live before use"
+  },
+  "database": {
+    "provider": "Supabase",
+    "production_ref": "htbbkcxevcouwehpugwc",
+    "schedule_semantics_repair": "production_verified",
+    "migration_ledger": "exists"
+  },
+  "tencent": {
+    "host": "ubuntu@124.222.111.108",
+    "ssh_key": "$HOME/.ssh/lawtech-tencent",
+    "openclaw_bin": "/home/ubuntu/.local/bin/openclaw",
+    "openclaw_home": "/home/ubuntu/.openclaw-candidate",
+    "relay_root": "/home/ubuntu/law-tech-runtime/integrations/openclaw/law-tech-wechat-relay",
+    "systemd_scope": "user",
+    "services": [
+      "openclaw-gateway.service",
+      "law-tech-cloudflared.service",
+      "law-tech-wechat-relay.service"
+    ],
+    "readyz": "http://127.0.0.1:18789/readyz",
+    "inbound_filter_applied": true,
+    "full_pr7_relay_runtime_applied": false
+  },
+  "current_mainline": "model-first Agent Controller Phase 1 for Schedule, Reading and Course",
+  "pending": [
+    "course natural full-cycle acceptance",
+    "historical failed/needs_attention course cleanup",
+    "Tencent migration hardening and restore drills",
+    "unified E2E, tracing and monitoring",
+    "historical bad Reading cleanup after Agent acceptance",
+    "CI/Docker optimization",
+    "data governance and export"
+  ],
+  "constraints": [
+    "no direct or force push to main",
+    "no new exact-time WeChat reminder product",
+    "no model-generated free SQL",
+    "one independently usable and reversible closure at a time",
+    "no secrets in chat or logs",
+    "no audit or extraction directories on Desktop",
+    "Tencent services use systemctl --user"
+  ]
+}
