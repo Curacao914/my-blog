@@ -7,6 +7,12 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      multiarch:
+        description: Build and publish both amd64 and arm64 images
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: docker-ghcr-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -19,6 +25,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.multiarch)) && 70 || 20 }}
     permissions:
       contents: read
       packages: write
@@ -34,16 +41,30 @@ jobs:
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
+          GIT_REF: ${{ github.ref }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
           set -euo pipefail
           required=true
           reason="push, tag, or manual run"
 
+          diff_base=""
+          diff_head=""
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
             required=false
             reason="documentation-only pull request"
+            diff_base="$BASE_SHA"
+            diff_head="$HEAD_SHA"
+          elif [[ "$EVENT_NAME" == "push" && "$GIT_REF" == "refs/heads/main" && -n "$BEFORE_SHA" && ! "$BEFORE_SHA" =~ ^0+$ ]]; then
+            required=false
+            reason="documentation-only main push"
+            diff_base="$BEFORE_SHA"
+            diff_head="$HEAD_SHA"
+          fi
+
+          if [[ -n "$diff_base" && -n "$diff_head" ]]; then
             while IFS= read -r path; do
               [[ -z "$path" ]] && continue
               case "$path" in
@@ -55,7 +76,7 @@ jobs:
                   break
                   ;;
               esac
-            done < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+            done < <(git diff --name-only "$diff_base" "$diff_head")
           fi
 
           echo "required=$required" >> "$GITHUB_OUTPUT"
@@ -77,6 +98,15 @@ jobs:
         if: steps.docker_changes.outputs.required == 'true'
         uses: docker/setup-buildx-action@v3
 
+      - name: Set up QEMU for explicit multi-architecture release
+        if: >-
+          steps.docker_changes.outputs.required == 'true' &&
+          (startsWith(github.ref, 'refs/tags/') ||
+          (github.event_name == 'workflow_dispatch' && inputs.multiarch))
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
       - name: Log into registry ${{ env.REGISTRY }}
         if: steps.docker_changes.outputs.required == 'true' && github.event_name != 'pull_request'
         uses: docker/login-action@v3
@@ -92,16 +122,59 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      - name: Build and push Docker image
-        if: steps.docker_changes.outputs.required == 'true'
+      - name: Build PR validation image
+        if: steps.docker_changes.outputs.required == 'true' && github.event_name == 'pull_request'
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          platforms: linux/amd64
+          push: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             LAW_TECH_STATIC_PREFETCH_MODE=skip
-          cache-from: type=gha,scope=docker-ghcr
-          cache-to: type=gha,mode=max,scope=docker-ghcr
+          cache-from: type=gha,scope=docker-amd64
+          cache-to: type=gha,mode=max,scope=docker-amd64
+          provenance: false
+          sbom: false
+
+      - name: Build and push main amd64 image
+        if: >-
+          steps.docker_changes.outputs.required == 'true' &&
+          github.event_name != 'pull_request' &&
+          !startsWith(github.ref, 'refs/tags/') &&
+          !(github.event_name == 'workflow_dispatch' && inputs.multiarch)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            LAW_TECH_STATIC_PREFETCH_MODE=skip
+          cache-from: type=gha,scope=docker-amd64
+          cache-to: type=gha,mode=max,scope=docker-amd64
+          provenance: false
+          sbom: false
+
+      - name: Build and push multi-architecture release image
+        if: >-
+          steps.docker_changes.outputs.required == 'true' &&
+          (startsWith(github.ref, 'refs/tags/') ||
+          (github.event_name == 'workflow_dispatch' && inputs.multiarch))
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            LAW_TECH_STATIC_PREFETCH_MODE=skip
+          cache-from: |
+            type=gha,scope=docker-amd64
+            type=gha,scope=docker-release
+          cache-to: type=gha,mode=max,scope=docker-release
+          provenance: false
+          sbom: false
