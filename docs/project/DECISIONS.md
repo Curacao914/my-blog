@@ -88,3 +88,11 @@
 - 状态：Accepted
 - 决策：状态、路线、决策、事故、运维和交接进入 `docs/project`；PR 模板强制文档影响检查。
 - 后果：旧交接不再作为唯一事实源；审计与解压目录不得写入 Desktop。
+
+
+## ADR: Agent Phase 1 复用会话 JSON，不新增数据库表
+
+- 决策：首期将结构化 Session State 与最近 trace 存入现有 `openclaw_conversation_states.state`，不新增 migration；
+- 原因：先验证 Router—Resource—Policy—Tool 闭环，降低数据库与发布耦合；
+- 代价：trace 仅为有界、带 TTL 的验收级记录，不替代后续耐久审计表；
+- 后续：统一 E2E 与观测阶段再设计 durable trace/event ledger。

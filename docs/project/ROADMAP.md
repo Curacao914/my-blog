@@ -229,3 +229,25 @@ Agent、课程和数据基础稳定后再扩张：
 - [x] 加入无数据库静态预取 skip 模式；
 - [x] 加入 BuildKit GHA cache 与 cancel-in-progress；
 - [x] CI PR #9 checks 与 merge commit `6db4e8a8e4b216f95b1b5f330905a084929ae78d` 已记录；纠正 PR #10 merge `f5f96ca71ead7c70606933ee1095f725630fe7ca` 已将 required validation 与 GHCR 发布解耦；docs-only commit `08a24bce38034bcd05072ec279369a0bce6f30e9` 的 `build` check 已成功验证 fast-success。
+
+
+### CI / Docker 构建降时第二阶段
+
+- [x] 普通 PR/main 从双架构改为原生 amd64 validation，且 required check 不依赖 GHCR 发布；
+- [x] GHCR 仅由版本标签或显式手工 publish 发布，arm64 仅保留在 multiarch release；
+- [x] 架构分离 GHA cache；普通 PR/main 20 分钟 timeout，显式 multiarch release 70 分钟；
+- [ ] Agent PR exact-SHA `build` 不超过 900 秒；
+- [ ] merge 后 main exact-SHA `build` 不超过 900 秒。
+
+
+### Model-first Agent Phase 1 实施
+
+- [x] RoutePlan、Capability Card、Resource、QuerySpec、MutationSpec、Session State、Risk Policy 稳定接口；
+- [x] Schedule、Reading、Course 资源与工具；
+- [x] `single` / `matching` / `all_unread` 课程简报已读；
+- [x] 结构化指代与固定自然语言评估集；
+- [x] 风险门禁、幂等、before/after 和 trace；
+- [ ] Preview 固定评估集通过；
+- [ ] Production 精确 commit 部署通过；
+- [ ] 微信真机验收通过并记录；
+- [ ] 真机验收后单独清理历史误创建 Reading。

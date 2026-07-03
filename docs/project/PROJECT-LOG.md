@@ -125,3 +125,20 @@
 - 随后的 docs-only 记录 PR 用于验证 `build` required job 在纯文档变更上快速成功。
 
 - docs-only 验证 commit：`08a24bce38034bcd05072ec279369a0bce6f30e9`；`build` check success，13.0 秒。
+
+
+### CI / Docker 构建降时第二阶段（待验收）
+
+- 基线：PR #9 `build` 约 2434 秒；
+- 原因：普通 PR 仍同时构建 amd64 与 QEMU arm64，两套完整 Next.js 镜像；
+- 调整：PR/main 仅做 amd64 validation，不发布；tag/显式 publish 才进入 GHCR，multiarch 仅用于 release；
+- 验收：Agent PR 与 merge 后 main 分别记录 exact-SHA build duration，任一超过 900 秒则不合并或不宣称完成。
+
+
+### Model-first Agent Phase 1 PR（待验收）
+
+- 旧 regex-first command handler 保留为显式人工回滚路径，但 Production 默认不再经过它；
+- Router 模型失败不会调用 legacy 分类器或 rules fallback 写入；
+- 新增三个领域的 Registry、Resource、实体解析、Policy、Tools、Session 与 trace；
+- 数据库边界为零 migration，复用现有会话 JSON 与领域表；
+- 验收分为代码/测试、Preview、Production、真实微信和课程自然周期，禁止混写。

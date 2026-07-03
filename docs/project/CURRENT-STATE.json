@@ -76,7 +76,57 @@
       "conclusion": "success",
       "duration_seconds": 13.0,
       "completed_at": "2026-07-03T16:56:38Z"
+    },
+    "optimization_phase_2": {
+      "status": "implemented_in_agent_pr_pending_checks",
+      "baseline_code_pr_build_seconds": 2434.0,
+      "baseline_pull_request": 9,
+      "baseline_merge_commit": "6db4e8a8e4b216f95b1b5f330905a084929ae78d",
+      "pull_request_platforms": [
+        "linux/amd64"
+      ],
+      "main_validation_platforms": [
+        "linux/amd64"
+      ],
+      "main_validation_publishes": false,
+      "release_platforms": [
+        "linux/amd64",
+        "linux/arm64"
+      ],
+      "release_triggers": [
+        "version_tag",
+        "manual_publish"
+      ],
+      "effective_main_commit": "f5f96ca71ead7c70606933ee1095f725630fe7ca",
+      "repair_pull_request": 10,
+      "repair_merge_commit": "f5f96ca71ead7c70606933ee1095f725630fe7ca",
+      "pr_timeout_minutes": 20,
+      "main_timeout_minutes": 20,
+      "release_timeout_minutes": 70,
+      "target_seconds": 600,
+      "hard_ceiling_seconds": 900
     }
   },
-  "project_docs_main_merge": "85dfb514d9db5ae930b87b0f72b4124fad4b2ce7"
+  "project_docs_main_merge": "85dfb514d9db5ae930b87b0f72b4124fad4b2ce7",
+  "agent_phase_1": {
+    "status": "implemented_in_pr_pending_preview_and_real_wechat",
+    "entrypoint": "pages/api/integrations/openclaw/command.js",
+    "controller": "lib/openclaw/agent/controller.js",
+    "feature_flag": "OPENCLAW_AGENT_V1_ENABLED",
+    "default": "enabled outside NODE_ENV=test unless explicitly false",
+    "domains": [
+      "schedule",
+      "reading",
+      "course"
+    ],
+    "course_brief_scopes": [
+      "single",
+      "matching",
+      "all_unread"
+    ],
+    "database_migration": "none",
+    "session_store": "openclaw_conversation_states.state",
+    "trace": "bounded session trace plus structured server log",
+    "fixed_eval": "__tests__/fixtures/openclaw-agent-eval-v1.json"
+  }
 }

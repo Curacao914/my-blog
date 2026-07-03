@@ -1,0 +1,267 @@
+{
+  "version": 1,
+  "timeZone": "Asia/Shanghai",
+  "referenceDate": "2026-07-03",
+  "cases": [
+    {
+      "id": "schedule-today",
+      "input": "我今天有什么安排",
+      "expected": {
+        "capability": "schedule.list",
+        "scope": "today"
+      }
+    },
+    {
+      "id": "schedule-tomorrow",
+      "input": "看看明天的安排",
+      "expected": {
+        "capability": "schedule.list",
+        "scope": "tomorrow"
+      }
+    },
+    {
+      "id": "schedule-week",
+      "input": "这周还要做什么",
+      "expected": {
+        "capability": "schedule.list",
+        "scope": "week"
+      }
+    },
+    {
+      "id": "schedule-overdue",
+      "input": "有哪些逾期事项",
+      "expected": {
+        "capability": "schedule.list",
+        "scope": "overdue"
+      }
+    },
+    {
+      "id": "schedule-create",
+      "input": "明天新增一个Agent验收事项",
+      "expected": {
+        "capability": "schedule.create",
+        "scope": "single"
+      }
+    },
+    {
+      "id": "schedule-create-time",
+      "input": "明天十点开项目会",
+      "expected": {
+        "capability": "schedule.create",
+        "scope": "single"
+      }
+    },
+    {
+      "id": "schedule-update-context",
+      "input": "时间改到十点",
+      "sessionFixture": "lastCreatedSchedule",
+      "expected": {
+        "capability": "schedule.update",
+        "scope": "selected",
+        "contextRef": "lastCreated"
+      }
+    },
+    {
+      "id": "schedule-complete-context",
+      "input": "这个完成了",
+      "sessionFixture": "lastSelectedSchedule",
+      "expected": {
+        "capability": "schedule.complete",
+        "scope": "selected"
+      }
+    },
+    {
+      "id": "schedule-delete",
+      "input": "删除刚才那个日程",
+      "sessionFixture": "lastCreatedSchedule",
+      "expected": {
+        "capability": "schedule.delete",
+        "scope": "selected",
+        "policy": "confirm"
+      }
+    },
+    {
+      "id": "cancel-pending",
+      "input": "取消刚才的操作",
+      "sessionFixture": "pendingDelete",
+      "expected": {
+        "capability": "agent.cancel_pending",
+        "scope": "single"
+      }
+    },
+    {
+      "id": "confirm-pending",
+      "input": "确认",
+      "sessionFixture": "pendingDelete",
+      "expected": {
+        "capability": "agent.confirm",
+        "scope": "single"
+      }
+    },
+    {
+      "id": "reading-list",
+      "input": "我还有哪些待读",
+      "expected": {
+        "capability": "reading.list",
+        "scope": "all"
+      }
+    },
+    {
+      "id": "reading-search",
+      "input": "找一下仲裁协议那篇待读",
+      "expected": {
+        "capability": "reading.list",
+        "scope": "matching"
+      }
+    },
+    {
+      "id": "reading-create-url",
+      "input": "把 https://example.com/article 保存到待读",
+      "expected": {
+        "capability": "reading.create",
+        "scope": "single"
+      }
+    },
+    {
+      "id": "reading-create-natural",
+      "input": "这篇关于善意取得的文章我以后读",
+      "expected": {
+        "capability": "reading.create",
+        "scope": "single"
+      }
+    },
+    {
+      "id": "reading-mark-context",
+      "input": "这个读完了",
+      "sessionFixture": "lastSelectedReading",
+      "expected": {
+        "capability": "reading.mark_read",
+        "scope": "selected"
+      }
+    },
+    {
+      "id": "reading-mark-title",
+      "input": "善意取得那篇读完了",
+      "expected": {
+        "capability": "reading.mark_read",
+        "scope": "single"
+      }
+    },
+    {
+      "id": "reading-delete",
+      "input": "把刚才保存的阅读删掉",
+      "sessionFixture": "lastCreatedReading",
+      "expected": {
+        "capability": "reading.delete",
+        "scope": "selected",
+        "policy": "confirm"
+      }
+    },
+    {
+      "id": "course-unread-list",
+      "input": "查看未读课程简报",
+      "expected": {
+        "capability": "course.brief.list",
+        "scope": "all_unread"
+      }
+    },
+    {
+      "id": "course-all-list",
+      "input": "查看全部课程简报",
+      "expected": {
+        "capability": "course.brief.list",
+        "scope": "all"
+      }
+    },
+    {
+      "id": "course-specific",
+      "input": "国际法6月3号的笔记读完了",
+      "expected": {
+        "capability": "course.brief.mark_read",
+        "scope": "single",
+        "filters": {
+          "courseName": "国际法",
+          "lessonDate": "2026-06-03"
+        }
+      }
+    },
+    {
+      "id": "course-matching",
+      "input": "把国际法六月的课程简报都标记已读",
+      "expected": {
+        "capability": "course.brief.mark_read",
+        "scope": "matching"
+      }
+    },
+    {
+      "id": "course-all-unread",
+      "input": "未读课程简报已全部读完",
+      "expected": {
+        "capability": "course.brief.mark_read",
+        "scope": "all_unread"
+      }
+    },
+    {
+      "id": "course-all-unread-alt",
+      "input": "所有没看的课程简报都读完了",
+      "expected": {
+        "capability": "course.brief.mark_read",
+        "scope": "all_unread"
+      }
+    },
+    {
+      "id": "course-selected",
+      "input": "第一份读完了",
+      "sessionFixture": "courseResultSet",
+      "expected": {
+        "capability": "course.brief.mark_read",
+        "scope": "selected",
+        "contextRef": "lastResultSet"
+      }
+    },
+    {
+      "id": "statement-no-write",
+      "input": "未读课程简报目前有三份",
+      "expected": {
+        "decision": "ignore"
+      }
+    },
+    {
+      "id": "system-status-no-write",
+      "input": "课程任务同步完成",
+      "expected": {
+        "decision": "ignore"
+      }
+    },
+    {
+      "id": "greeting",
+      "input": "你好呀",
+      "expected": {
+        "decision": "ignore"
+      }
+    },
+    {
+      "id": "ambiguous-read",
+      "input": "那个读完了",
+      "expected": {
+        "decision": "clarify"
+      }
+    },
+    {
+      "id": "no-exact-wechat-reminder",
+      "input": "明天十点微信提醒我交材料",
+      "expected": {
+        "capability": "schedule.create",
+        "policy": "deny_exact_wechat_reminder"
+      }
+    },
+    {
+      "id": "help",
+      "input": "你现在能做什么",
+      "expected": {
+        "capability": "agent.help",
+        "scope": "single"
+      }
+    }
+  ]
+}
