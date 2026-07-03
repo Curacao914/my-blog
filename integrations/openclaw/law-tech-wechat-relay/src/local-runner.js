@@ -2,6 +2,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+import { normalizeLawTechBaseUrl } from './base-url.js'
+
 function findRelay(node) {
   if (Array.isArray(node)) {
     for (const value of node) {
@@ -58,9 +60,7 @@ const config = JSON.parse(
 )
 const relay = inspectRelay(findRelay(config) || config)
 const captureUrl = String(relay.captureUrl || '').trim()
-const baseUrl = captureUrl
-  .replace(/\/api\/schedule\/capture\/?$/, '')
-  .replace(/\/$/, '')
+const baseUrl = normalizeLawTechBaseUrl(captureUrl)
 
 process.env.WECHAT_CAPTURE_TOKEN ||= relay.token || ''
 process.env.LAW_TECH_BASE_URL ||= baseUrl || 'https://preview.law-tech.dev'
