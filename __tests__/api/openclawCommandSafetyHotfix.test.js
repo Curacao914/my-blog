@@ -27,6 +27,21 @@ describe('OpenClaw context safety hotfix', () => {
     expect(command).toContain('completesPendingUpdate')
   })
 
+  it('blocks ambiguous mutations before generic capture', () => {
+    expect(command).toContain('assessOpenClawMutation')
+    expect(command).toContain("mutationPolicy.decision === 'ignore'")
+    expect(command).toContain("mutationPolicy.decision === 'clarify'")
+    const policyIndex = command.indexOf(
+      'const mutationPolicy = assessOpenClawMutation({'
+    )
+    const captureCallIndex = command.indexOf(
+      'forwardToCapture(req, {',
+      policyIndex
+    )
+    expect(policyIndex).toBeGreaterThanOrEqual(0)
+    expect(captureCallIndex).toBeGreaterThan(policyIndex)
+  })
+
   it('marks no-op chat replies as silent', () => {
     expect(command).toContain('silent: true')
   })

@@ -1,6 +1,7 @@
 import { fromDbScheduleItem, toDbScheduleItem } from '@/lib/domain/schedule'
 import { selectRelevantItems } from '@/lib/domain/schedule-context'
 import { applyResolvedScheduleCommand } from '@/lib/openclaw/scheduleCommandBridge'
+import { assessCaptureIntent } from '@/lib/openclaw/mutationPolicy'
 import {
   ensureProfile,
   listScheduleRows,
@@ -231,6 +232,30 @@ export default async function handler(req, res) {
   if (!command.trim()) {
     return res.status(400).json({ ok: false, error: 'Empty command' })
   }
+
+  const captureIntent = assessCaptureIntent({ text: originalCommand })
+  if (captureIntent.decision === 'ignore') {
+    return res.status(200).json({
+      ok: true,
+      status: 'ignored',
+      action: 'ignored',
+      reason: captureIntent.reason,
+      silent: Boolean(captureIntent.silent),
+      replyText: '',
+      items: []
+    })
+  }
+  if (captureIntent.decision === 'clarify') {
+    return res.status(200).json({
+      ok: true,
+      status: 'needs_confirmation',
+      action: 'clarify',
+      reason: captureIntent.reason,
+      replyText: captureIntent.replyText,
+      items: []
+    })
+  }
+
   if (shouldIgnoreCommand(originalCommand)) {
     return res.status(200).json({
       ok: true,
