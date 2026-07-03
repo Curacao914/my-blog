@@ -14,7 +14,9 @@ RUN yarn install --frozen-lockfile
 # 2. Rebuild the source code only when needed
 FROM base AS builder
 ARG NOTION_PAGE_ID
+ARG LAW_TECH_STATIC_PREFETCH_MODE=skip
 ENV NEXT_BUILD_STANDALONE=true
+ENV LAW_TECH_STATIC_PREFETCH_MODE=${LAW_TECH_STATIC_PREFETCH_MODE}
 
 WORKDIR /app
 

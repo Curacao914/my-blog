@@ -48,5 +48,14 @@
     "no secrets in chat or logs",
     "no audit or extraction directories on Desktop",
     "Tencent services use systemctl --user"
-  ]
+  ],
+  "ci": {
+    "workflow": ".github/workflows/docker-ghcr.yaml",
+    "required_job_name_preserved": "build",
+    "docs_only_fast_success": "implemented_in_ci_pr_pending_merge",
+    "static_prefetch_mode": "LAW_TECH_STATIC_PREFETCH_MODE=skip",
+    "buildkit_gha_cache": true,
+    "cancel_in_progress": true
+  },
+  "project_docs_main_merge": "85dfb514d9db5ae930b87b0f72b4124fad4b2ce7"
 }

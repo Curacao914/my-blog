@@ -114,3 +114,13 @@ gh pr list --state open
 curl -fsS https://law-tech.dev/api/health || true
 ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user is-active openclaw-gateway.service law-tech-cloudflared.service law-tech-wechat-relay.service; curl -fsS http://127.0.0.1:18789/readyz'
 ```
+
+
+## CI / Docker 独立闭环（本 PR）
+
+- Docker required job/check 名称仍为 `build`；不使用 workflow-level `paths-ignore`。
+- 纯文档 PR 在同一 `build` job 内快速成功；未知或代码路径默认执行 Docker build。
+- Docker 构建使用 BuildKit GHA cache，并启用 concurrency cancel-in-progress。
+- 无数据库 Docker 构建显式传入 `LAW_TECH_STATIC_PREFETCH_MODE=skip`，立即跳过 Notion 与数据库静态预取。
+- 本条在 CI PR 合并前属于“代码与测试完成、等待 CI/merge”，不得表述为 Production 已完成。
+- 项目治理 PR #8 merge anchor：`85dfb514d9db5ae930b87b0f72b4124fad4b2ce7`。

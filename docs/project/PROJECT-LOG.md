@@ -112,3 +112,12 @@
 - 旧 migration matrix 停在 6 月 26 日；
 - 建立 `docs/project` 作为长期项目管理入口；
 - GitHub 集成读取正常，但创建 branch/ref 返回 403，因此文档变更继续采用本地一键包 + 用户 push/PR。
+
+
+### CI / Docker 优化 PR（待合并）
+
+- 保留 required job/check 名称 `build`，不使用 workflow-level paths-ignore；
+- 纯文档 PR 在 job 内快速成功；
+- 无数据库 Docker build 显式跳过静态预取；
+- 加入 BuildKit GHA cache 与 concurrency cancel-in-progress；
+- 本记录在 merge 前仅代表分支实现，最终 SHA 由 merge 后文档记录 PR 补齐。

@@ -163,3 +163,12 @@ MANIFEST-SHA256.txt
 ## 文档发布
 
 任何改变运行事实、架构或路线的 PR 都必须根据 `docs/project/README.md` 更新文档。PR 描述不得把“计划合并”“已 merge”和“Production 已部署”混在一起。
+
+
+## Docker CI
+
+- workflow 固定为 `.github/workflows/docker-ghcr.yaml`，required job/check 名称固定为 `build`；
+- 禁止对 required workflow 使用 workflow-level `paths-ignore`；纯文档变更在 job 内判定并快速成功；
+- pull request 只构建非纯文档变更；main、tag 与手动运行始终构建；
+- Docker 无数据库构建必须传入 `LAW_TECH_STATIC_PREFETCH_MODE=skip`；
+- 使用 BuildKit GHA cache 与 concurrency cancel-in-progress。

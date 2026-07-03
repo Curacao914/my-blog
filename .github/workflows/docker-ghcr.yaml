@@ -1,27 +1,31 @@
 name: Docker ghcr.io
 
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
 on:
   push:
     branches: [main]
-    # Publish semver tags as releases.
     tags: ["v*.*.*"]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      multiarch:
+        description: Build and publish both amd64 and arm64 images
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: docker-ghcr-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
-  # Use docker.io for Docker Hub if empty
   REGISTRY: ghcr.io
-  # github.repository as <account>/<repo>
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.multiarch)) && 70 || 20 }}
     permissions:
       contents: read
       packages: write
@@ -29,35 +33,148 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether Docker build is required
+        id: docker_changes
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          GIT_REF: ${{ github.ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          required=true
+          reason="push, tag, or manual run"
+
+          diff_base=""
+          diff_head=""
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            required=false
+            reason="documentation-only pull request"
+            diff_base="$BASE_SHA"
+            diff_head="$HEAD_SHA"
+          elif [[ "$EVENT_NAME" == "push" && "$GIT_REF" == "refs/heads/main" && -n "$BEFORE_SHA" && ! "$BEFORE_SHA" =~ ^0+$ ]]; then
+            required=false
+            reason="documentation-only main push"
+            diff_base="$BEFORE_SHA"
+            diff_head="$HEAD_SHA"
+          fi
+
+          if [[ -n "$diff_base" && -n "$diff_head" ]]; then
+            while IFS= read -r path; do
+              [[ -z "$path" ]] && continue
+              case "$path" in
+                docs/*|*.md|*.mdx|.github/pull_request_template.md)
+                  ;;
+                *)
+                  required=true
+                  reason="build-relevant path: $path"
+                  break
+                  ;;
+              esac
+            done < <(git diff --name-only "$diff_base" "$diff_head")
+          fi
+
+          echo "required=$required" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Docker build decision"
+            echo
+            echo "- required: \`$required\`"
+            echo "- reason: $reason"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fast success for documentation-only pull request
+        if: steps.docker_changes.outputs.required != 'true'
+        run: |
+          echo "Docker build skipped: ${{ steps.docker_changes.outputs.reason }}"
+          echo "The required job/check name remains build and succeeds."
 
       - name: Set up Docker Buildx
+        if: steps.docker_changes.outputs.required == 'true'
         uses: docker/setup-buildx-action@v3
 
-      # Login against a Docker registry except on PR
-      # https://github.com/docker/login-action
+      - name: Set up QEMU for explicit multi-architecture release
+        if: >-
+          steps.docker_changes.outputs.required == 'true' &&
+          (startsWith(github.ref, 'refs/tags/') ||
+          (github.event_name == 'workflow_dispatch' && inputs.multiarch))
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
       - name: Log into registry ${{ env.REGISTRY }}
-        if: github.event_name != 'pull_request'
+        if: steps.docker_changes.outputs.required == 'true' && github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Extract metadata (tags, labels) for Docker
-      # https://github.com/docker/metadata-action
       - name: Extract Docker metadata
+        if: steps.docker_changes.outputs.required == 'true'
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      # Build and push Docker image with Buildx (don't push on PR)
-      # https://github.com/docker/build-push-action
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+      - name: Build PR validation image
+        if: steps.docker_changes.outputs.required == 'true' && github.event_name == 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            LAW_TECH_STATIC_PREFETCH_MODE=skip
+          cache-from: type=gha,scope=docker-amd64
+          cache-to: type=gha,mode=max,scope=docker-amd64
+          provenance: false
+          sbom: false
+
+      - name: Build and push main amd64 image
+        if: >-
+          steps.docker_changes.outputs.required == 'true' &&
+          github.event_name != 'pull_request' &&
+          !startsWith(github.ref, 'refs/tags/') &&
+          !(github.event_name == 'workflow_dispatch' && inputs.multiarch)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            LAW_TECH_STATIC_PREFETCH_MODE=skip
+          cache-from: type=gha,scope=docker-amd64
+          cache-to: type=gha,mode=max,scope=docker-amd64
+          provenance: false
+          sbom: false
+
+      - name: Build and push multi-architecture release image
+        if: >-
+          steps.docker_changes.outputs.required == 'true' &&
+          (startsWith(github.ref, 'refs/tags/') ||
+          (github.event_name == 'workflow_dispatch' && inputs.multiarch))
+        uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            LAW_TECH_STATIC_PREFETCH_MODE=skip
+          cache-from: |
+            type=gha,scope=docker-amd64
+            type=gha,scope=docker-release
+          cache-to: type=gha,mode=max,scope=docker-release
+          provenance: false
+          sbom: false
