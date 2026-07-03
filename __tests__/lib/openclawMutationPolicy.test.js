@@ -68,11 +68,97 @@ describe('OpenClaw semantic mutation policy', () => {
     })
   })
 
-  it('does not treat ordinary preferences as database writes', () => {
-    expect(assessCaptureIntent({ text: '我喜欢读论文' })).toMatchObject({
+  it.each([
+    '我喜欢读论文',
+    '今天心情不错',
+    '今晚有点累',
+    '周五天气应该不错'
+  ])('silently ignores an ordinary statement on both entry policies: %s', text => {
+    const classification = classifyCommandText(text)
+
+    expect(
+      assessCaptureIntent({
+        text,
+        classification
+      })
+    ).toMatchObject({
       decision: 'ignore',
       reason: 'non_actionable_statement',
       silent: true
+    })
+
+    expect(
+      assessOpenClawMutation({
+        text,
+        classification
+      })
+    ).toMatchObject({
+      decision: 'ignore',
+      reason: 'non_actionable_statement',
+      silent: true
+    })
+  })
+
+  it.each([
+    '下午三点',
+    '提醒一下',
+    '帮我提醒一下',
+    '请帮我提醒一下',
+    '麻烦你帮我提醒一下',
+    '帮忙提醒一下',
+    '提醒我一下',
+    '帮我记一下',
+    '保存一下',
+    '添加一下',
+    '安排一下',
+    '修改一下',
+    '周五交',
+    '今天写'
+  ])('clarifies a weak but incomplete action signal: %s', text => {
+    const classification = classifyCommandText(text)
+    const result = assessOpenClawMutation({
+      text,
+      classification
+    })
+
+    expect(result).toMatchObject({
+      decision: 'clarify'
+    })
+  })
+
+  it.each([
+    '帮我提醒一下周五交材料',
+    '提醒我周五交材料',
+    '帮我记一下周五交材料',
+    '保存一下这篇论文',
+    '添加周五会议',
+    '安排周五会议',
+    '周五交材料',
+    '今天写论文',
+    '今晚买牛奶'
+  ])('normalizes a sufficiently specific create request: %s', text => {
+    const classification = classifyCommandText(text)
+    const mutation = assessOpenClawMutation({
+      text,
+      classification
+    })
+
+    expect(mutation).toMatchObject({
+      decision: 'allow',
+      reason: 'explicit_write_intent',
+      classification: {
+        action: 'create',
+        operation: 'write'
+      }
+    })
+
+    expect(
+      assessCaptureIntent({
+        text,
+        classification
+      })
+    ).toMatchObject({
+      decision: 'allow'
     })
   })
 
@@ -107,8 +193,26 @@ describe('OpenClaw semantic mutation policy', () => {
 
   it('preserves long pasted content for model-level interpretation', () => {
     const text = `这是一段准备稍后整理的材料。${'法学研究材料与论证线索。'.repeat(20)}`
+    const classification = classifyCommandText(text)
+
     expect(text.length).toBeGreaterThan(120)
-    expect(assessCaptureIntent({ text })).toMatchObject({
+
+    expect(
+      assessCaptureIntent({
+        text,
+        classification
+      })
+    ).toMatchObject({
+      decision: 'allow',
+      reason: 'rich_content_for_model'
+    })
+
+    expect(
+      assessOpenClawMutation({
+        text,
+        classification
+      })
+    ).toMatchObject({
       decision: 'allow',
       reason: 'rich_content_for_model'
     })

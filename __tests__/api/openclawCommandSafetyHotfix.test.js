@@ -42,6 +42,37 @@ describe('OpenClaw context safety hotfix', () => {
     expect(captureCallIndex).toBeGreaterThan(policyIndex)
   })
 
+  it('lets the shared policy own unknown intent decisions', () => {
+    expect(command).not.toContain(
+      "if (classification.action === 'unknown')"
+    )
+    expect(command).not.toContain(
+      '我还不能确定你想查询、添加还是修改什么'
+    )
+    expect(command).toContain(
+      "mutationPolicy.decision === 'ignore'"
+    )
+    expect(command).toContain(
+      "mutationPolicy.decision === 'clarify'"
+    )
+    expect(command).toContain(
+      'Object.assign('
+    )
+    expect(command).toContain(
+      'mutationPolicy.classification'
+    )
+
+    const normalizationIndex = command.indexOf(
+      'Object.assign('
+    )
+    const protocolIndex = command.indexOf(
+      'const protocol = buildSparseCommand({'
+    )
+
+    expect(normalizationIndex).toBeGreaterThanOrEqual(0)
+    expect(protocolIndex).toBeGreaterThan(normalizationIndex)
+  })
+
   it('marks no-op chat replies as silent', () => {
     expect(command).toContain('silent: true')
   })

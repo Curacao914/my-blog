@@ -281,6 +281,13 @@ export default async function handler(req, res) {
       confirmedPending
     })
 
+    if (mutationPolicy.classification) {
+      Object.assign(
+        classification,
+        mutationPolicy.classification
+      )
+    }
+
     if (mutationPolicy.decision === 'ignore') {
       return res.status(200).json({
         ok: true,
@@ -408,16 +415,6 @@ export default async function handler(req, res) {
         action: 'select',
         item: candidate,
         replyText: describeOpenClawCandidate(candidate),
-        protocol
-      })
-    }
-
-    if (classification.action === 'unknown') {
-      return res.status(200).json({
-        ok: true,
-        status: 'needs_confirmation',
-        action: 'clarify',
-        replyText: '我还不能确定你想查询、添加还是修改什么。请换一种更明确的说法。',
         protocol
       })
     }
