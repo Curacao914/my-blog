@@ -14,6 +14,7 @@ export async function handleWechatInbound(envelope, config = {}) {
     claimed: true,
     stopAgent: true,
     replyText: result.replyText,
+    silent: Boolean(result.silent),
     ok: result.ok,
     payload: result.payload || null
   }
