@@ -228,4 +228,4 @@ Agent、课程和数据基础稳定后再扩张：
 - [x] 保留 `build` required check 名称并让纯文档 PR 快速成功；
 - [x] 加入无数据库静态预取 skip 模式；
 - [x] 加入 BuildKit GHA cache 与 cancel-in-progress；
-- [ ] 以 CI PR checks、merge commit 和 merge 后 main run 作为完成证据。
+- [x] CI PR #9 checks 与 merge commit `6db4e8a8e4b216f95b1b5f330905a084929ae78d` 已记录；纠正 PR #10 merge `f5f96ca71ead7c70606933ee1095f725630fe7ca` 已将 required validation 与 GHCR 发布解耦；docs-only commit `08a24bce38034bcd05072ec279369a0bce6f30e9` 的 `build` check 已成功验证 fast-success。
