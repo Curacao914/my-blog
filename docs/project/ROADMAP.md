@@ -221,3 +221,11 @@ Agent、课程和数据基础稳定后再扩张：
 - 多模型竞技场；
 - 全宇宙知识图谱；
 - Production 腾讯服务器上的 self-hosted CI runner。
+
+
+### CI / Docker 独立闭环
+
+- [x] 保留 `build` required check 名称并让纯文档 PR 快速成功；
+- [x] 加入无数据库静态预取 skip 模式；
+- [x] 加入 BuildKit GHA cache 与 cancel-in-progress；
+- [ ] 以 CI PR checks、merge commit 和 merge 后 main run 作为完成证据。
