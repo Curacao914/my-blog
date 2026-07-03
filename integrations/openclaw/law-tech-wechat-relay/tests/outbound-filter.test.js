@@ -27,6 +27,18 @@ test('filters explicit outbound or self-authored WeChat messages', () => {
   assert.equal(shouldHandleWechatMessage(selfAuthored), false)
 })
 
+test('does not treat string false flags as self-authored', () => {
+  const inbound = normalizeWechatMessage({
+    channel: 'wechat',
+    text: '买牛奶',
+    direction: 'inbound',
+    isFromMe: 'false',
+    outbound: 'false'
+  })
+  assert.equal(inbound.fromSelf, false)
+  assert.equal(shouldHandleWechatMessage(inbound), true)
+})
+
 test('filters assistant and system messages but keeps inbound user text', () => {
   const assistant = normalizeWechatMessage({
     channel: 'wechat',
@@ -34,6 +46,13 @@ test('filters assistant and system messages but keeps inbound user text', () => 
     role: 'assistant'
   })
   assert.equal(shouldHandleWechatMessage(assistant), false)
+
+  const system = normalizeWechatMessage({
+    channel: 'wechat',
+    text: '每日提醒',
+    role: 'system'
+  })
+  assert.equal(shouldHandleWechatMessage(system), false)
 
   const inbound = normalizeOpenClawHookMessage(
     { content: '明天下午三点开会', direction: 'inbound' },

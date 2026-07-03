@@ -48,4 +48,11 @@ describe('schedule capture semantic write gate', () => {
     expect(parse).toContain('未读课程简报已全部读完')
     expect(parse).toContain('不要只因出现“读、完成、提醒、课程”等关键词就写入')
   })
+
+  it('uses shared semantic reading intent instead of a broad reading regex', () => {
+    expect(parse).toContain('hasExplicitReadingIntent')
+    expect(parse).not.toContain(
+      '/(?:加入|添加|保存|放进|列入).{0,8}(?:阅读|待读)/'
+    )
+  })
 })

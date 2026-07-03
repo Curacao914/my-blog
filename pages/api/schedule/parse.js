@@ -1,6 +1,10 @@
 import { cleanDisplayTags, cleanDisplayText } from '@/lib/domain/metadata'
 import { addCalendarDays } from '@/lib/domain/calendarDate'
-import { assessCaptureIntent, looksLikeAggregateStatus } from '@/lib/openclaw/mutationPolicy'
+import {
+  assessCaptureIntent,
+  hasExplicitReadingIntent,
+  looksLikeAggregateStatus
+} from '@/lib/openclaw/mutationPolicy'
 import { profileCan } from '@/lib/auth/permissions'
 import { requireWorkspaceRequest } from '@/lib/auth/serverAdmin'
 import { resolveUserAiConfig } from '@/lib/server/userIntegrations'
@@ -371,11 +375,8 @@ function looksLikeActionCommand(text) {
 
 function looksLikeReadingCommand(text, links) {
   if (looksLikeAggregateStatus(text)) return false
-  const explicitReading =
-    /(?:加入|添加|保存|放进|列入).{0,8}(?:阅读|待读)|(?:待读|稍后读|以后读|有空读|读一下|看一下|稍后看|以后看|有空看)|(?:阅读|读|看)(?:这篇|一下|文章|论文|材料|链接)|(?:文章|论文|材料|链接).{0,8}(?:加入|添加|保存|待读|稍后看)/i.test(
-      text
-    )
-  return explicitReading || (!looksLikeActionCommand(text) && links.length > 0)
+  return hasExplicitReadingIntent(text) ||
+    (!looksLikeActionCommand(text) && (links.length > 0 || text.length > 120))
 }
 
 function fallbackItemsFromCommand(command, { referenceDate, linkMetadata = [] }) {

@@ -24,21 +24,27 @@ function messageRole(envelope = {}, context = {}) {
   ).toLowerCase()
 }
 
+function truthyFlag(value) {
+  if (value === true || value === 1) return true
+  if (typeof value !== 'string') return false
+  return ['true', '1', 'yes'].includes(value.trim().toLowerCase())
+}
+
 function messageFromSelf(envelope = {}, context = {}) {
-  return Boolean(
-    context.fromMe ||
-    context.isFromMe ||
-    context.outbound ||
-    envelope.fromMe ||
-    envelope.isFromMe ||
-    envelope.outbound ||
-    envelope.sentBySelf ||
-    envelope.metadata?.fromMe ||
-    envelope.metadata?.isFromMe ||
-    envelope.metadata?.outbound ||
-    envelope.message?.fromMe ||
+  return [
+    context.fromMe,
+    context.isFromMe,
+    context.outbound,
+    envelope.fromMe,
+    envelope.isFromMe,
+    envelope.outbound,
+    envelope.sentBySelf,
+    envelope.metadata?.fromMe,
+    envelope.metadata?.isFromMe,
+    envelope.metadata?.outbound,
+    envelope.message?.fromMe,
     envelope.message?.isFromMe
-  )
+  ].some(truthyFlag)
 }
 
 export function normalizeWechatMessage(envelope = {}) {
