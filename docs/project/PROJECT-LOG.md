@@ -123,3 +123,5 @@
 - merge commit：`6db4e8a8e4b216f95b1b5f330905a084929ae78d`；PR：https://github.com/Curacao914/my-blog/pull/9。
 - GHCR 发布解耦纠正 PR #10：https://github.com/Curacao914/my-blog/pull/10；merge：`f5f96ca71ead7c70606933ee1095f725630fe7ca`。
 - 随后的 docs-only 记录 PR 用于验证 `build` required job 在纯文档变更上快速成功。
+
+- docs-only 验证 commit：`08a24bce38034bcd05072ec279369a0bce6f30e9`；`build` check success，13.0 秒。

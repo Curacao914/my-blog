@@ -123,4 +123,5 @@ ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user i
 - Docker 构建使用 BuildKit GHA cache，并启用 concurrency cancel-in-progress。
 - 无数据库 Docker 构建显式传入 `LAW_TECH_STATIC_PREFETCH_MODE=skip`，立即跳过 Notion 与数据库静态预取。
 - CI PR #9 已合并，merge commit：`6db4e8a8e4b216f95b1b5f330905a084929ae78d`；纠正 PR #10 已将 required PR/main validation 与 GHCR 发布解耦，merge commit：`f5f96ca71ead7c70606933ee1095f725630fe7ca`；corrected main 验收锚点：`f5f96ca71ead7c70606933ee1095f725630fe7ca`。
+- docs-only 验证 commit：`08a24bce38034bcd05072ec279369a0bce6f30e9`；同名 `build` check 成功，运行 13.0 秒。
 - 项目治理 PR #8 merge anchor：`85dfb514d9db5ae930b87b0f72b4124fad4b2ce7`。
