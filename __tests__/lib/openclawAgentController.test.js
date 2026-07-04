@@ -1,6 +1,9 @@
 import { runOpenClawAgent } from '@/lib/openclaw/agent/controller'
 import { loadResourceCatalog } from '@/lib/openclaw/agent/resources'
-import { modelFirstOpenClawEnabled } from '@/lib/server/openclawAgentHandler'
+import {
+  modelFirstOpenClawEnabled,
+  routerEvaluationModelConfig
+} from '@/lib/server/openclawAgentHandler'
 
 function modelResult(plan) {
   return {
@@ -59,6 +62,54 @@ describe('OpenClaw model-first controller', () => {
       else process.env.OPENCLAW_AGENT_V1_ENABLED = previousFlag
       if (previousVercelEnv === undefined) delete process.env.VERCEL_ENV
       else process.env.VERCEL_ENV = previousVercelEnv
+    }
+  })
+
+  test('builds isolated router evaluation model config without Supabase', () => {
+    const names = [
+      'COURSE_AI_API_KEY',
+      'SCHEDULE_AI_API_KEY',
+      'AI_API_KEY',
+      'OPENAI_API_KEY',
+      'COURSE_AI_BASE_URL',
+      'SCHEDULE_AI_BASE_URL',
+      'AI_BASE_URL',
+      'OPENCLAW_ROUTER_MODEL',
+      'SCHEDULE_AI_MODEL',
+      'COURSE_AI_MODEL',
+      'AI_MODEL',
+      'SUPABASE_URL',
+      'SUPABASE_SERVICE_ROLE_KEY',
+      'SUPABASE_SECRET_KEY',
+      'LAW_TECH_ROUTER_EVAL_CONFIG_MODE'
+    ]
+    const previous = Object.fromEntries(
+      names.map(name => [name, process.env[name]])
+    )
+    try {
+      for (const name of names) delete process.env[name]
+      process.env.AI_API_KEY = 'eval-key'
+      process.env.AI_BASE_URL = 'https://model.example/v1/'
+      process.env.OPENCLAW_ROUTER_MODEL = 'router-eval'
+      expect(routerEvaluationModelConfig()).toEqual({
+        apiKey: 'eval-key',
+        baseUrl: 'https://model.example/v1',
+        models: {
+          default: 'deepseek-v4-pro',
+          router: 'router-eval'
+        },
+        source: 'router_evaluation_environment'
+      })
+      process.env.LAW_TECH_ROUTER_EVAL_CONFIG_MODE = 'user_integration_read_only'
+      expect(routerEvaluationModelConfig()).toBeNull()
+      delete process.env.LAW_TECH_ROUTER_EVAL_CONFIG_MODE
+      delete process.env.AI_API_KEY
+      expect(routerEvaluationModelConfig()).toBeNull()
+    } finally {
+      for (const [name, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[name]
+        else process.env[name] = value
+      }
     }
   })
 

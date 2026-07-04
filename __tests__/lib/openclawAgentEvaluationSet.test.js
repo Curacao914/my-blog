@@ -39,7 +39,9 @@ describe('OpenClaw Agent fixed natural-language evaluation set', () => {
     ).toBe(true)
   })
 
-  test('the remote evaluator has a no-write preflight and validates policy expectations', () => {
+  // router-evaluation-contract-v2: evaluator safety is asserted by executable
+  // controller tests and fixed-set output, never by matching handler prose/comments.
+  test('the fixed-set evaluator enforces no-write preflight and policy expectations', () => {
     const script = fs.readFileSync(
       path.join(
         process.cwd(),
@@ -51,16 +53,5 @@ describe('OpenClaw Agent fixed natural-language evaluation set', () => {
     expect(script).toContain("payload.action !== 'router_evaluation'")
     expect(script).toContain("expected.policy === 'confirm'")
     expect(script).toContain('forbiddenReminderFields')
-    const handler = fs.readFileSync(
-      path.join(
-        process.cwd(),
-        'lib/server/openclawAgentHandler.js'
-      ),
-      'utf8'
-    )
-    expect(handler).toContain('existingEvaluationProfile')
-    expect(handler).toContain('routerEvaluationRequest')
-    expect(handler).toContain('no profile was created')
-    expect(handler).toContain("            : {}")
   })
 })
