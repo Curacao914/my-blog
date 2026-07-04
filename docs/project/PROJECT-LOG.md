@@ -157,13 +157,13 @@
 - 在 Vercel Production 添加 `OPENCLAW_AGENT_V1_ENABLED=false`；变量类型为 Sensitive。
 - 从 PR #12 exact main 重新部署，deployment：`dpl_3DRvnp53MBjXdECgRd6nx87WVRCS`。
 - deployment Ready，`law-tech.dev` alias 已切换，首页 HTTP 200，未鉴权 command 返回 401。
-- CLI 无法读取 Sensitive token，authenticated command 与真实微信 legacy 接管尚未在本窗口完成；不得将本条表述为 Production E2E 已通过。
+- 真实微信随后完成 legacy 查询以及可清理事项创建/删除，未再出现 v1 help 接管；该验收只证明回退成功，不证明 Agent v2 已存在。
 
 ### 治理与实时审计差异
 
 - 初始 GitHub public branch API 返回 `main protected=false`；恢复 Keychain 中的 GitHub CLI 认证后，已启用 branch protection：PR required、`build` required、enforce admins、禁止 force-push/deletion、要求解决 review conversations。
-- Vercel CLI 对 Supabase Sensitive 变量返回空值，无法完成 live schema/data 复核。
-- 腾讯云已知 SSH key 在本窗口返回 `Permission denied (publickey)`；更早同日 active/readyz 证据仅保留为历史快照。
+- 通过已认证 Supabase CLI 与只读 REST 完成 Production live audit：项目 `ACTIVE_HEALTHY`，`profiles`、`schedule_items`、`openclaw_conversation_states`、`course_brief_reads`、`message_deliveries`、`course_jobs` 六表均存在且可读；未输出密钥、未写数据库。
+- 腾讯云授权指定公钥后，SSH 登录身份确认为 `ubuntu@VM-0-6-ubuntu`；三个 user services 均为 active/running 且 `ExecMainStatus=0`，readyz 为 true；未重启服务。
 
 ### v2 架构冻结
 

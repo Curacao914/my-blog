@@ -42,12 +42,12 @@
 
 - GitHub main 为 `9163826c3a78fa1254683c7682286a528a8ce280`；
 - Production rollback redeploy `dpl_3DRvnp53MBjXdECgRd6nx87WVRCS` Ready，`OPENCLAW_AGENT_V1_ENABLED` 已在 Production 添加为 false；
-- authenticated command 与真实微信 legacy 接管尚待验证；
+- 真实微信 legacy 查询及可清理事项创建/删除已通过；
 - main 已恢复保护：必须经 PR，required check 为 `build`，禁止 force-push/deletion；
-- Supabase live audit 因 Sensitive 值不可读未完成；
-- 腾讯云 live audit 因 SSH public-key 拒绝未完成。
+- Supabase Production 已完成只读 live audit，项目 healthy，六个关键表均存在且可读；
+- 腾讯云 SSH 已恢复，三个 user services active/running，readyz 为 true。
 
-上述真实微信、Supabase 和腾讯云三项未闭环前，不开始 Agent Studio 代码 PR。
+待本回退与治理文档 PR 合并后，才开始 Agent Studio 代码 PR。
 
 禁止从补正则或修补 PR #12 Router 开始。实施顺序固定为：
 

@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "as_of": "2026-07-04T11:49:00+08:00",
+  "as_of": "2026-07-04T12:29:57+08:00",
   "repository": "Curacao914/my-blog",
   "production": "https://law-tech.dev",
   "git": {
@@ -25,17 +25,26 @@
       "configured_value": "false",
       "sensitive": true
     },
-    "authenticated_command_verified": false,
-    "real_wechat_verified": false,
-    "verification_note": "Sensitive capture token was not readable through the current CLI session; authenticated command and real-device acceptance remain pending."
+    "authenticated_command_verified": true,
+    "real_wechat_verified": true,
+    "verification_note": "Real WeChat legacy query and disposable schedule-item create/delete acceptance passed after the v1 flag rollback."
   },
   "database": {
     "provider": "Supabase",
     "production_ref": "htbbkcxevcouwehpugwc",
     "schedule_semantics_repair": "previously_production_verified",
     "migration_ledger": "previously_verified",
-    "live_schema_data_verified_at_as_of": false,
-    "verification_blocker": "Vercel CLI returned empty values for Sensitive Supabase variables; no secret was requested or printed."
+    "live_schema_data_verified_at_as_of": true,
+    "project_status": "ACTIVE_HEALTHY",
+    "read_only_table_counts": {
+      "profiles": 3,
+      "schedule_items": 70,
+      "openclaw_conversation_states": 3,
+      "course_brief_reads": 1,
+      "message_deliveries": 20,
+      "course_jobs": 7
+    },
+    "verification_note": "Authenticated Supabase CLI plus read-only REST audit; no key value was printed and no database write was made."
   },
   "tencent": {
     "host": "ubuntu@124.222.111.108",
@@ -47,9 +56,11 @@
       "law-tech-wechat-relay.service"
     ],
     "readyz": "http://127.0.0.1:18789/readyz",
-    "historical_same_day_snapshot": "three_services_active_and_readyz_true",
-    "live_verified_at_as_of": false,
-    "verification_blocker": "Permission denied (publickey)"
+    "live_verified_at_as_of": true,
+    "login_identity": "ubuntu@VM-0-6-ubuntu",
+    "service_state": "three_services_active_running_exec_main_status_0",
+    "readyz_state": "ready_true",
+    "verification_note": "SSH and read-only checks passed; no service restart or mutation was performed."
   },
   "ci": {
     "workflow": ".github/workflows/docker-ghcr.yaml",
@@ -71,7 +82,7 @@
     "merge_commit": "9163826c3a78fa1254683c7682286a528a8ce280",
     "status": "production_product_acceptance_failed",
     "failure": "An explicit schedule creation request was routed to agent.help in real WeChat testing.",
-    "production_flag_rollback": "deployed_pending_real_device_verification",
+    "production_flag_rollback": "deployed_and_real_device_verified",
     "database_migration": "none",
     "do_not_continue": [
       "direct model capability selection",
@@ -99,10 +110,6 @@
   },
   "current_mainline": "finish PR12 rollback and governance closure before Agent v2 code",
   "pending": [
-    "authenticated Production command verification",
-    "real WeChat legacy takeover verification",
-    "live Supabase schema and key-table audit",
-    "live Tencent user-systemd and readyz audit",
     "docs-only rollback/governance PR merge",
     "course natural full-cycle acceptance",
     "historical failed or needs_attention course cleanup",

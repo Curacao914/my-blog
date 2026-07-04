@@ -36,18 +36,20 @@
 - Vercel project：`curacaos-projects/curacao-top`；
 - 当前 GitHub main：`9163826c3a78fa1254683c7682286a528a8ce280`；
 - 2026-07-04 已在 Production 新增 `OPENCLAW_AGENT_V1_ENABLED=false` 并从该 main commit 重新部署；deployment `dpl_3DRvnp53MBjXdECgRd6nx87WVRCS` 为 Ready，`law-tech.dev` alias 已指向该 deployment；
-- 首页 HTTP 200；authenticated command 与真实微信 legacy 接管仍待用户侧真机验证，不能只凭变量存在宣称完成；
+- 首页 HTTP 200；真实微信已完成 legacy 查询以及可清理事项的创建/删除验收，v1 help 错路由未再接管；
 - Production Supabase ref：`htbbkcxevcouwehpugwc`；
 - 7 列 schedule semantics additive repair 已完成隔离恢复、隔离验收和 Production 执行；
 - migration ledger 已建立；
 - 不伪造历史 migration 执行记录；
 - `openclaw_conversation_states`、`course_brief_reads`、`message_deliveries` 等对象已进入真实链路；
 - 两账号隔离有真实测试，但仍需持续做 guessed-ID、RLS 和导出/删除审计。
-- 本轮 Vercel CLI 对 Sensitive 环境变量只返回空值，无法据此完成 Supabase live schema/data 复核；数据库状态继续沿用旧证据并明确标记未实时复核。
+- 2026-07-04 通过已认证 Supabase CLI 和只读 REST 完成 Production live audit：项目为 `ACTIVE_HEALTHY`；`profiles` 3、`schedule_items` 70、`openclaw_conversation_states` 3、`course_brief_reads` 1、`message_deliveries` 20、`course_jobs` 7，六表均存在且可读；未输出密钥、未执行写入。
 
 ## 腾讯云 / OpenClaw
 
 服务器：`ubuntu@124.222.111.108`。
+
+2026-07-04 已重新完成 SSH 与只读运行核验：登录用户 `ubuntu`、主机 `VM-0-6-ubuntu`；三个 user-level services 均为 `active/running`、`ExecMainStatus=0`，Gateway `readyz` 返回 `ready=true`。本次未重启或修改服务。
 
 ```text
 OpenClaw binary: /home/ubuntu/.local/bin/openclaw
@@ -73,7 +75,6 @@ law-tech-wechat-relay.service
 - 腾讯 runtime 的完整 `local-runner/base-url` 包尚未完成最终落地；
 - 独立 CLI 与 Gateway 的 Weixin 插件加载上下文仍需单独闭环；
 - 该支线不得继续阻塞 Agent 产品重构。
-- 2026-07-04 当前窗口使用已知 SSH key 连接返回 `Permission denied (publickey)`；更早同日审计记录过三个 user services active、readyz 正常，但该结果不是本轮实时复核。
 
 ## 微信 Agent
 
@@ -109,7 +110,7 @@ PR #12 曾将 Production 默认切入一次模型直接选择 capability 的 Age
 
 ## 当前 P0
 
-1. 完成 PR #12 Production 回退的真实微信验收、main branch protection 和运行事实复核；
+1. 合并 PR #12 Production 回退与治理文档 PR；
 2. 完整交付 Agent Studio + Evaluation Kernel，未完成不得开始 Shadow Runtime；
 3. 完整交付 default-off、无写入的 Production Shadow Runtime，并等待严格自然样本门禁；
 4. 等待课程最终调度版本自然完整周期；
@@ -154,6 +155,6 @@ ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user i
 
 - v1 代码、测试和 CI 存在，Production 也曾部署；真实微信产品验收失败。
 - 根因是模型直接选择 capability，而校验层只验证格式、枚举和注册状态；`agent.help` 在 Resource/Policy 前即可返回。
-- 2026-07-04 已设置 Production-only feature flag 为 false 并完成 Ready redeploy；真实微信 legacy 接管尚待真机确认。
+- 2026-07-04 已设置 Production-only feature flag 为 false 并完成 Ready redeploy；真实微信 legacy 查询和可清理事项创建/删除均已通过。
 - v1 代码和 PR #12 保留为失败证据，不继续追加提示词、关键词或同义词规则。
 - 下一独立代码闭环是完整 Agent Studio 与评估内核；该 PR 不接入真实微信流量。

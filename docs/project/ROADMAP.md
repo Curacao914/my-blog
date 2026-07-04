@@ -8,7 +8,8 @@
 
 - [x] PR #12 失败后停止扩展 direct `LLM → capability` Router；
 - [x] Production 设置 `OPENCLAW_AGENT_V1_ENABLED=false` 并完成 Ready redeploy；
-- [ ] 完成真实微信 legacy 接管验收、main branch protection、Supabase/Tencent 只读复核和回退文档 PR；
+- [x] 完成真实微信 legacy 接管验收、main branch protection 和 Supabase/Tencent 只读复核；
+- [ ] 合并回退与治理文档 PR；
 - [ ] 完整交付 Agent Studio + Evaluation Kernel：固定可视拓扑、版本配置、development/holdout、真实模型测试、发布和回滚；
 - [ ] 完整交付 `UserIntent → Deterministic Planner → Semantic Gate`；
 - [ ] 完整交付 Schedule、Reading、Course Capability/Resource/实体解析；
