@@ -13,12 +13,11 @@ const baseUrl = argument(
   'base-url',
   process.env.LAW_TECH_REAL_BASE_URL || 'https://law-tech.dev'
 )
-const token = process.env.WECHAT_CAPTURE_TOKEN || ''
-const senderId = argument(
-  'sender-id',
-  process.env.WECHAT_ALLOWED_SENDER_ID || ''
-)
-const threadId = argument('thread-id', senderId || 'default')
+const supabaseUrl = String(process.env.SUPABASE_URL || '').replace(/\/$/, '')
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SECRET_KEY ||
+  ''
 const outputPath = argument(
   'output',
   path.join(process.cwd(), 'openclaw-agent-real-wechat-report.json')
@@ -28,14 +27,9 @@ const runTag = argument(
   Date.now().toString(36).slice(-6).toUpperCase()
 )
 
-if (!token) {
+if (!supabaseUrl || !supabaseKey) {
   throw new Error(
-    'WECHAT_CAPTURE_TOKEN is required in the local environment; do not paste it into chat.'
-  )
-}
-if (!senderId) {
-  throw new Error(
-    'WECHAT_ALLOWED_SENDER_ID is required in the local environment.'
+    'SUPABASE_URL and a Supabase service credential are required for read-only trace acceptance.'
   )
 }
 
@@ -48,20 +42,27 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-async function fetchJson(url, options = {}, attempts = 4) {
+function eq(value) {
+  return `eq.${encodeURIComponent(String(value || ''))}`
+}
+
+async function supabaseGet(pathname, attempts = 4) {
   let lastError = null
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 20000)
     try {
-      const response = await fetch(url, {
-        ...options,
+      const response = await fetch(`${supabaseUrl}/rest/v1${pathname}`, {
+        headers: {
+          apikey: supabaseKey,
+          authorization: `Bearer ${supabaseKey}`
+        },
         signal: controller.signal
       })
-      const payload = await response.json().catch(() => ({}))
-      if (response.ok) return { response, payload }
+      const payload = await response.json().catch(() => null)
+      if (response.ok) return payload
       lastError = new Error(
-        `HTTP ${response.status}: ${payload.error || 'request failed'}`
+        `Supabase HTTP ${response.status}: ${payload?.message || payload?.hint || 'request failed'}`
       )
       if (![408, 425, 429, 500, 502, 503, 504].includes(response.status)) {
         throw lastError
@@ -71,22 +72,58 @@ async function fetchJson(url, options = {}, attempts = 4) {
     } finally {
       clearTimeout(timeout)
     }
-    if (attempt < attempts) await sleep(Math.min(4000, 500 * 2 ** (attempt - 1)))
+    if (attempt < attempts) {
+      await sleep(Math.min(4000, 500 * 2 ** (attempt - 1)))
+    }
   }
-  throw lastError || new Error('request failed')
+  throw lastError || new Error('Supabase request failed')
 }
 
-async function traces() {
-  const url = new URL(
-    '/api/integrations/openclaw/traces',
-    baseUrl
+async function resolveOwnerProfile() {
+  const candidates = [
+    process.env.WECHAT_OWNER_USER_ID,
+    process.env.SCHEDULE_OWNER_USER_ID,
+    ...(process.env.CLERK_ADMIN_USER_IDS || '').split(',')
+  ].map(value => String(value || '').trim()).filter(Boolean)
+
+  for (const clerkUserId of candidates) {
+    const rows = await supabaseGet(
+      `/profiles?select=id,clerk_user_id,role,status&clerk_user_id=${eq(clerkUserId)}&limit=1`
+    )
+    if (rows?.[0]?.id) {
+      return { ...rows[0], source: 'environment' }
+    }
+  }
+
+  const rows = await supabaseGet(
+    '/profiles?select=id,clerk_user_id,role,status&role=eq.owner&status=eq.active&order=updated_at.desc&limit=1'
   )
-  url.searchParams.set('senderId', senderId)
-  url.searchParams.set('threadId', threadId)
-  const { payload } = await fetchJson(url, {
-    headers: { authorization: `Bearer ${token}` }
+  if (rows?.[0]?.id) {
+    return { ...rows[0], source: 'supabase_read_only' }
+  }
+  throw new Error('No existing active owner profile is available for real-WeChat acceptance.')
+}
+
+const ownerProfile = await resolveOwnerProfile()
+
+async function traces() {
+  const rows = await supabaseGet(
+    '/openclaw_conversation_states' +
+    '?select=sender_id,thread_id,state,updated_at' +
+    `&owner_id=${eq(ownerProfile.id)}` +
+    '&channel=eq.openclaw-weixin' +
+    '&order=updated_at.desc&limit=30'
+  )
+  return (rows || []).flatMap(row => {
+    const recent = Array.isArray(row?.state?.recentTraces)
+      ? row.state.recentTraces
+      : []
+    return recent.map(trace => ({
+      ...trace,
+      senderId: row.sender_id || '',
+      threadId: row.thread_id || ''
+    }))
   })
-  return payload.traces || []
 }
 
 async function waitForTrace({
@@ -184,7 +221,8 @@ const cases = [
 ]
 
 console.log('\n请保持本脚本运行，并在真实微信中逐条发送它显示的原文。')
-console.log(`本轮唯一标识：${runTag}。每条发送后回到终端按 Enter。\n`)
+console.log(`本轮唯一标识：${runTag}。每条发送后回到终端按 Enter。`)
+console.log('验收证据将从 Supabase trace 中只读获取，不需要本地微信入口 token 或发送者白名单。\n')
 
 const results = []
 for (const testCase of cases) {
@@ -283,12 +321,14 @@ rl.close()
 const expectedCount = cases.length + 1 + cleanupCases.length
 const passed = results.length === expectedCount && results.every(item => item.ok)
 const report = {
-  version: 2,
+  version: 3,
   runTag,
   scheduleTitle,
   readingUrl,
   baseUrl,
   executedAt: new Date().toISOString(),
+  evidenceSource: 'supabase_openclaw_conversation_states_read_only',
+  ownerProfileSource: ownerProfile.source,
   passed,
   bulkAccepted,
   cleanupCompleted: cleanupCases.every(cleanup =>
@@ -302,6 +342,7 @@ const report = {
     ok: item.ok,
     errors: item.errors,
     traceId: item.trace?.traceId || '',
+    senderIdObserved: item.trace?.senderId ? 'present' : 'missing',
     routePlan: item.trace?.routePlan || null,
     policy: item.trace?.policy || null,
     toolResults: item.trace?.toolResults || []
