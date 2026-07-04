@@ -168,7 +168,8 @@ ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user i
 - 数据库仅新增 `openclaw_agent_configs`、`openclaw_agent_eval_cases`、`openclaw_agent_eval_runs`，不修改微信入口或 Schedule/Reading/Course 业务表；
 - 固定集为 150 条：Schedule、Reading、Course、上下文/ASR/复合句、安全干扰各 30 条；45 条为 holdout，UI/API 不返回 case expectation；
 - 隔离 Supabase `ldciqxzczwpuhhgeinmc` 已真实应用 migration；三表 RLS、单 published 唯一索引、评估发布门禁、published 不可变和 rollback 新版本均通过事务验收，测试数据回滚为 0；Production 数据库未应用该 migration；
-- Draft PR #14：https://github.com/Curacao914/my-blog/pull/14；首轮 `build` 2m59s、CodeQL、Analyze、Vercel Preview 全部通过；
-- 10 个 suite、51 个定向测试通过；新增文件 ESLint 0 error；本地 Production build 通过。构建中无数据库/Notion 的既有 fallback 日志不属于本 PR 回归；
-- Vercel Preview 的 `SUPABASE_URL` 与 service key 已从共享配置拆分为 Preview-only 覆盖，指向隔离项目 `ldciqxzczwpuhhgeinmc`；Production 作用域未修改。下一 commit 的 Preview 才是该隔离配置的首个部署证据；
-- 尚未完成：隔离配置下的 Vercel Preview UI/API、真实配置模型完整 fixed-set、Production migration/部署。因此不得写成 Studio 已发布，也不得开始 Shadow Runtime。
+- Draft PR #14：https://github.com/Curacao914/my-blog/pull/14；隔离配置后的 `build` 2m36s、CodeQL、Analyze、Vercel Preview 全部通过；
+- 9 个 Agent Studio suite、55 个定向测试通过；另有 v1 回归 4 suites / 22 tests；新增文件 ESLint 0 error；本地 Production build 通过。构建中无数据库/Notion 的既有 fallback 日志不属于本 PR 回归；
+- Vercel Preview 的 `SUPABASE_URL` 与 service key 已从共享配置拆分为 Preview-only 覆盖，指向隔离项目 `ldciqxzczwpuhhgeinmc`；Production 作用域未修改；
+- `preview.law-tech.dev` 已指向 PR #14 Preview；owner 登录、固定拓扑、Preview 环境选中及隔离数据库空配置 GET 已通过。尚未执行 Preview 草稿创建、真实配置模型完整 fixed-set、发布/回滚与 Production migration/部署，因此不得写成 Studio 已发布，也不得开始 Shadow Runtime；
+- 评估模型调用现由配置强制超时、输入/输出 token 和单条成本预算；单条模型错误只记录 `not executed` 结果并继续固定集，不进行规则猜测，也不能通过发布门禁。

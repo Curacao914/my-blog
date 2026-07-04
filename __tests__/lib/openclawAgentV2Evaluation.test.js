@@ -105,4 +105,23 @@ describe('OpenClaw Agent v2 evaluation kernel', () => {
       reasons: expect.arrayContaining(['duplicate_or_missing_cases'])
     }))
   })
+
+  it('classifies model errors as deterministic release failures', () => {
+    const report = buildEvaluationReport([{
+      caseId: 'schedule-1',
+      expected: {
+        action: 'read', domain: 'schedule', objectType: 'schedule_item',
+        scope: 'list', executionAllowed: true
+      },
+      actual: {
+        action: null, domain: null, objectType: null, scope: null,
+        executionAllowed: false
+      },
+      modelError: 'model timed out'
+    }])
+    expect(report.failures).toEqual(expect.arrayContaining([
+      expect.objectContaining({ category: 'model_error', critical: false })
+    ]))
+    expect(publishingGate(report).allowed).toBe(false)
+  })
 })

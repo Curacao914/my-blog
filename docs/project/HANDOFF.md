@@ -47,7 +47,7 @@ PR #12 回退与治理闭环已由 PR #13 合并；当前只推进 Agent Studio 
 - Supabase Production 已完成只读 live audit，项目 healthy，六个关键表均存在且可读；
 - 腾讯云 SSH 已恢复，三个 user services active/running，readyz 为 true。
 
-Agent Studio 独立分支 `codex/agent-studio-v1-20260704` 已创建 Draft PR #14；51 项定向测试、ESLint、build、首轮 GitHub/Vercel checks 和隔离 Supabase migration/事务验收均通过。Preview Supabase 已拆分为 `ldciqxzczwpuhhgeinmc` 的独立覆盖；尚未完成该配置下的 Preview UI/API、真实模型 fixed-set 与 Production migration。不得提前开始 Shadow。
+Agent Studio 独立分支 `codex/agent-studio-v1-20260704` 已创建 Draft PR #14；55 项定向测试、v1 回归、ESLint、build、GitHub/Vercel checks 和隔离 Supabase migration/事务验收均通过。Preview Supabase 已拆分为 `ldciqxzczwpuhhgeinmc` 的独立覆盖；`preview.law-tech.dev` 的 owner 页面与隔离空配置 GET 已通过。尚未完成草稿写入、真实模型 fixed-set、发布/回滚与 Production migration。不得提前开始 Shadow。
 
 禁止从补正则或修补 PR #12 Router 开始。实施顺序固定为：
 

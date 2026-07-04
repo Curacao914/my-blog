@@ -13,6 +13,7 @@ describe('OpenClaw Agent Studio config store', () => {
 
   it('creates the next immutable version in one environment', async () => {
     supabaseRest
+      .mockResolvedValueOnce([{ id: 'config-3', owner_id: 'owner-1', environment: 'preview' }])
       .mockResolvedValueOnce([{ version_number: 3 }])
       .mockResolvedValueOnce([{ id: 'config-4', version_number: 4, status: 'draft' }])
 
@@ -24,8 +25,8 @@ describe('OpenClaw Agent Studio config store', () => {
     })
 
     expect(row.version_number).toBe(4)
-    expect(supabaseRest.mock.calls[1][0]).toContain('/openclaw_agent_configs')
-    expect(JSON.parse(supabaseRest.mock.calls[1][1].body)).toEqual(
+    expect(supabaseRest.mock.calls[2][0]).toContain('/openclaw_agent_configs')
+    expect(JSON.parse(supabaseRest.mock.calls[2][1].body)).toEqual(
       expect.objectContaining({
         owner_id: 'owner-1',
         environment: 'preview',
@@ -34,6 +35,17 @@ describe('OpenClaw Agent Studio config store', () => {
         parent_config_id: 'config-3'
       })
     )
+  })
+
+  it('rejects a parent outside the same owner and environment', async () => {
+    supabaseRest.mockResolvedValueOnce([])
+    await expect(createAgentConfigDraft({
+      ownerId: 'owner-1',
+      environment: 'preview',
+      profile: {},
+      parentConfigId: 'production-or-other-owner-config'
+    })).rejects.toThrow(/parent/i)
+    expect(supabaseRest).toHaveBeenCalledTimes(1)
   })
 
   it('updates drafts but refuses in-place changes to published versions', async () => {
