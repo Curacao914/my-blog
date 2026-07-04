@@ -6,6 +6,7 @@ import { AiSettings } from '@/components/AiSettings'
 import { AiUsageSettings } from '@/components/AiUsageSettings'
 import { CourseAutomationSettings } from '@/components/CourseAutomationSettings'
 import { MemberManagement } from '@/components/MemberManagement'
+import { OpenClawAgentStudio } from '@/components/OpenClawAgentStudio'
 import { WechatSettings } from '@/components/WechatSettings'
 import { AdminContentSync } from '@/components/law-tech/AdminContentSync'
 import { useWorkspaceSession } from '@/hooks/useWorkspaceSession'
@@ -146,6 +147,7 @@ export function SystemDesk() {
     {
       label: '站点',
       items: isOwnerView ? [
+        { key: 'agent-studio', label: 'Agent Studio' },
         { key: 'content', label: '内容与同步' },
         { key: 'site', label: '站点与连接' },
         { key: 'members', label: '成员与权限' }
@@ -245,6 +247,9 @@ export function SystemDesk() {
           {section === 'ai-usage' ? <AiUsageSettings /> : null}
           {section === 'wechat' ? <WechatSettings /> : null}
           {section === 'courses' ? <CourseAutomationSettings /> : null}
+          {section === 'agent-studio' && isOwnerView ? (
+            <OpenClawAgentStudio />
+          ) : null}
           {section === 'content' && isOwnerView ? (
             <ContentMaintenance health={health} onReload={loadHealth} state={healthState} />
           ) : null}

@@ -125,3 +125,11 @@
 - 状态：Accepted
 - 决策：Studio 配置/评估和 Shadow trace 使用独立 additive 表；真实微信原文与 legacy 回复使用现有 AES-256-GCM 密钥加密，派生 Intent/Plan/usage/成本可检索，默认保留 30 天。
 - 后果：不再让 `openclaw_conversation_states.state` 同时承担会话、评估和长期审计职责；模型不获得数据库或自由 SQL 权限。
+
+## D-019：发布门禁由数据库事务再次强制
+
+- 日期：2026-07-04
+- 状态：Accepted
+- 决策：Studio UI/API 的发布按钮不是授权来源。数据库发布函数必须再次验证同 owner、同 environment、同 config 的完整评估：至少 150 条、总体不低于 98%、安全为 100%。published/retired profile 不可原地修改；rollback 复制历史 profile 为新的递增 published 版本。
+- 原因：避免绕过前端、并发发布、跨环境评估复用或直接 REST 更新造成配置漂移。
+- 后果：未通过真实模型 fixed-set 的草稿不能发布；回滚也有可审计的新版本和明确来源。

@@ -1,0 +1,135 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+
+import { OpenClawAgentStudio } from '@/components/OpenClawAgentStudio'
+
+const profile = {
+  schemaVersion: '1.0',
+  topology: [
+    'message', 'intent', 'planner', 'semantic_gate', 'resource',
+    'risk_policy', 'tool', 'response', 'trace'
+  ],
+  models: {
+    interpreter: 'deepseek/deepseek-v4-flash',
+    responder: 'deepseek/deepseek-v4-flash'
+  },
+  plannerMode: 'deterministic',
+  capabilities: {
+    'schedule.read': true,
+    'reading.read': true,
+    'course.read': true,
+    'schedule.create': false
+  },
+  thresholds: {
+    autoResolveMinimum: 0.98,
+    candidateGapMinimum: 0.2,
+    clarificationMaximum: 0.05
+  },
+  aliases: { schedule: [], reading: [], course: [] },
+  budgets: {
+    maxModelCalls: 1,
+    maxInputTokens: 6000,
+    maxOutputTokens: 800,
+    maxEstimatedUsd: 0.01,
+    timeoutMs: 12000
+  },
+  riskPolicy: {
+    read: { confirmation: 'none' },
+    reversible_write: { confirmation: 'none' },
+    bulk_write: { confirmation: 'required' },
+    destructive: { confirmation: 'required' },
+    privileged: { confirmation: 'required' }
+  }
+}
+
+function apiResponse(body, status = 200) {
+  return Promise.resolve({
+    ok: status >= 200 && status < 300,
+    status,
+    json: () => Promise.resolve(body)
+  })
+}
+
+describe('OpenClawAgentStudio', () => {
+  beforeEach(() => {
+    global.fetch = jest.fn().mockImplementation(() => apiResponse({
+      ok: true,
+      environment: 'preview',
+      configs: [{
+        id: 'config-1',
+        version_number: 1,
+        status: 'draft',
+        checksum: 'abc',
+        profile,
+        created_at: '2026-07-04T00:00:00Z'
+      }],
+      evaluationRuns: []
+    }))
+  })
+
+  it('renders the fixed control plane and schema-driven controls', async () => {
+    render(<OpenClawAgentStudio />)
+    expect(await screen.findByText('Agent Studio')).toBeInTheDocument()
+    ;['消息', '意图', '规划', '语义门禁', '资源', '风险策略', '工具', '回复', '追踪']
+      .forEach(label => expect(screen.getByText(label)).toBeInTheDocument())
+    expect(await screen.findByLabelText('理解模型')).toHaveValue('deepseek/deepseek-v4-flash')
+    expect(screen.getByLabelText('自动解析阈值')).toHaveValue(0.98)
+    expect(screen.queryByLabelText(/system prompt/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/sql/i)).not.toBeInTheDocument()
+  })
+
+  it('keeps publish disabled until a matching run passes every gate', async () => {
+    render(<OpenClawAgentStudio />)
+    const publish = await screen.findByRole('button', { name: '发布此版本' })
+    expect(publish).toBeDisabled()
+    expect(screen.getByText(/需要 150 条/)).toBeInTheDocument()
+  })
+
+  it('switches Preview and Production without mixing requests', async () => {
+    render(<OpenClawAgentStudio />)
+    await screen.findByLabelText('理解模型')
+    fireEvent.click(screen.getByRole('button', { name: 'Production' }))
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenLastCalledWith(
+        '/api/settings/openclaw-agent?environment=production',
+        expect.objectContaining({ credentials: 'same-origin' })
+      )
+    })
+  })
+
+  it('runs evaluation for the selected draft and refreshes the report', async () => {
+    global.fetch
+      .mockImplementationOnce(() => apiResponse({
+        ok: true,
+        environment: 'preview',
+        configs: [{
+          id: 'config-1', version_number: 1, status: 'draft',
+          checksum: 'abc', profile
+        }],
+        evaluationRuns: []
+      }))
+      .mockImplementationOnce(() => apiResponse({
+        ok: true,
+        run: { id: 'run-1', status: 'passed' }
+      }))
+      .mockImplementationOnce(() => apiResponse({
+        ok: true,
+        environment: 'preview',
+        configs: [{
+          id: 'config-1', version_number: 1, status: 'draft',
+          checksum: 'abc', profile
+        }],
+        evaluationRuns: [{
+          id: 'run-1', config_id: 'config-1', status: 'passed',
+          case_count: 150, overall_score: 0.99, safety_score: 1
+        }]
+      }))
+    render(<OpenClawAgentStudio />)
+    fireEvent.click(await screen.findByRole('button', { name: '运行完整评估' }))
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(
+      '/api/settings/openclaw-agent/evaluate',
+      expect.objectContaining({ method: 'POST' })
+    ))
+    expect(await screen.findByText('99.0%')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '发布此版本' })).toBeEnabled()
+  })
+})

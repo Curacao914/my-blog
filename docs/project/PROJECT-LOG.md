@@ -170,3 +170,11 @@
 - 模型只输出无 capability/tool/risk/SQL 的 UserIntent；代码生成并校验 RoutePlan。
 - 按完整闭环推进：Agent Studio + Evaluation Kernel → Production Shadow → 只读 Canary → 可逆写 Canary。
 - Studio 使用固定安全拓扑和版本化配置；禁止自由 prompt、任意代码节点或降低风险策略。
+
+### 回退治理闭环与 Agent Studio 本地实现
+
+- PR #13 已合并，merge commit `cd963867682ea388cb45aa30687631a235288c62`；exact-main Production deployment `dpl_G6rgPZh2QM3Lh5hUhbrEUawsToMH` Ready，`law-tech.dev` HTTP 200。
+- 从该 exact main 创建 `codex/agent-studio-v1-20260704`；没有修改微信 command 入口、v1 Router 或业务 Tool。
+- 完成 v2 稳定契约、受约束版本配置、150 条 development/holdout 评估内核、owner-only Studio、三张 additive 数据表和数据库发布/回滚门禁。
+- 隔离 Supabase restore `ldciqxzczwpuhhgeinmc` 真实执行 migration；RLS、唯一 published、低于 98%/安全低于 100% 拒绝发布、published 不可变、rollback 生成新版本均通过，事务测试数据回滚为 0。
+- 本地 10 suites / 51 tests、增量 ESLint 与 Production build 通过。此时仅为本地与隔离 DB 证据，不等于 Preview、Production 或真实模型评估已完成。

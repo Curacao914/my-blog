@@ -29,12 +29,14 @@
 | #10 | ci: decouple required validation from GHCR publishing | `f5f96ca71ead7c70606933ee1095f725630fe7ca` | required validation 与镜像发布解耦 |
 | #11 | docs: record Docker CI closure | `f016e0d2b65c32c4c858dad1e0496937bec81107` | 记录 CI 闭环 |
 | #12 | feat: add model-first Agent and cut Docker build time | `9163826c3a78fa1254683c7682286a528a8ce280` | Agent 真实微信验收失败；CI 降时部分保留 |
+| #13 | docs: record Agent rollback and v2 governance | `cd963867682ea388cb45aa30687631a235288c62` | v1 回退、治理与实时审计闭环 |
 
 ## Production 与数据库
 
 - Production：`https://law-tech.dev`；
 - Vercel project：`curacaos-projects/curacao-top`；
-- 当前 GitHub main：`9163826c3a78fa1254683c7682286a528a8ce280`；
+- 当前 GitHub main：`cd963867682ea388cb45aa30687631a235288c62`；
+- exact-main Production deployment：`dpl_G6rgPZh2QM3Lh5hUhbrEUawsToMH` Ready，首页 HTTP 200；
 - 2026-07-04 已在 Production 新增 `OPENCLAW_AGENT_V1_ENABLED=false` 并从该 main commit 重新部署；deployment `dpl_3DRvnp53MBjXdECgRd6nx87WVRCS` 为 Ready，`law-tech.dev` alias 已指向该 deployment；
 - 首页 HTTP 200；真实微信已完成 legacy 查询以及可清理事项的创建/删除验收，v1 help 错路由未再接管；
 - Production Supabase ref：`htbbkcxevcouwehpugwc`；
@@ -110,11 +112,10 @@ PR #12 曾将 Production 默认切入一次模型直接选择 capability 的 Age
 
 ## 当前 P0
 
-1. 合并 PR #12 Production 回退与治理文档 PR；
-2. 完整交付 Agent Studio + Evaluation Kernel，未完成不得开始 Shadow Runtime；
-3. 完整交付 default-off、无写入的 Production Shadow Runtime，并等待严格自然样本门禁；
-4. 等待课程最终调度版本自然完整周期；
-5. 完成腾讯云迁移后的备份、日志、heartbeat、单实例与恢复硬化。
+1. 完整交付 Agent Studio + Evaluation Kernel，未完成不得开始 Shadow Runtime；
+2. 完整交付 default-off、无写入的 Production Shadow Runtime，并等待严格自然样本门禁；
+3. 等待课程最终调度版本自然完整周期；
+4. 完成腾讯云迁移后的备份、日志、heartbeat、单实例与恢复硬化。
 
 ## 实时核验
 
@@ -158,3 +159,14 @@ ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user i
 - 2026-07-04 已设置 Production-only feature flag 为 false 并完成 Ready redeploy；真实微信 legacy 查询和可清理事项创建/删除均已通过。
 - v1 代码和 PR #12 保留为失败证据，不继续追加提示词、关键词或同义词规则。
 - 下一独立代码闭环是完整 Agent Studio 与评估内核；该 PR 不接入真实微信流量。
+
+## Agent Studio + Evaluation Kernel（独立分支，尚未合并）
+
+- 分支：`codex/agent-studio-v1-20260704`，基于 exact main `cd963867682ea388cb45aa30687631a235288c62`；
+- 已实现 UserIntent、RoutePlan、CapabilityCard、Resource、Tool、QuerySpec、MutationSpec、SessionState、RiskPolicy 与 ToolResult v2 校验；模型输出禁止 capability/tool/risk/SQL；
+- 已实现固定安全拓扑的 owner-only Studio、Preview/Production 配置隔离、不可变版本、diff、评估、发布与回滚；没有自由 system prompt、SQL 或任意代码节点入口；
+- 数据库仅新增 `openclaw_agent_configs`、`openclaw_agent_eval_cases`、`openclaw_agent_eval_runs`，不修改微信入口或 Schedule/Reading/Course 业务表；
+- 固定集为 150 条：Schedule、Reading、Course、上下文/ASR/复合句、安全干扰各 30 条；45 条为 holdout，UI/API 不返回 case expectation；
+- 隔离 Supabase `ldciqxzczwpuhhgeinmc` 已真实应用 migration；三表 RLS、单 published 唯一索引、评估发布门禁、published 不可变和 rollback 新版本均通过事务验收，测试数据回滚为 0；Production 数据库未应用该 migration；
+- 10 个 suite、51 个定向测试通过；新增文件 ESLint 0 error；本地 Production build 通过。构建中无数据库/Notion 的既有 fallback 日志不属于本 PR 回归；
+- 尚未完成：GitHub PR、Vercel Preview、真实配置模型完整 fixed-set、Production migration/部署。因此不得写成 Studio 已发布，也不得开始 Shadow Runtime。

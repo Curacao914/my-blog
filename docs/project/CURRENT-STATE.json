@@ -1,12 +1,13 @@
 {
   "schema_version": 2,
-  "as_of": "2026-07-04T12:29:57+08:00",
+  "as_of": "2026-07-04T13:06:00+08:00",
   "repository": "Curacao914/my-blog",
   "production": "https://law-tech.dev",
   "git": {
-    "main_commit": "9163826c3a78fa1254683c7682286a528a8ce280",
+    "main_commit": "cd963867682ea388cb45aa30687631a235288c62",
     "open_pull_requests": 0,
     "project_docs_merge_commit": "85dfb514d9db5ae930b87b0f72b4124fad4b2ce7",
+    "rollback_governance_merge_commit": "cd963867682ea388cb45aa30687631a235288c62",
     "main_protected": true,
     "required_check_name": "build",
     "required_check_enforced": true,
@@ -14,6 +15,9 @@
   },
   "vercel": {
     "project": "curacaos-projects/curacao-top",
+    "current_production_deployment_id": "dpl_G6rgPZh2QM3Lh5hUhbrEUawsToMH",
+    "current_production_commit": "cd963867682ea388cb45aa30687631a235288c62",
+    "current_production_status": "ready",
     "rollback_deployment_id": "dpl_3DRvnp53MBjXdECgRd6nx87WVRCS",
     "rollback_deployment_commit": "9163826c3a78fa1254683c7682286a528a8ce280",
     "rollback_deployment_status": "ready",
@@ -93,7 +97,21 @@
   "agent_v2": {
     "architecture": "UserIntent -> Deterministic Planner -> Semantic Gate -> Resource -> Risk Policy -> Tool -> Response -> Trace",
     "model_direct_permissions": [],
-    "next_closure": "agent_studio_and_evaluation_kernel",
+    "next_closure": "finish_agent_studio_pr_preview_model_eval_and_release",
+    "studio": {
+      "branch": "codex/agent-studio-v1-20260704",
+      "base_commit": "cd963867682ea388cb45aa30687631a235288c62",
+      "status": "implemented_locally_not_merged",
+      "targeted_tests": "10_suites_51_tests_passed",
+      "eslint": "passed_for_new_files",
+      "local_build": "passed",
+      "fixed_set_cases": 150,
+      "holdout_cases": 45,
+      "isolated_database_ref": "ldciqxzczwpuhhgeinmc",
+      "isolated_migration": "applied_and_transaction_verified",
+      "production_migration": "not_applied",
+      "wechat_runtime_changed": false
+    },
     "execution_order": [
       "finish rollback and governance",
       "agent studio and evaluation kernel",
@@ -108,9 +126,11 @@
       "fixed_set_accuracy_minimum": 0.98
     }
   },
-  "current_mainline": "finish PR12 rollback and governance closure before Agent v2 code",
+  "current_mainline": "finish Agent Studio and evaluation kernel closure before Shadow Runtime",
   "pending": [
-    "docs-only rollback/governance PR merge",
+    "Agent Studio PR and Vercel Preview",
+    "real configured-model fixed-set evaluation and publish rollback acceptance",
+    "Agent Studio Production migration and deployment",
     "course natural full-cycle acceptance",
     "historical failed or needs_attention course cleanup",
     "historical bad Reading cleanup after Agent write-canary acceptance"

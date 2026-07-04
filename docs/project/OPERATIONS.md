@@ -165,6 +165,8 @@ MANIFEST-SHA256.txt
 - PR #12 v1 仅作为失败实验保留；Production 必须显式设置 `OPENCLAW_AGENT_V1_ENABLED=false`。
 - 新 Agent 的未配置状态必须等同于关闭。禁止“非 test 默认开启”。
 - 发布顺序固定为 Studio/Evaluation → Shadow → 只读 Canary → 可逆写 Canary；每一步是独立 PR、独立 flag 和独立回滚锚点。
+- Studio migration 必须先在隔离 Supabase 项目执行：确认三张目标表不存在，应用 SQL，核验 RLS/唯一 published 索引/事务函数，再在单一 `BEGIN ... ROLLBACK` 中验证低分拒绝、published 不可变和 rollback 新版本；确认测试行计数为 0 后才允许进入 Preview。
+- Production migration 只能在 Studio PR、Preview 和真实模型 fixed-set 达标后执行；不得为了让 Preview 页面“先能打开”而跳过隔离数据库验收。
 - Shadow 不回复、不调用 Tool、不改变 legacy 结果；模型或 trace 失败只记录，不影响用户路径。
 - 每个配置版本先跑 development 和 holdout。真实语句可以进入评估数据，但不得被拼进 Production system prompt 当个例补丁。
 - 简单工具成功回复使用确定性模板；是否允许写入、目标 ID、数量和 before/after 不交给 LLM judge 决定。
