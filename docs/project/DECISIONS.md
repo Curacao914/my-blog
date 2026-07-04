@@ -42,9 +42,9 @@
 ## D-007：微信 Agent 采用 model-first 控制平面
 
 - 日期：2026-07-03
-- 状态：Accepted
+- 状态：Superseded by D-015
 - 决策：模型先理解并生成结构化计划，代码后校验真实对象和执行；正则只做传输过滤、格式和安全边界。
-- 后果：旧关键词分类器和万能 schedule fallback 降级或废止，不再补同义词词典。
+- 后果：原则继续有效，但 PR #12 将“模型理解”错误实现成“模型直接选择 capability”；新的权限分层由 D-015 取代。
 
 ## D-008：Resource 与 Tool 分离，模型不得直接 SQL
 
@@ -92,7 +92,36 @@
 
 ## ADR: Agent Phase 1 复用会话 JSON，不新增数据库表
 
+- 状态：Superseded by D-016
 - 决策：首期将结构化 Session State 与最近 trace 存入现有 `openclaw_conversation_states.state`，不新增 migration；
 - 原因：先验证 Router—Resource—Policy—Tool 闭环，降低数据库与发布耦合；
 - 代价：trace 仅为有界、带 TTL 的验收级记录，不替代后续耐久审计表；
 - 后续：统一 E2E 与观测阶段再设计 durable trace/event ledger。
+
+## D-015：模型只解释 UserIntent，代码生成并授权 RoutePlan
+
+- 日期：2026-07-04
+- 状态：Accepted
+- 决策：第一次模型调用只输出不含 capability、tool、SQL 和 risk 授权的 `UserIntent`。确定性 Planner 根据版本化 Capability Card 生成 RoutePlan，Semantic Gate 检查 action/domain/object/scope 一致性后，才能进入真实 Resource、Risk Policy 和 Tool。
+- 后果：常见路径仍为一次模型调用；复杂规划最多增加一次受约束选择。模型自报 confidence 只用于观测，不能单独授予写权限。PR #12 的 direct `LLM → capability → execution` 架构不再演进。
+
+## D-016：新 Agent 默认关闭，先 Studio，再 Shadow，再 Canary
+
+- 日期：2026-07-04
+- 状态：Accepted
+- 决策：新 Agent 的任何模式均 default-off。先完整交付 Agent Studio + Evaluation Kernel，再交付只读 Production Shadow；Shadow 达到固定集和真实自然样本门槛后，才允许另开只读 Canary PR。
+- 后果：不存在“代码合并即自动接管 Production”。Shadow 不回复、不调用 Tool、不改变 legacy 结果；任一阶段失败通过配置版本或 feature flag 回滚。
+
+## D-017：Agent Studio 是受约束、版本化的控制面
+
+- 日期：2026-07-04
+- 状态：Accepted
+- 决策：提供固定拓扑的可视化 Studio，支持 draft、真实模型评估、publish、diff 和 rollback。用户可以配置模型分工、能力启停、阈值、领域别名和预算，但不能编辑任意 system prompt、插入代码/SQL 节点、降低风险级别或绕过确认。
+- 后果：灵活性来自 schema、ontology、Capability Registry 和版本化配置，不来自为失败原句追加个例提示词。每个发布版本必须绑定 development/holdout 评估结果。
+
+## D-018：Agent 真实语料加密并使用独立 trace 数据模型
+
+- 日期：2026-07-04
+- 状态：Accepted
+- 决策：Studio 配置/评估和 Shadow trace 使用独立 additive 表；真实微信原文与 legacy 回复使用现有 AES-256-GCM 密钥加密，派生 Intent/Plan/usage/成本可检索，默认保留 30 天。
+- 后果：不再让 `openclaw_conversation_states.state` 同时承担会话、评估和长期审计职责；模型不获得数据库或自由 SQL 权限。

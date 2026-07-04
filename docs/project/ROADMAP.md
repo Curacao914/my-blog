@@ -6,19 +6,19 @@
 
 当前最优先。
 
-- 停止扩展旧 `classifyCommandText` 和关键词优先策略；
-- 建立 model-first Router；
-- Capability Registry；
-- Resource / Tool 分离；
-- RoutePlan、QuerySpec、MutationSpec；
-- Schedule、Reading、Course 三个首批领域；
-- 标题、课程、日期、别名、上下文和 embedding 的混合实体解析；
-- 单个、匹配集合和 `all_unread` 批量课程简报操作；
-- `lastSelected/lastCreated/lastUpdated/lastResultSet/pendingConfirmation` 结构化会话；
-- 风险分级、幂等、before/after 和撤销；
-- trace、延迟、token、候选分数和固定自然语言评估集；
-- Preview + 微信真机验收；
-- 验收后清理历史误创建 Reading。
+- [x] PR #12 失败后停止扩展 direct `LLM → capability` Router；
+- [x] Production 设置 `OPENCLAW_AGENT_V1_ENABLED=false` 并完成 Ready redeploy；
+- [x] 完成真实微信 legacy 接管验收、main branch protection 和 Supabase/Tencent 只读复核；
+- [ ] 合并回退与治理文档 PR；
+- [ ] 完整交付 Agent Studio + Evaluation Kernel：固定可视拓扑、版本配置、development/holdout、真实模型测试、发布和回滚；
+- [ ] 完整交付 `UserIntent → Deterministic Planner → Semantic Gate`；
+- [ ] 完整交付 Schedule、Reading、Course Capability/Resource/实体解析；
+- [ ] 完整交付 default-off Production Shadow、独立加密 trace、成本和延迟观测；
+- [ ] Shadow 连续 7 天、至少 50 条真实消息，关键安全项 100%、固定集总体至少 98%；
+- [ ] 另开只读 Canary PR；只读验收完成后再开单条可逆写 Canary PR；
+- [ ] 写 Canary 真机验收后单独清理历史误创建 Reading。
+
+每一项均是独立 PR/闭环。前一项未完整验收时禁止启动下一项，不创建需要“以后补齐”的空壳。
 
 ## P0：课程自然周期
 
@@ -242,12 +242,10 @@ Agent、课程和数据基础稳定后再扩张：
 
 ### Model-first Agent Phase 1 实施
 
-- [x] RoutePlan、Capability Card、Resource、QuerySpec、MutationSpec、Session State、Risk Policy 稳定接口；
-- [x] Schedule、Reading、Course 资源与工具；
-- [x] `single` / `matching` / `all_unread` 课程简报已读；
-- [x] 结构化指代与固定自然语言评估集；
-- [x] 风险门禁、幂等、before/after 和 trace；
-- [ ] Preview 固定评估集通过；
-- [ ] Production 精确 commit 部署通过；
-- [ ] 微信真机验收通过并记录；
-- [ ] 真机验收后单独清理历史误创建 Reading。
+- [x] PR #12 代码、单测和 Production deployment 曾存在；
+- [x] 真实微信验收发现明确日程创建被错路由到 `agent.help`；
+- [x] v1 进入失败实验状态并触发 Production feature-flag 回退；
+- [ ] v2 Studio/Evaluation 独立闭环；
+- [ ] v2 Shadow 独立闭环；
+- [ ] v2 只读 Canary 独立闭环；
+- [ ] v2 可逆写 Canary 独立闭环。
