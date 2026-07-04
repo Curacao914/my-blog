@@ -177,7 +177,7 @@ function lastObjectFromPayload(payload = {}, fallback = null) {
 }
 
 export default async function handler(req, res) {
-  if (modelFirstOpenClawEnabled()) {
+  if (modelFirstOpenClawEnabled(req)) {
     return handleModelFirstOpenClawCommand(req, res)
   }
 

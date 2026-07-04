@@ -1,5 +1,6 @@
 import { runOpenClawAgent } from '@/lib/openclaw/agent/controller'
 import { loadResourceCatalog } from '@/lib/openclaw/agent/resources'
+import { modelFirstOpenClawEnabled } from '@/lib/server/openclawAgentHandler'
 
 function modelResult(plan) {
   return {
@@ -36,6 +37,31 @@ function basePlan(overrides = {}) {
 }
 
 describe('OpenClaw model-first controller', () => {
+  test('forces router-only evaluation through Agent on Preview even during rollback', () => {
+    const previousFlag = process.env.OPENCLAW_AGENT_V1_ENABLED
+    const previousVercelEnv = process.env.VERCEL_ENV
+    try {
+      process.env.OPENCLAW_AGENT_V1_ENABLED = 'false'
+      process.env.VERCEL_ENV = 'preview'
+      expect(
+        modelFirstOpenClawEnabled({
+          body: { evaluationMode: 'router' }
+        })
+      ).toBe(true)
+      process.env.VERCEL_ENV = 'production'
+      expect(
+        modelFirstOpenClawEnabled({
+          body: { evaluationMode: 'router' }
+        })
+      ).toBe(false)
+    } finally {
+      if (previousFlag === undefined) delete process.env.OPENCLAW_AGENT_V1_ENABLED
+      else process.env.OPENCLAW_AGENT_V1_ENABLED = previousFlag
+      if (previousVercelEnv === undefined) delete process.env.VERCEL_ENV
+      else process.env.VERCEL_ENV = previousVercelEnv
+    }
+  })
+
   test('executes all_unread only after model route, resource and policy', async () => {
     const executeTool = jest.fn().mockResolvedValue({
       status: 'updated',

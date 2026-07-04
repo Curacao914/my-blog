@@ -1,3 +1,6 @@
+import fs from 'fs'
+import path from 'path'
+
 const evaluation = require('../fixtures/openclaw-agent-eval-v1.json')
 
 describe('OpenClaw Agent fixed natural-language evaluation set', () => {
@@ -24,5 +27,40 @@ describe('OpenClaw Agent fixed natural-language evaluation set', () => {
         item.input.includes('时间改到十点')
       )
     ).toBe(true)
+    expect(
+      evaluation.cases.some(item =>
+        item.expected?.policy === 'confirm'
+      )
+    ).toBe(true)
+    expect(
+      evaluation.cases.some(item =>
+        item.expected?.policy === 'deny_exact_wechat_reminder'
+      )
+    ).toBe(true)
+  })
+
+  test('the remote evaluator has a no-write preflight and validates policy expectations', () => {
+    const script = fs.readFileSync(
+      path.join(
+        process.cwd(),
+        'scripts/openclaw-agent/evaluate-fixed-set.mjs'
+      ),
+      'utf8'
+    )
+    expect(script).toContain('evaluation-safety-preflight')
+    expect(script).toContain("payload.action !== 'router_evaluation'")
+    expect(script).toContain("expected.policy === 'confirm'")
+    expect(script).toContain('forbiddenReminderFields')
+    const handler = fs.readFileSync(
+      path.join(
+        process.cwd(),
+        'lib/server/openclawAgentHandler.js'
+      ),
+      'utf8'
+    )
+    expect(handler).toContain('existingEvaluationProfile')
+    expect(handler).toContain('routerEvaluationRequest')
+    expect(handler).toContain('no profile was created')
+    expect(handler).toContain("            : {}")
   })
 })
