@@ -178,3 +178,4 @@
 - 完成 v2 稳定契约、受约束版本配置、150 条 development/holdout 评估内核、owner-only Studio、三张 additive 数据表和数据库发布/回滚门禁。
 - 隔离 Supabase restore `ldciqxzczwpuhhgeinmc` 真实执行 migration；RLS、唯一 published、低于 98%/安全低于 100% 拒绝发布、published 不可变、rollback 生成新版本均通过，事务测试数据回滚为 0。
 - 本地 10 suites / 51 tests、增量 ESLint 与 Production build 通过。此时仅为本地与隔离 DB 证据，不等于 Preview、Production 或真实模型评估已完成。
+- Draft PR #14 创建后，首轮 `build` 2m59s、CodeQL、Analyze 与 Vercel Preview checks 通过。随后将 Vercel Preview 的 Supabase URL/service key 拆分为 Preview-only 覆盖并指向已迁移的隔离 restore；Production 环境变量未修改。需由下一 commit 的部署证明隔离 Preview 行为。
