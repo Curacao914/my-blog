@@ -125,3 +125,24 @@ ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user i
 - CI PR #9 已合并，merge commit：`6db4e8a8e4b216f95b1b5f330905a084929ae78d`；纠正 PR #10 已将 required PR/main validation 与 GHCR 发布解耦，merge commit：`f5f96ca71ead7c70606933ee1095f725630fe7ca`；corrected main 验收锚点：`f5f96ca71ead7c70606933ee1095f725630fe7ca`。
 - docs-only 验证 commit：`08a24bce38034bcd05072ec279369a0bce6f30e9`；同名 `build` check 成功，运行 13.0 秒。
 - 项目治理 PR #8 merge anchor：`85dfb514d9db5ae930b87b0f72b4124fad4b2ce7`。
+
+
+## CI / Docker 构建降时第二阶段（本 PR）
+
+- PR #9 的代码 Docker `build` 基线为约 2434 秒，双架构冷构建不可接受；
+- 普通代码 PR 只在 GitHub 原生 runner 上验证 `linux/amd64`，不再为每个 PR 模拟 arm64；
+- main 普通提交只验证原生 amd64，不发布镜像；版本标签或显式 `workflow_dispatch publish=true` 才发布，multiarch 仅用于显式双架构发布；
+- 保留同名 required `build`、纯文档 fast-success、无数据库静态预取和架构分离缓存；
+- PR/main 的 `build` 目标为 600 秒内，900 秒为拒绝合并的硬上限；实际耗时必须由 exact-SHA check 记录。
+
+
+## Model-first Agent Phase 1（本 PR）
+
+- Production 默认进入 model-first Controller；`NODE_ENV=test` 保留 legacy 路径以兼容既有回归，显式 `OPENCLAW_AGENT_V1_ENABLED=false` 可人工回滚。
+- 模型输出严格 RoutePlan；代码通过 Capability Registry、Resource、实体解析、Risk Policy 与 Tool 执行。
+- 模型失败、输出无效或对象不唯一时停止，不退化为正则猜测写入。
+- 首期覆盖 Schedule、Reading、Course；课程简报支持 `single`、`matching`、`all_unread`。
+- 复用 `openclaw_conversation_states.state` 保存结构化 Session State 与有限 trace；本 PR 不新增数据库 migration。
+- before/after、MutationSpec、idempotency key 与失败明细进入 trace/响应；批量结果不伪装为全成功。
+- 固定自然语言评估集、Preview router-only 评估和真实微信验收必须分别记录；合并前不得表述为 Production 已验收。
+- 前置 CI merge commit：`f5f96ca71ead7c70606933ee1095f725630fe7ca`。

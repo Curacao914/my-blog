@@ -1,0 +1,57 @@
+import fs from 'fs'
+import path from 'path'
+
+const evaluation = require('../fixtures/openclaw-agent-eval-v1.json')
+
+describe('OpenClaw Agent fixed natural-language evaluation set', () => {
+  test('is versioned and covers required first-stage behavior', () => {
+    expect(evaluation.version).toBe(1)
+    expect(evaluation.cases.length).toBeGreaterThanOrEqual(30)
+    const capabilities = new Set(
+      evaluation.cases
+        .map(item => item.expected?.capability)
+        .filter(Boolean)
+    )
+    expect(capabilities.has('schedule.create')).toBe(true)
+    expect(capabilities.has('schedule.update')).toBe(true)
+    expect(capabilities.has('reading.create')).toBe(true)
+    expect(capabilities.has('reading.mark_read')).toBe(true)
+    expect(capabilities.has('course.brief.mark_read')).toBe(true)
+    expect(
+      evaluation.cases.some(item =>
+        item.expected?.scope === 'all_unread'
+      )
+    ).toBe(true)
+    expect(
+      evaluation.cases.some(item =>
+        item.input.includes('时间改到十点')
+      )
+    ).toBe(true)
+    expect(
+      evaluation.cases.some(item =>
+        item.expected?.policy === 'confirm'
+      )
+    ).toBe(true)
+    expect(
+      evaluation.cases.some(item =>
+        item.expected?.policy === 'deny_exact_wechat_reminder'
+      )
+    ).toBe(true)
+  })
+
+  // router-evaluation-contract-v2: evaluator safety is asserted by executable
+  // controller tests and fixed-set output, never by matching handler prose/comments.
+  test('the fixed-set evaluator enforces no-write preflight and policy expectations', () => {
+    const script = fs.readFileSync(
+      path.join(
+        process.cwd(),
+        'scripts/openclaw-agent/evaluate-fixed-set.mjs'
+      ),
+      'utf8'
+    )
+    expect(script).toContain('evaluation-safety-preflight')
+    expect(script).toContain("payload.action !== 'router_evaluation'")
+    expect(script).toContain("expected.policy === 'confirm'")
+    expect(script).toContain('forbiddenReminderFields')
+  })
+})

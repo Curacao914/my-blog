@@ -996,3 +996,15 @@ Law-Tech 微信 Agent 采用：
 ## 仓库维护要求
 
 本文件是产品宪法层文档。只有产品原则或总架构确实改变时才修改；具体功能增减通常只更新 Capability Registry 和 `ROADMAP.md`。任何修改本文件的 PR 必须在 `DECISIONS.md` 记录原因、替代方案和兼容影响。
+
+
+## Phase 1 稳定接口落地（2026-07-03）
+
+- `RoutePlan`：模型唯一输出，包含 decision/domain/capability/operation/scope/target/parameters/risk/confidence；
+- `Capability Card`：代码注册的能力、resource/tool、scope、risk、confirmation 与幂等声明；
+- `Resource`：只返回真实对象候选和 QuerySpec，不接受自由 SQL；
+- `QuerySpec`：resource + filters + sort + limit + cursor；
+- `MutationSpec`：命名 tool + 真实 targetIds + 白名单 patch/create + preconditions + idempotencyKey + traceId；
+- `Session State`：lastSelected/lastCreated/lastUpdated/lastResultSet/pendingConfirmation/recentTurns/recentTraces；
+- `Risk Policy`：read、reversible_write、bulk_write、destructive、privileged 五级；
+- 代码位置：`lib/openclaw/agent/*`；HTTP 入口：`pages/api/integrations/openclaw/command.js`；验收 trace：`pages/api/integrations/openclaw/traces.js`。

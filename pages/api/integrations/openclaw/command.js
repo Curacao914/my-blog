@@ -24,6 +24,10 @@ import {
   describeOpenClawCandidate,
   executeOpenClawQuery
 } from '@/lib/server/openclawQueries'
+import {
+  handleModelFirstOpenClawCommand,
+  modelFirstOpenClawEnabled
+} from '@/lib/server/openclawAgentHandler'
 
 function readBearerToken(req) {
   const authorization = String(req.headers.authorization || '')
@@ -173,6 +177,10 @@ function lastObjectFromPayload(payload = {}, fallback = null) {
 }
 
 export default async function handler(req, res) {
+  if (modelFirstOpenClawEnabled(req)) {
+    return handleModelFirstOpenClawCommand(req, res)
+  }
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
     return res.status(405).json({ ok: false, error: 'Method not allowed' })

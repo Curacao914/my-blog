@@ -169,6 +169,8 @@ MANIFEST-SHA256.txt
 
 - workflow 固定为 `.github/workflows/docker-ghcr.yaml`，required job/check 名称固定为 `build`；
 - 禁止对 required workflow 使用 workflow-level `paths-ignore`；纯文档变更在 job 内判定并快速成功；
-- pull request 只构建非纯文档变更；main、tag 与手动运行始终构建；
+- pull request 与 main 非纯文档变更仅验证 `linux/amd64`，required `build` 不发布镜像；版本标签或显式 `workflow_dispatch publish=true` 才发布，multiarch 仅用于双架构发布；
 - Docker 无数据库构建必须传入 `LAW_TECH_STATIC_PREFETCH_MODE=skip`；
 - 使用 BuildKit GHA cache 与 concurrency cancel-in-progress。
+
+- 代码 PR/main 的 `build` check 目标 600 秒、硬上限 900 秒；超限不得合并并宣称闭环。
