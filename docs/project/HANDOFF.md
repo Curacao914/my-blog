@@ -36,19 +36,28 @@
 
 ## 当前唯一主线
 
-按照 `AGENT-ARCHITECTURE.md` 重建 Schedule / Reading / Course 的 model-first 控制平面。
+先完成 PR #12 回退与治理闭环，再按照 `AGENT-ARCHITECTURE.md` 的 v2 修订重建 Schedule / Reading / Course 控制平面。
 
-禁止从补正则开始。第一阶段应包括：
+截至 2026-07-04：
 
-- Router；
-- Capability Registry；
-- Resource / Tool；
-- 实体解析；
-- 课程简报 single/matching/all_unread；
-- 基础结构化上下文；
-- 风险策略；
-- trace 和评估；
-- Preview 与真机验收。
+- GitHub main 为 `9163826c3a78fa1254683c7682286a528a8ce280`；
+- Production rollback redeploy `dpl_3DRvnp53MBjXdECgRd6nx87WVRCS` Ready，`OPENCLAW_AGENT_V1_ENABLED` 已在 Production 添加为 false；
+- authenticated command 与真实微信 legacy 接管尚待验证；
+- main 已恢复保护：必须经 PR，required check 为 `build`，禁止 force-push/deletion；
+- Supabase live audit 因 Sensitive 值不可读未完成；
+- 腾讯云 live audit 因 SSH public-key 拒绝未完成。
+
+上述真实微信、Supabase 和腾讯云三项未闭环前，不开始 Agent Studio 代码 PR。
+
+禁止从补正则或修补 PR #12 Router 开始。实施顺序固定为：
+
+1. 完整 Agent Studio + Evaluation Kernel；
+2. 完整 default-off Production Shadow；
+3. 严格自然样本门禁后的只读 Canary；
+4. 单条可逆写 Canary；
+5. matching/all_unread、上下文修改与 destructive confirmation。
+
+模型只生成 UserIntent；确定性 Planner 与 Semantic Gate 生成并授权 RoutePlan。失败样例进入评估集，不进入 Production prompt 当个例补丁。
 
 ## 同时保留的等待线
 

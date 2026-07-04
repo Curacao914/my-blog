@@ -1,8 +1,32 @@
 # Law-Tech 微信 AI Agent 产品纲领与目标架构 v1.0
 
-**状态：产品宪法／架构冻结稿**
+**状态：产品宪法／v2 权限分层修订稿**
 **日期：2026-07-03**
 **适用范围：微信 ClawBot、Law-Tech 网站后台及后续所有自然语言控制入口**
+
+> 2026-07-04 修订：本文的自然语言优先、模型不得直接 SQL、真实对象、Resource/Tool 分离、风险门禁和结构化上下文原则继续有效。下文原 v1 `Router → capability` 示例已被真实微信事故证明不足；凡与本修订冲突，以本修订和 `DECISIONS.md` D-015—D-018 为准。
+
+## v2 权限分层修订
+
+新的稳定主链路是：
+
+```text
+Message
+→ UserIntent（模型输出，不含 capability/tool/risk/SQL）
+→ Deterministic Planner（代码选择注册能力）
+→ Semantic Gate（代码检查语义一致性）
+→ Resource / Entity Resolution（只读真实候选）
+→ Risk Policy（风险由 Capability Card 派生）
+→ Tool（命名工具和真实 ID）
+→ Response（只依据工具结果）
+→ Trace
+```
+
+`UserIntent` 描述用户要做什么、作用于什么对象、提取了哪些字段、引用了什么上下文以及仍有哪些不确定项。模型不能在这一阶段输出 capability 或工具名。
+
+`RoutePlan` 改为代码产物，不再是模型的直接执行指令。Planner 只能从已发布的版本化 Capability Registry 选择能力；Semantic Gate 必须检查 action、domain、objectType、scope 与能力卡一致。`agent.help`、只读、写入和删除都必须经过同一语义门禁，不能存在提前返回的权限旁路。
+
+首个交付闭环是完整 Agent Studio + Evaluation Kernel，不接入真实微信；随后才是 default-off、无 Tool 的 Production Shadow。任何 Canary 均为后续独立 PR。
 
 ---
 

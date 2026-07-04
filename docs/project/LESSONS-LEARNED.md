@@ -28,6 +28,28 @@
 
 多系统排障曾从语义误写扩散到插件发送上下文。以后每轮固定说明：唯一目标、已完成、未完成、明确不做；新支线进入 parking lot。
 
+### 合法 JSON 不等于语义授权
+
+PR #12 的 Router 输出通过了 JSON、枚举和 capability 注册校验，但真实日程创建请求仍被模型路由成 `agent.help`。Controller 又在 Resource 与 Risk Policy 前直接返回帮助文案，导致错误计划没有第二道语义防线。
+
+规避：模型只输出无工具权限的 `UserIntent`；RoutePlan 由确定性 Planner 生成；Semantic Gate 检查 action/domain/object/scope 与 Capability Card 一致。任何 capability，包括 help，都不得绕过该门禁。
+
+### mock 正确 Router 不能证明真实模型正确
+
+Controller 测试将 `routeWithModel` mock 成预期计划，只证明“Router 正确时后续链路可工作”。真实模型固定集没有成为合并阻断，CI 和 Production Ready 因而掩盖了核心产品失败。
+
+规避：每个配置和模型版本必须运行真实模型 development + holdout；安全许可由确定性断言判断；真实 Shadow trace 达标前不得进入 Canary。
+
+### Agent 上线必须 default-off
+
+PR #12 在未配置 feature flag 时于非 test 环境默认开启，使代码合并自动变成 Production 流量切换。
+
+规避：所有新 Agent 模式默认关闭；Studio、Shadow、只读 Canary 和写 Canary 分别使用显式开关和独立验收。未配置等同于关闭。
+
+### 调整语义不能变成追加失败原句
+
+失败语句可以进入评估集，但不得作为 production prompt 中的专门提示词补丁。每个失败必须归因到 ontology、Intent schema、Planner、Resource、Entity resolver、Policy 或模型能力，并修改对应层的通用机制。
+
 ## Git 与发布
 
 ### 集成写权限不可靠

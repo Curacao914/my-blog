@@ -142,3 +142,31 @@
 - 新增三个领域的 Registry、Resource、实体解析、Policy、Tools、Session 与 trace；
 - 数据库边界为零 migration，复用现有会话 JSON 与领域表；
 - 验收分为代码/测试、Preview、Production、真实微信和课程自然周期，禁止混写。
+
+## 2026-07-04
+
+### PR #12 merge 与真实微信失败
+
+- PR #12 merge commit：`9163826c3a78fa1254683c7682286a528a8ce280`；Vercel 与 `build` check 成功。
+- Production 未显式配置关闭 flag 时，v1 Agent 默认接管。
+- 真实微信明确日程创建请求被错误路由到 `agent.help`，返回整段能力说明且未创建日程。
+- 结论：代码、单测、CI 和 deployment 存在，但产品验收失败；停止扩展 v1 Router。
+
+### Production feature-flag 回退
+
+- 在 Vercel Production 添加 `OPENCLAW_AGENT_V1_ENABLED=false`；变量类型为 Sensitive。
+- 从 PR #12 exact main 重新部署，deployment：`dpl_3DRvnp53MBjXdECgRd6nx87WVRCS`。
+- deployment Ready，`law-tech.dev` alias 已切换，首页 HTTP 200，未鉴权 command 返回 401。
+- CLI 无法读取 Sensitive token，authenticated command 与真实微信 legacy 接管尚未在本窗口完成；不得将本条表述为 Production E2E 已通过。
+
+### 治理与实时审计差异
+
+- 初始 GitHub public branch API 返回 `main protected=false`；恢复 Keychain 中的 GitHub CLI 认证后，已启用 branch protection：PR required、`build` required、enforce admins、禁止 force-push/deletion、要求解决 review conversations。
+- Vercel CLI 对 Supabase Sensitive 变量返回空值，无法完成 live schema/data 复核。
+- 腾讯云已知 SSH key 在本窗口返回 `Permission denied (publickey)`；更早同日 active/readyz 证据仅保留为历史快照。
+
+### v2 架构冻结
+
+- 模型只输出无 capability/tool/risk/SQL 的 UserIntent；代码生成并校验 RoutePlan。
+- 按完整闭环推进：Agent Studio + Evaluation Kernel → Production Shadow → 只读 Canary → 可逆写 Canary。
+- Studio 使用固定安全拓扑和版本化配置；禁止自由 prompt、任意代码节点或降低风险策略。

@@ -160,6 +160,30 @@ MANIFEST-SHA256.txt
 
 禁止盲目重跑完整脚本。
 
+## 微信 Agent 发布与回滚
+
+- PR #12 v1 仅作为失败实验保留；Production 必须显式设置 `OPENCLAW_AGENT_V1_ENABLED=false`。
+- 新 Agent 的未配置状态必须等同于关闭。禁止“非 test 默认开启”。
+- 发布顺序固定为 Studio/Evaluation → Shadow → 只读 Canary → 可逆写 Canary；每一步是独立 PR、独立 flag 和独立回滚锚点。
+- Shadow 不回复、不调用 Tool、不改变 legacy 结果；模型或 trace 失败只记录，不影响用户路径。
+- 每个配置版本先跑 development 和 holdout。真实语句可以进入评估数据，但不得被拼进 Production system prompt 当个例补丁。
+- 简单工具成功回复使用确定性模板；是否允许写入、目标 ID、数量和 before/after 不交给 LLM judge 决定。
+
+Production feature-flag 回退流程：
+
+```text
+确认当前 exact main/deployment
+→ 在 Production 设置 OPENCLAW_AGENT_V1_ENABLED=false
+→ redeploy 同一 exact commit
+→ vercel inspect 确认 Ready 与 alias
+→ authenticated command 查询
+→ 真实微信查询
+→ 可清理测试事项创建/删除
+→ 更新项目文档
+```
+
+Vercel CLI 对 Sensitive 变量可能只返回存在性而不返回值。不得把 `env ls` 或空的 `env pull` 当作值验证；最终以新 deployment 和 authenticated/真实微信行为为准。
+
 ## 文档发布
 
 任何改变运行事实、架构或路线的 PR 都必须根据 `docs/project/README.md` 更新文档。PR 描述不得把“计划合并”“已 merge”和“Production 已部署”混在一起。
@@ -174,3 +198,4 @@ MANIFEST-SHA256.txt
 - 使用 BuildKit GHA cache 与 concurrency cancel-in-progress。
 
 - 代码 PR/main 的 `build` check 目标 600 秒、硬上限 900 秒；超限不得合并并宣称闭环。
+- `build` 名称存在不等于它已被 branch protection 强制。每次治理审计同时检查 GitHub branch/ruleset；若 `protected=false`，必须明确记录为未受保护。

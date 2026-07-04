@@ -1,6 +1,6 @@
 # 当前状态
 
-> 核验日期：2026-07-03
+> 核验日期：2026-07-04
 > 运行事实会变化；交接前必须重新执行本页“实时核验”命令。
 
 ## 已验证功能基线
@@ -24,17 +24,26 @@
 | #5 | fix: add semantic write gates for WeChat commands | `6e6ba5f0fd1a199b2636e5c706c4847f0be0080f` | 语义写入门禁和 outbound 过滤代码 |
 | #6 | fix: unify OpenClaw unknown intent handling | `5e822604ff579356e3de621470d360fd30fdd5fa` | unknown/create 策略统一 |
 | #7 | fix: normalize OpenClaw relay base URL | `6382b37a6d91c49be96861b4b29a6a39d85a3784` | capture URL 基础域规范化 |
+| #8 | docs: establish Law-Tech project governance | `85dfb514d9db5ae930b87b0f72b4124fad4b2ce7` | `docs/project` 已进入 main |
+| #9 | ci: make Docker required check fast and deterministic | `6db4e8a8e4b216f95b1b5f330905a084929ae78d` | 文档 fast-success、BuildKit cache、静态预取 skip |
+| #10 | ci: decouple required validation from GHCR publishing | `f5f96ca71ead7c70606933ee1095f725630fe7ca` | required validation 与镜像发布解耦 |
+| #11 | docs: record Docker CI closure | `f016e0d2b65c32c4c858dad1e0496937bec81107` | 记录 CI 闭环 |
+| #12 | feat: add model-first Agent and cut Docker build time | `9163826c3a78fa1254683c7682286a528a8ce280` | Agent 真实微信验收失败；CI 降时部分保留 |
 
 ## Production 与数据库
 
 - Production：`https://law-tech.dev`；
 - Vercel project：`curacaos-projects/curacao-top`；
+- 当前 GitHub main：`9163826c3a78fa1254683c7682286a528a8ce280`；
+- 2026-07-04 已在 Production 新增 `OPENCLAW_AGENT_V1_ENABLED=false` 并从该 main commit 重新部署；deployment `dpl_3DRvnp53MBjXdECgRd6nx87WVRCS` 为 Ready，`law-tech.dev` alias 已指向该 deployment；
+- 首页 HTTP 200；authenticated command 与真实微信 legacy 接管仍待用户侧真机验证，不能只凭变量存在宣称完成；
 - Production Supabase ref：`htbbkcxevcouwehpugwc`；
 - 7 列 schedule semantics additive repair 已完成隔离恢复、隔离验收和 Production 执行；
 - migration ledger 已建立；
 - 不伪造历史 migration 执行记录；
 - `openclaw_conversation_states`、`course_brief_reads`、`message_deliveries` 等对象已进入真实链路；
 - 两账号隔离有真实测试，但仍需持续做 guessed-ID、RLS 和导出/删除审计。
+- 本轮 Vercel CLI 对 Sensitive 环境变量只返回空值，无法据此完成 Supabase live schema/data 复核；数据库状态继续沿用旧证据并明确标记未实时复核。
 
 ## 腾讯云 / OpenClaw
 
@@ -64,6 +73,7 @@ law-tech-wechat-relay.service
 - 腾讯 runtime 的完整 `local-runner/base-url` 包尚未完成最终落地；
 - 独立 CLI 与 Gateway 的 Weixin 插件加载上下文仍需单独闭环；
 - 该支线不得继续阻塞 Agent 产品重构。
+- 2026-07-04 当前窗口使用已知 SSH key 连接返回 `Permission denied (publickey)`；更早同日审计记录过三个 user services active、readyz 正常，但该结果不是本轮实时复核。
 
 ## 微信 Agent
 
@@ -75,7 +85,7 @@ law-tech-wechat-relay.service
 - 对话状态入库；
 - outbound/self/assistant/system 消息过滤。
 
-当前产品缺陷：现有链路是正则分类和规则门禁先决定意图，模型只在后段整理字段，不能可靠支持自然语言实体解析、批量范围和连续指代。
+PR #12 曾将 Production 默认切入一次模型直接选择 capability 的 Agent。真实微信发送明确日程创建请求时，模型错误选择 `agent.help`，系统返回能力说明且未创建日程。该失败证明“合法 RoutePlan”不等于“语义正确的执行授权”。
 
 真实失败样例：
 
@@ -84,7 +94,7 @@ law-tech-wechat-relay.service
 国际法6月3号的笔记读完了
 ```
 
-因此下一主线是 `AGENT-ARCHITECTURE.md` 所定义的 model-first Agent Controller，而不是继续补正则。
+因此 PR #12 Agent 已停止扩展并通过 Production feature flag 回退。下一主线是两阶段语义架构：模型只生成不含 capability/tool/risk 的 `UserIntent`，确定性 Planner、Semantic Gate、真实 Resource 和 Risk Policy 再生成并授权 RoutePlan。不得继续修补 v1 Router，也不得回到正则分类器补词。
 
 历史误创建 Reading `未读课程简报已全部读完` 尚未删除，应在新 Agent 真机验收后独立备份、唯一性校验并清理。
 
@@ -99,10 +109,11 @@ law-tech-wechat-relay.service
 
 ## 当前 P0
 
-1. 按 Agent 宪法实现 Schedule / Reading / Course 的 model-first 控制平面；
-2. 等待课程最终调度版本自然完整周期；
-3. 完成腾讯云迁移后的备份、日志、heartbeat、单实例与恢复硬化；
-4. 建立统一 E2E、trace、监控与数据质量闭环。
+1. 完成 PR #12 Production 回退的真实微信验收、main branch protection 和运行事实复核；
+2. 完整交付 Agent Studio + Evaluation Kernel，未完成不得开始 Shadow Runtime；
+3. 完整交付 default-off、无写入的 Production Shadow Runtime，并等待严格自然样本门禁；
+4. 等待课程最终调度版本自然完整周期；
+5. 完成腾讯云迁移后的备份、日志、heartbeat、单实例与恢复硬化。
 
 ## 实时核验
 
@@ -110,21 +121,24 @@ law-tech-wechat-relay.service
 cd "/Users/curacao/Script/个人主页/my-blog-clean"
 git fetch origin --prune --tags
 git rev-parse origin/main
-gh pr list --state open
-curl -fsS https://law-tech.dev/api/health || true
+curl -fsSL 'https://api.github.com/repos/Curacao914/my-blog/pulls?state=open&per_page=100'
+curl -fsSL 'https://api.github.com/repos/Curacao914/my-blog/branches/main'
+vercel inspect https://law-tech.dev
+curl -fsS https://law-tech.dev/ >/dev/null
 ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user is-active openclaw-gateway.service law-tech-cloudflared.service law-tech-wechat-relay.service; curl -fsS http://127.0.0.1:18789/readyz'
 ```
 
 
 ## CI / Docker 独立闭环（已合并）
 
-- Docker required job/check 名称仍为 `build`；不使用 workflow-level `paths-ignore`。
+- Docker job/check 名称仍为 `build`；不使用 workflow-level `paths-ignore`。
 - 纯文档 PR 在同一 `build` job 内快速成功；未知或代码路径默认执行 Docker build。
 - Docker 构建使用 BuildKit GHA cache，并启用 concurrency cancel-in-progress。
 - 无数据库 Docker 构建显式传入 `LAW_TECH_STATIC_PREFETCH_MODE=skip`，立即跳过 Notion 与数据库静态预取。
 - CI PR #9 已合并，merge commit：`6db4e8a8e4b216f95b1b5f330905a084929ae78d`；纠正 PR #10 已将 required PR/main validation 与 GHCR 发布解耦，merge commit：`f5f96ca71ead7c70606933ee1095f725630fe7ca`；corrected main 验收锚点：`f5f96ca71ead7c70606933ee1095f725630fe7ca`。
 - docs-only 验证 commit：`08a24bce38034bcd05072ec279369a0bce6f30e9`；同名 `build` check 成功，运行 13.0 秒。
 - 项目治理 PR #8 merge anchor：`85dfb514d9db5ae930b87b0f72b4124fad4b2ce7`。
+- GitHub `main` 已于 2026-07-04 恢复 branch protection：必须经 PR，required check 为 `build`，管理员同样受约束，禁止 force-push/deletion，并要求解决 review conversations。
 
 
 ## CI / Docker 构建降时第二阶段（本 PR）
@@ -136,13 +150,10 @@ ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user i
 - PR/main 的 `build` 目标为 600 秒内，900 秒为拒绝合并的硬上限；实际耗时必须由 exact-SHA check 记录。
 
 
-## Model-first Agent Phase 1（本 PR）
+## PR #12 Agent 事故与回退
 
-- Production 默认进入 model-first Controller；`NODE_ENV=test` 保留 legacy 路径以兼容既有回归，显式 `OPENCLAW_AGENT_V1_ENABLED=false` 可人工回滚。
-- 模型输出严格 RoutePlan；代码通过 Capability Registry、Resource、实体解析、Risk Policy 与 Tool 执行。
-- 模型失败、输出无效或对象不唯一时停止，不退化为正则猜测写入。
-- 首期覆盖 Schedule、Reading、Course；课程简报支持 `single`、`matching`、`all_unread`。
-- 复用 `openclaw_conversation_states.state` 保存结构化 Session State 与有限 trace；本 PR 不新增数据库 migration。
-- before/after、MutationSpec、idempotency key 与失败明细进入 trace/响应；批量结果不伪装为全成功。
-- 固定自然语言评估集、Preview router-only 评估和真实微信验收必须分别记录；合并前不得表述为 Production 已验收。
-- 前置 CI merge commit：`f5f96ca71ead7c70606933ee1095f725630fe7ca`。
+- v1 代码、测试和 CI 存在，Production 也曾部署；真实微信产品验收失败。
+- 根因是模型直接选择 capability，而校验层只验证格式、枚举和注册状态；`agent.help` 在 Resource/Policy 前即可返回。
+- 2026-07-04 已设置 Production-only feature flag 为 false 并完成 Ready redeploy；真实微信 legacy 接管尚待真机确认。
+- v1 代码和 PR #12 保留为失败证据，不继续追加提示词、关键词或同义词规则。
+- 下一独立代码闭环是完整 Agent Studio 与评估内核；该 PR 不接入真实微信流量。
