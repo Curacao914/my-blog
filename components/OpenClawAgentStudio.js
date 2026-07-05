@@ -236,10 +236,25 @@ export function OpenClawAgentStudio() {
   }
 
   function evaluate() {
-    return perform('evaluate', () => request('/api/settings/openclaw-agent/evaluate', {
-      method: 'POST',
-      body: JSON.stringify({ environment, configId: selected.id })
-    }), '完整评估已完成。')
+    return perform('evaluate', async () => {
+      let runId = latestRun?.status === 'running' ? latestRun.id : null
+      while (true) {
+        const result = await request('/api/settings/openclaw-agent/evaluate', {
+          method: 'POST',
+          body: JSON.stringify({
+            environment,
+            configId: selected.id,
+            ...(runId ? { runId } : {})
+          })
+        })
+        if (result.done) return result
+        runId = result.run?.id
+        setNotice({
+          kind: 'info',
+          text: `评估进行中：${result.completedCases}/${result.totalCases}`
+        })
+      }
+    }, '完整评估已完成。')
   }
 
   function publish() {

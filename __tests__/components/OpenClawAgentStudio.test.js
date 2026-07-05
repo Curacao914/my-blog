@@ -163,7 +163,17 @@ describe('OpenClawAgentStudio', () => {
       }))
       .mockImplementationOnce(() => apiResponse({
         ok: true,
-        run: { id: 'run-1', status: 'passed' }
+        done: false,
+        run: { id: 'run-1', status: 'running' },
+        completedCases: 24,
+        totalCases: 150
+      }))
+      .mockImplementationOnce(() => apiResponse({
+        ok: true,
+        done: true,
+        run: { id: 'run-1', status: 'passed' },
+        completedCases: 150,
+        totalCases: 150
       }))
       .mockImplementationOnce(() => apiResponse({
         ok: true,
@@ -183,6 +193,14 @@ describe('OpenClawAgentStudio', () => {
       '/api/settings/openclaw-agent/evaluate',
       expect.objectContaining({ method: 'POST' })
     ))
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/settings/openclaw-agent/evaluate',
+      expect.objectContaining({
+        body: JSON.stringify({
+          environment: 'preview', configId: 'config-1', runId: 'run-1'
+        })
+      })
+    )
     expect(await screen.findByText('99.0%')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '发布此版本' })).toBeEnabled()
   })
