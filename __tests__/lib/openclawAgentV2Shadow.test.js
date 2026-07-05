@@ -103,6 +103,26 @@ describe('OpenClaw Agent v2 shadow runtime', () => {
     expect(fetchImpl).not.toHaveBeenCalled()
   })
 
+  it('rejects model-originated session control without matching session state', () => {
+    const profile = buildAgentProfile()
+    const confirm = intent({
+      action: 'confirm', domain: 'agent', objectType: 'agent', scope: 'single'
+    })
+    const confirmPlan = buildRoutePlan({ intent: confirm, profile })
+    expect(evaluateSemanticGate({ intent: confirm, plan: confirmPlan }).reasons)
+      .toContain('no_pending_confirmation')
+
+    const select = intent({
+      action: 'select', domain: 'agent', objectType: 'agent', scope: 'selected'
+    })
+    const selectPlan = buildRoutePlan({ intent: select, profile })
+    expect(evaluateSemanticGate({
+      intent: select,
+      plan: selectPlan,
+      resolution: { status: 'missing' }
+    }).reasons).toContain('entity_missing')
+  })
+
   it('reads a published profile, observes resources and records a trace without a Tool dependency', async () => {
     const profile = buildAgentProfile()
     const saveTrace = jest.fn().mockResolvedValue({ id: 'trace-1' })

@@ -195,5 +195,5 @@
 - PR #14 合并，merge commit `9042a93641da292150040bd7ef933ec802be0599`；未产生 published Agent profile。
 - 从 exact main 创建 `codex/agent-v2-shadow-20260705`，提交 `16e6052d` 并创建 Draft PR #15。
 - PR #15 实现共享 strict Interpreter、代码所有的 Capability Registry/Planner/Semantic Gate、Schedule/Reading/Course 只读 Resource、真实对象/结构化上下文解析、零模型 Session Control、default-off `waitUntil` Shadow 和独立加密 trace；未导入业务 Tool。
-- 5 suites / 42 tests、`git diff --check`、JSON 解析和 `LAW_TECH_STATIC_PREFETCH_MODE=skip` build 通过。
+- 5 suites / 43 tests、`git diff --check`、JSON 解析和 `LAW_TECH_STATIC_PREFETCH_MODE=skip` build 通过。
 - Production Studio migration 前备份两次停在 Supabase Management API 临时登录角色初始化；0B 文件不算备份，已停止且未执行数据库写入。Production Studio/Shadow migration、Preview、Production 与微信 Shadow 仍未验收。

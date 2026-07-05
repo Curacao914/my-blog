@@ -131,7 +131,7 @@
       "tool_imports": false,
       "trace_migration": "included_not_applied",
       "production_enabled": false,
-      "targeted_tests": "5_suites_42_tests_passed",
+      "targeted_tests": "5_suites_43_tests_passed",
       "local_build": "passed_with_static_prefetch_skip"
     },
     "execution_order": [

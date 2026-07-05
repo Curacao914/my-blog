@@ -184,4 +184,4 @@ ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user i
 - confirm、cancel 和已存在结果集的序号选择使用零模型 Session Control 协议；普通自然语言仍由模型理解，不回退到 legacy 正则写入；
 - `OPENCLAW_AGENT_V2_SHADOW_ENABLED` 未显式为 true 时关闭；Shadow 使用 `waitUntil`，不回复、不导入 Tool、不改变 legacy 结果；
 - 新增独立 trace migration：原文与 legacy 回复 AES-256-GCM 加密，sender/thread/message 标识哈希化，30 天到期清理；不修改业务表；
-- 5 个定向 suites / 42 tests、`git diff --check` 和静态预取 skip build 通过；Production migration、Preview、Production Shadow 与真实微信 Shadow 均尚未验收。
+- 5 个定向 suites / 43 tests、`git diff --check` 和静态预取 skip build 通过；Production migration、Preview、Production Shadow 与真实微信 Shadow 均尚未验收。
