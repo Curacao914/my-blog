@@ -28,6 +28,8 @@ Message
 
 首个交付闭环是完整 Agent Studio + Evaluation Kernel，不接入真实微信；随后才是 default-off、无 Tool 的 Production Shadow。任何 Canary 均为后续独立 PR。
 
+截至 2026-07-04，v2 contracts、受约束 AgentProfile、150 条固定评估集、Studio 与 additive database boundary 已在独立分支实现并通过隔离数据库事务验收；在 PR、Preview、真实配置模型评估和 Production migration 完成前，状态仍是“实现中”，不是已发布能力。
+
 ---
 
 ## 一、产品定义

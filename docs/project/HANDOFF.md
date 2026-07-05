@@ -36,18 +36,18 @@
 
 ## 当前唯一主线
 
-先完成 PR #12 回退与治理闭环，再按照 `AGENT-ARCHITECTURE.md` 的 v2 修订重建 Schedule / Reading / Course 控制平面。
+PR #12 回退与治理闭环已由 PR #13 合并；当前只推进 Agent Studio + Evaluation Kernel，完成前不开始 Shadow Runtime。
 
 截至 2026-07-04：
 
-- GitHub main 为 `9163826c3a78fa1254683c7682286a528a8ce280`；
+- GitHub main 为 `cd963867682ea388cb45aa30687631a235288c62`；
 - Production rollback redeploy `dpl_3DRvnp53MBjXdECgRd6nx87WVRCS` Ready，`OPENCLAW_AGENT_V1_ENABLED` 已在 Production 添加为 false；
 - 真实微信 legacy 查询及可清理事项创建/删除已通过；
 - main 已恢复保护：必须经 PR，required check 为 `build`，禁止 force-push/deletion；
 - Supabase Production 已完成只读 live audit，项目 healthy，六个关键表均存在且可读；
 - 腾讯云 SSH 已恢复，三个 user services active/running，readyz 为 true。
 
-待本回退与治理文档 PR 合并后，才开始 Agent Studio 代码 PR。
+Agent Studio 独立分支 `codex/agent-studio-v1-20260704` 的 Draft PR #14 已形成 release candidate `490a5367`。固定拓扑、三张 additive 表、隔离 migration/事务、150 条 development/holdout、可恢复 24 条分批账本、严格 Function Schema、UI/API/数据库发布门禁均已验收。strict Flash/Pro 意图均为 52%，安全分别 97.33%/99.33%，因此都被正确拒绝发布；没有 published profile，也没有接入微信流量。下一步是合并 PR #14、应用 Production additive migration/验收控制面，然后另开 default-off Shadow PR；未达门禁的配置不得启用 Shadow。
 
 禁止从补正则或修补 PR #12 Router 开始。实施顺序固定为：
 

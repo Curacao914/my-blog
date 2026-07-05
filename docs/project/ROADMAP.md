@@ -9,8 +9,14 @@
 - [x] PR #12 失败后停止扩展 direct `LLM → capability` Router；
 - [x] Production 设置 `OPENCLAW_AGENT_V1_ENABLED=false` 并完成 Ready redeploy；
 - [x] 完成真实微信 legacy 接管验收、main branch protection 和 Supabase/Tencent 只读复核；
-- [ ] 合并回退与治理文档 PR；
+- [x] 合并回退与治理文档 PR #13，merge `cd963867682ea388cb45aa30687631a235288c62`；
 - [ ] 完整交付 Agent Studio + Evaluation Kernel：固定可视拓扑、版本配置、development/holdout、真实模型测试、发布和回滚；
+  - [x] 本地协议、Studio、三张 additive 表、150 条 fixed set、测试、ESLint、build 与隔离数据库事务验收；
+  - [x] 创建独立 Draft PR #14，首轮 `build`、CodeQL、Analyze 与 Vercel checks 通过；
+  - [x] 隔离 Supabase 配置下的 Vercel Preview owner 页面、固定拓扑和空配置 GET 验收；
+  - [x] Preview owner 草稿创建、保存、隔离数据库边界和失败发布门禁验收；
+  - [x] 完成 strict Function Schema、可恢复分批评估、真实 Flash/Pro 对比；不合格草稿被三层门禁拒绝发布；
+  - [ ] 合并 PR #14，并完成 Production additive migration/控制面部署验收；不存在合格 published profile 时保持 Agent runtime 关闭；
 - [ ] 完整交付 `UserIntent → Deterministic Planner → Semantic Gate`；
 - [ ] 完整交付 Schedule、Reading、Course Capability/Resource/实体解析；
 - [ ] 完整交付 default-off Production Shadow、独立加密 trace、成本和延迟观测；
@@ -245,7 +251,7 @@ Agent、课程和数据基础稳定后再扩张：
 - [x] PR #12 代码、单测和 Production deployment 曾存在；
 - [x] 真实微信验收发现明确日程创建被错路由到 `agent.help`；
 - [x] v1 进入失败实验状态并触发 Production feature-flag 回退；
-- [ ] v2 Studio/Evaluation 独立闭环；
+- [ ] v2 Studio/Evaluation 独立闭环（本地实现与隔离 DB 验收完成，等待 PR/Preview/Production）；
 - [ ] v2 Shadow 独立闭环；
 - [ ] v2 只读 Canary 独立闭环；
 - [ ] v2 可逆写 Canary 独立闭环。

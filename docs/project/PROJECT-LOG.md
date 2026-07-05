@@ -170,3 +170,20 @@
 - 模型只输出无 capability/tool/risk/SQL 的 UserIntent；代码生成并校验 RoutePlan。
 - 按完整闭环推进：Agent Studio + Evaluation Kernel → Production Shadow → 只读 Canary → 可逆写 Canary。
 - Studio 使用固定安全拓扑和版本化配置；禁止自由 prompt、任意代码节点或降低风险策略。
+
+### 回退治理闭环与 Agent Studio 本地实现
+
+- PR #13 已合并，merge commit `cd963867682ea388cb45aa30687631a235288c62`；exact-main Production deployment `dpl_G6rgPZh2QM3Lh5hUhbrEUawsToMH` Ready，`law-tech.dev` HTTP 200。
+- 从该 exact main 创建 `codex/agent-studio-v1-20260704`；没有修改微信 command 入口、v1 Router 或业务 Tool。
+- 完成 v2 稳定契约、受约束版本配置、150 条 development/holdout 评估内核、owner-only Studio、三张 additive 数据表和数据库发布/回滚门禁。
+- 隔离 Supabase restore `ldciqxzczwpuhhgeinmc` 真实执行 migration；RLS、唯一 published、低于 98%/安全低于 100% 拒绝发布、published 不可变、rollback 生成新版本均通过，事务测试数据回滚为 0。
+- 本地 Agent Studio 9 suites / 66 tests、v1 回归 6 suites / 23 tests、增量 ESLint 与 Production build 通过。评估调用强制执行超时、token/成本预算；单条模型错误形成未执行结果并继续测试，不回退为规则猜测；草稿父版本必须属于同 owner、同 environment。
+- Draft PR #14 创建后，将 Vercel Preview 的 Supabase URL/service key 拆分为 Preview-only 覆盖并指向已迁移的隔离 restore；Production 环境变量未修改。隔离配置后的 `build` 2m36s、CodeQL、Analyze 与 Vercel checks 通过。
+- `preview.law-tech.dev` 已切到 commit `f72e0bda` 的 `dpl_1Esv5N6o5cbM5K13WmN4aX6s6nmH`；owner 创建并保存 v1 草稿后，隔离 Supabase 仅有一条 `preview/draft` 配置。
+- 第一次 150 条评估暴露默认模型名错误：provider 仅接受 `deepseek-v4-flash`/`deepseek-v4-pro`，原值带 `deepseek/` 前缀；该轮 0 token/0 cost 且发布被拒。草稿修正后第二轮真实评估为总体 56%、意图 32%、安全 80%、failed，累计 20,187 input tokens、42,222 output tokens、500,474ms；102 个 intent mismatch、29 个 model error、21 个 unsafe write。未追加个例 prompt。
+- 两轮逐 case failure 明细导致 Studio GET 超过 30 秒；已改为数据库保留原始明细、API 聚合类别计数和代表消息。进一步 TDD 增加无 raw message 的逐 case 结构化 actual/error/usage 证据、通用数组形状与 domain/object 映射、`slots.query` 与代码 QuerySpec 的权限分离，以及缺省保守价格/未知价格预算失败。修正版本待 Preview 重跑。
+- commit `66042bd7` / deployment `dpl_5P8FtF4Po2Tqk2bC9kP6qfzMu4ky` checks 全通过。第三轮真实评估为总体 58%、意图 39.3%、安全 76.7%、USD 0.017674，仍被门禁拒绝；development 结构化 actual 证明是通用 ontology 和 uncertainty 读写门禁问题，未读取 holdout 期望明细。TDD 新增 `requestMode`/`additionalActions` 语言态、action/scope 语义和安全读取分离，待下一 Preview 重跑。
+- 第三轮数据库已完成但浏览器收到非 JSON 网关页；Studio 现按 content-type 安全解析，并在长评估连接中断时刷新服务器 run 状态，错误页不再污染控制面。
+- 将评估改为 24 条一批的可恢复账本协议，真实完成中断续跑 24→48→72→96→120→144→150；不再依赖单个长 HTTP 连接。
+- DeepSeek `json_schema` 不可用、Thinking 下 forced tool choice 被拒；依据官方 strict mode 规范改为 `/beta`、`thinking=disabled`、强制 `emit_user_intent` Function Schema。真实探针通过，content-only JSON 被代码拒绝。
+- strict Flash 150 条结果为总体 74.67%、意图 52%、安全 97.33%、USD 0.037189；strict Pro 为总体 75.67%、意图 52%、安全 99.33%、USD 0.116434。两者均未达门槛并被拒绝发布；未把 development 规则模拟写入生产代码。
