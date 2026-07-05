@@ -48,7 +48,7 @@ describe('OpenClaw Agent v2 model evaluator', () => {
           domain: 'schedule',
           objectType: 'schedule_item',
           scope: 'list',
-          slots: { requestMode: 'execute', additionalActions: [] },
+          slots: { requestMode: 'execute', additionalActions: [], values: [] },
           contextReferences: [],
           uncertainties: []
         }) } }],
@@ -67,12 +67,18 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     })
     expect(result.actual).toEqual(expect.objectContaining({
       domain: 'schedule',
-      slots: { requestMode: 'execute', additionalActions: [] },
+      slots: { requestMode: 'execute', additionalActions: [], values: [] },
       contextReferences: [],
       executionAllowed: true
     }))
     expect(result.inputTokens).toBe(100)
     expect(fetchImpl.mock.calls[0][1].headers.authorization).toBe('Bearer secret')
+    const requestBody = JSON.parse(fetchImpl.mock.calls[0][1].body)
+    expect(requestBody.response_format).toEqual(expect.objectContaining({
+      type: 'json_schema',
+      json_schema: expect.objectContaining({ name: 'user_intent_v2', strict: true })
+    }))
+    expect(requestBody.response_format.json_schema.schema.additionalProperties).toBe(false)
   })
 
   it('enforces the configured timeout and output-token ceiling on every model call', async () => {
@@ -85,7 +91,8 @@ describe('OpenClaw Agent v2 model evaluator', () => {
           choices: [{ message: { content: JSON.stringify({
             version: '2.0', intentId: 'v2-test', action: 'read',
             domain: 'schedule', objectType: 'schedule_item', scope: 'list',
-            slots: {}, contextReferences: [], uncertainties: []
+            slots: { requestMode: 'execute', additionalActions: [], values: [] },
+            contextReferences: [], uncertainties: []
           }) } }]
         })
       })
@@ -127,7 +134,7 @@ describe('OpenClaw Agent v2 model evaluator', () => {
       domain: 'schedule',
       objectType: 'schedule_item',
       scope: 'list',
-      slots: { requestMode: 'execute', additionalActions: [] },
+      slots: { requestMode: 'execute', additionalActions: [], values: [] },
       contextReferences: [],
       uncertainties: []
     })
@@ -159,7 +166,8 @@ describe('OpenClaw Agent v2 model evaluator', () => {
         choices: [{ message: { content: JSON.stringify({
           version: '2.0', intentId: 'v2-test', action: 'read',
           domain: 'schedule', objectType: 'schedule_item', scope: 'list',
-          slots: {}, contextReferences: [], uncertainties: []
+          slots: { requestMode: 'execute', additionalActions: [], values: [] },
+          contextReferences: [], uncertainties: []
         }) } }],
         usage: { prompt_tokens: 1000, completion_tokens: 1000 }
       })
@@ -202,19 +210,19 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     const uncertainRead = await interpretEvaluationCase({
       ...base,
       fetchImpl: jest.fn().mockResolvedValue(responseFor({
-        requestMode: 'execute', additionalActions: []
+        requestMode: 'execute', additionalActions: [], values: []
       }))
     })
     const negated = await interpretEvaluationCase({
       ...base,
       fetchImpl: jest.fn().mockResolvedValue(responseFor({
-        requestMode: 'negated', additionalActions: []
+        requestMode: 'negated', additionalActions: [], values: []
       }))
     })
     const secondaryWrite = await interpretEvaluationCase({
       ...base,
       fetchImpl: jest.fn().mockResolvedValue(responseFor({
-        requestMode: 'execute', additionalActions: ['delete']
+        requestMode: 'execute', additionalActions: ['delete'], values: []
       }))
     })
     expect(uncertainRead.actual.executionAllowed).toBe(true)
@@ -229,7 +237,8 @@ describe('OpenClaw Agent v2 model evaluator', () => {
         choices: [{ message: { content: JSON.stringify({
           version: '2.0', intentId: 'v2-test', action: 'read',
           domain: 'schedule', objectType: 'schedule_item', scope: 'list',
-          slots: {}, contextReferences: [], uncertainties: []
+          slots: { requestMode: 'execute', additionalActions: [], values: [] },
+          contextReferences: [], uncertainties: []
         }) } }],
         usage: { prompt_tokens: 6001, completion_tokens: 10 }
       })
@@ -260,7 +269,8 @@ describe('OpenClaw Agent v2 model evaluator', () => {
         choices: [{ message: { content: JSON.stringify({
           version: '2.0', intentId: 'v2-test', action: 'read',
           domain: 'schedule', objectType: 'schedule_item', scope: 'list',
-          slots: {}, contextReferences: [], uncertainties: []
+          slots: { requestMode: 'execute', additionalActions: [], values: [] },
+          contextReferences: [], uncertainties: []
         }) } }],
         usage: { prompt_tokens: 1000, completion_tokens: 1000 }
       })
@@ -289,7 +299,8 @@ describe('OpenClaw Agent v2 model evaluator', () => {
         choices: [{ message: { content: JSON.stringify({
           version: '2.0', intentId: 'v2-test', action: 'read',
           domain: 'schedule', objectType: 'schedule_item', scope: 'list',
-          slots: {}, contextReferences: [], uncertainties: []
+          slots: { requestMode: 'execute', additionalActions: [], values: [] },
+          contextReferences: [], uncertainties: []
         }) } }],
         usage: { prompt_tokens: 100, completion_tokens: 30 }
       })
@@ -315,7 +326,8 @@ describe('OpenClaw Agent v2 model evaluator', () => {
           choices: [{ message: { content: JSON.stringify({
             version: '2.0', intentId: 'v2-test-2', action: 'read',
             domain: 'schedule', objectType: 'schedule_item', scope: 'list',
-            slots: {}, contextReferences: [], uncertainties: []
+            slots: { requestMode: 'execute', additionalActions: [], values: [] },
+            contextReferences: [], uncertainties: []
           }) } }]
         })
       })

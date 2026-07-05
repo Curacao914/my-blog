@@ -1,5 +1,6 @@
 import {
   AGENT_V2_CONTRACT_VERSION,
+  USER_INTENT_JSON_SCHEMA,
   validateCapabilityCard,
   validateMutationSpec,
   validateQuerySpec,
@@ -13,6 +14,11 @@ import {
 } from '@/lib/openclaw/agent-v2/contracts'
 
 describe('OpenClaw Agent v2 stable contracts', () => {
+  const emptySlots = {
+    requestMode: 'execute',
+    additionalActions: [],
+    values: []
+  }
   const intent = {
     version: '2.0',
     intentId: 'intent-1',
@@ -21,9 +27,8 @@ describe('OpenClaw Agent v2 stable contracts', () => {
     objectType: 'schedule_item',
     scope: 'single',
     slots: {
-      date: '2026-07-04',
-      requestMode: 'execute',
-      additionalActions: []
+      ...emptySlots,
+      values: [{ key: 'date', value: '2026-07-04' }]
     },
     contextReferences: [],
     uncertainties: []
@@ -32,6 +37,20 @@ describe('OpenClaw Agent v2 stable contracts', () => {
   it('accepts a model-owned UserIntent without execution authority', () => {
     expect(AGENT_V2_CONTRACT_VERSION).toBe('2.0')
     expect(validateUserIntent(intent)).toEqual(intent)
+  })
+
+  it('exports a closed provider schema for constrained decoding', () => {
+    expect(USER_INTENT_JSON_SCHEMA).toEqual(expect.objectContaining({
+      type: 'object',
+      additionalProperties: false,
+      required: expect.arrayContaining(['action', 'domain', 'slots'])
+    }))
+    expect(USER_INTENT_JSON_SCHEMA.properties.action.enum).toContain('read')
+    expect(USER_INTENT_JSON_SCHEMA.properties.slots).toEqual(expect.objectContaining({
+      additionalProperties: false,
+      required: ['requestMode', 'additionalActions', 'values']
+    }))
+    expect(USER_INTENT_JSON_SCHEMA.properties.slots.properties.values.maxItems).toBeLessThanOrEqual(16)
   })
 
   it.each(['capability', 'tool', 'sql', 'risk', 'riskLevel', 'query']) (
@@ -45,7 +64,10 @@ describe('OpenClaw Agent v2 stable contracts', () => {
   it('rejects forbidden execution fields nested inside model-owned slots', () => {
     expect(() => validateUserIntent({
       ...intent,
-      slots: { date: '2026-07-04', sql: 'delete from schedule_items' }
+      slots: {
+        ...emptySlots,
+        values: [{ key: 'sql', value: 'delete from schedule_items' }]
+      }
     })).toThrow(/forbidden/i)
   })
 
@@ -55,14 +77,20 @@ describe('OpenClaw Agent v2 stable contracts', () => {
       domain: 'reading',
       objectType: 'reading_item',
       scope: 'matching',
-      slots: { query: '人工智能治理' }
-    }).slots.query).toBe('人工智能治理')
+      slots: {
+        ...emptySlots,
+        values: [{ key: 'query', value: '人工智能治理' }]
+      }
+    }).slots.values).toEqual([{ key: 'query', value: '人工智能治理' }])
     expect(() => validateUserIntent({ ...intent, query: { resource: 'schedule_items' } }))
       .toThrow(/forbidden/i)
     expect(() => validateUserIntent({
       ...intent,
-      slots: { query: { resource: 'schedule_items' } }
-    })).toThrow(/slots.query/i)
+      slots: {
+        ...emptySlots,
+        values: [{ key: 'query', value: { resource: 'schedule_items' } }]
+      }
+    })).toThrow(/slots.values/i)
   })
 
   it('requires stable context-reference and uncertainty item shapes', () => {
@@ -89,19 +117,21 @@ describe('OpenClaw Agent v2 stable contracts', () => {
       ...intent,
       slots: {
         requestMode: 'negated',
-        additionalActions: ['delete']
+        additionalActions: ['delete'],
+        values: []
       }
     }).slots).toEqual({
       requestMode: 'negated',
-      additionalActions: ['delete']
+      additionalActions: ['delete'],
+      values: []
     })
     expect(() => validateUserIntent({
       ...intent,
-      slots: { requestMode: 'allow_write', additionalActions: [] }
+      slots: { ...emptySlots, requestMode: 'allow_write' }
     })).toThrow(/requestMode/i)
     expect(() => validateUserIntent({
       ...intent,
-      slots: { requestMode: 'execute', additionalActions: ['sql'] }
+      slots: { ...emptySlots, additionalActions: ['sql'] }
     })).toThrow(/additionalActions/i)
   })
 
