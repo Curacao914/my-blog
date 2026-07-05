@@ -169,7 +169,7 @@ ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user i
 - 固定集为 150 条：Schedule、Reading、Course、上下文/ASR/复合句、安全干扰各 30 条；45 条为 holdout，UI/API 不返回 case expectation；
 - 隔离 Supabase `ldciqxzczwpuhhgeinmc` 已真实应用 migration；三表 RLS、单 published 唯一索引、评估发布门禁、published 不可变和 rollback 新版本均通过事务验收，测试数据回滚为 0；Production 数据库未应用该 migration；
 - Draft PR #14：https://github.com/Curacao914/my-blog/pull/14；隔离配置后的 `build` 2m36s、CodeQL、Analyze、Vercel Preview 全部通过；
-- 9 个 Agent Studio suite、65 个定向测试通过；另有 v1 回归 6 suites / 23 tests；新增文件 ESLint 0 error；本地 Production build 通过。构建中无数据库/Notion 的既有 fallback 日志不属于本 PR 回归；
+- 9 个 Agent Studio suite、66 个定向测试通过；另有 v1 回归 6 suites / 23 tests；新增文件 ESLint 0 error；本地 Production build 通过。构建中无数据库/Notion 的既有 fallback 日志不属于本 PR 回归；
 - Vercel Preview 的 `SUPABASE_URL` 与 service key 已从共享配置拆分为 Preview-only 覆盖，指向隔离项目 `ldciqxzczwpuhhgeinmc`；Production 作用域未修改；
 - `preview.law-tech.dev` 已指向 PR #14 commit `66042bd7` 的 Ready deployment `dpl_5P8FtF4Po2Tqk2bC9kP6qfzMu4ky`；该提交的全部 GitHub checks 通过；owner 创建 v1 草稿、保存模型配置和隔离数据库核验均通过；
 - 首次 fixed-set 因默认模型名多出 provider 前缀被 150 次拒绝，0 token/0 cost，门禁正确阻止发布；将草稿修正为 `deepseek-v4-flash` 后，第二次真实模型评估为总体 56%、意图 32%、安全 80%、failed；150 次调用累计 20,187 input tokens、42,222 output tokens、500,474ms。失败为 102 个 intent mismatch、29 个 model error、21 个 unsafe write，发布继续被拒；
@@ -177,4 +177,5 @@ ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user i
 - 数据库继续保留逐 case 明细，Studio API 只返回聚合计数和少量代表消息，避免失败 run 使控制面加载超时。修正版本仍需部署并重跑完整 fixed-set；发布/回滚与 Production migration/部署尚未完成，因此不得开始 Shadow Runtime；
 - commit `66042bd7` 的第三轮真实评估为总体 58%、意图 39.3%、安全 76.7%、failed，150 次调用累计 29,648 input tokens、48,299 output tokens、估算 USD 0.017674、总调用延迟 598,188ms；91 个 intent mismatch、17 个 model error、30 个 unsafe write。仅分析 development 明细，holdout 只保留聚合指标；
 - development 混淆矩阵证明剩余问题主要是缺少通用 ontology（scope 定义、Reading `update` 与 Course Brief `mark_read` 边界、Course Brief 与 Reading 对象边界）以及“任何 uncertainty 都禁止安全读取”的错误代码策略。已在 TDD 中加入语言态 `requestMode`/`additionalActions`、通用 action/scope 语义和读写分离门禁；没有加入失败原句或示例。该修正待下一 Preview 评估；
+- 第三轮长请求在数据库完成后，浏览器收到非 JSON 网关页；Studio 已用 TDD 改为按 content-type 安全解析，并在评估连接中断时刷新服务器评估账本，禁止再显示底层 `Unexpected token` 解析错误；
 - 评估模型调用现由配置强制超时、输入/输出 token 和单条成本预算；单条模型错误只记录 `not executed` 结果并继续固定集，不进行规则猜测，也不能通过发布门禁。

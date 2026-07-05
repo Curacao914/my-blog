@@ -108,8 +108,17 @@ async function request(url, options = {}) {
       ? { 'content-type': 'application/json', ...(options.headers || {}) }
       : options.headers
   })
-  const data = await response.json()
-  if (!response.ok) throw new Error(data?.error || 'Agent Studio request failed')
+  const contentType = response.headers?.get?.('content-type') || ''
+  let data = null
+  if (contentType.includes('application/json')) {
+    data = await response.json().catch(() => null)
+  }
+  if (!response.ok) {
+    throw new Error(
+      data?.error || `Agent Studio request failed (HTTP ${response.status})`
+    )
+  }
+  if (!data) throw new Error('Agent Studio returned a non-JSON response')
   return data
 }
 
@@ -189,7 +198,15 @@ export function OpenClawAgentStudio() {
       setNotice({ kind: 'success', text: success })
       await load(environment)
     } catch (error) {
-      setNotice({ kind: 'error', text: error.message })
+      if (name === 'evaluate') {
+        await load(environment)
+        setNotice({
+          kind: 'error',
+          text: '评估连接中断，已刷新服务器状态；运行结果会保留在评估账本。'
+        })
+      } else {
+        setNotice({ kind: 'error', text: error.message })
+      }
     } finally {
       setAction('')
     }

@@ -103,7 +103,7 @@
       "base_commit": "cd963867682ea388cb45aa30687631a235288c62",
       "pull_request": 14,
       "status": "draft_pr_preview_write_passed_model_eval_failed_generic_contract_fix_pending_rerun",
-      "targeted_tests": "9_studio_suites_65_tests_and_6_v1_suites_23_tests_passed",
+      "targeted_tests": "9_studio_suites_66_tests_and_6_v1_suites_23_tests_passed",
       "eslint": "passed_for_new_files",
       "local_build": "passed",
       "fixed_set_cases": 150,

@@ -47,7 +47,7 @@ PR #12 回退与治理闭环已由 PR #13 合并；当前只推进 Agent Studio 
 - Supabase Production 已完成只读 live audit，项目 healthy，六个关键表均存在且可读；
 - 腾讯云 SSH 已恢复，三个 user services active/running，readyz 为 true。
 
-Agent Studio 独立分支 `codex/agent-studio-v1-20260704` 已创建 Draft PR #14；65 项定向测试、v1 回归、ESLint、build、GitHub/Vercel checks 和隔离 Supabase migration/事务验收均通过。commit `66042bd7` 的第三轮真实评估为总体 58%、意图 39.3%、安全 76.7%、failed，门禁继续拒绝发布。仅用 development 结构化 actual 归因出通用 ontology 与安全读取门禁问题，holdout 只看聚合指标；已增加 `requestMode`/`additionalActions`、action/scope 定义与读写分离，没有加入失败原句或示例，待下一 Preview 重跑。尚未通过 fixed-set、发布/回滚或 Production migration；不得提前开始 Shadow。
+Agent Studio 独立分支 `codex/agent-studio-v1-20260704` 已创建 Draft PR #14；66 项定向测试、v1 回归、ESLint、build、GitHub/Vercel checks 和隔离 Supabase migration/事务验收均通过。commit `66042bd7` 的第三轮真实评估为总体 58%、意图 39.3%、安全 76.7%、failed，门禁继续拒绝发布。仅用 development 结构化 actual 归因出通用 ontology 与安全读取门禁问题，holdout 只看聚合指标；已增加 `requestMode`/`additionalActions`、action/scope 定义与读写分离，没有加入失败原句或示例，并修复非 JSON 长请求响应的账本恢复，待下一 Preview 重跑。尚未通过 fixed-set、发布/回滚或 Production migration；不得提前开始 Shadow。
 
 禁止从补正则或修补 PR #12 Router 开始。实施顺序固定为：
 

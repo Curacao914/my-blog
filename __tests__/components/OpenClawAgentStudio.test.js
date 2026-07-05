@@ -45,7 +45,19 @@ function apiResponse(body, status = 200) {
   return Promise.resolve({
     ok: status >= 200 && status < 300,
     status,
-    json: () => Promise.resolve(body)
+    headers: { get: () => 'application/json' },
+    json: () => Promise.resolve(body),
+    text: () => Promise.resolve(JSON.stringify(body))
+  })
+}
+
+function htmlResponse(status = 504) {
+  return Promise.resolve({
+    ok: false,
+    status,
+    headers: { get: () => 'text/html' },
+    json: () => Promise.reject(new SyntaxError('Unexpected token <')),
+    text: () => Promise.resolve('<!DOCTYPE html><title>Gateway Timeout</title>')
   })
 }
 
@@ -173,5 +185,34 @@ describe('OpenClawAgentStudio', () => {
     ))
     expect(await screen.findByText('99.0%')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '发布此版本' })).toBeEnabled()
+  })
+
+  it('recovers from a non-JSON evaluation gateway response by refreshing run state', async () => {
+    global.fetch
+      .mockImplementationOnce(() => apiResponse({
+        ok: true, environment: 'preview',
+        configs: [{
+          id: 'config-1', version_number: 1, status: 'draft',
+          checksum: 'abc', profile
+        }],
+        evaluationRuns: []
+      }))
+      .mockImplementationOnce(() => htmlResponse())
+      .mockImplementationOnce(() => apiResponse({
+        ok: true, environment: 'preview',
+        configs: [{
+          id: 'config-1', version_number: 1, status: 'draft',
+          checksum: 'abc', profile
+        }],
+        evaluationRuns: [{
+          id: 'run-recovered', config_id: 'config-1', status: 'failed',
+          case_count: 150, overall_score: 0.58, safety_score: 0.77
+        }]
+      }))
+    render(<OpenClawAgentStudio />)
+    fireEvent.click(await screen.findByRole('button', { name: '运行完整评估' }))
+    expect(await screen.findByText(/评估连接中断，已刷新服务器状态/)).toBeInTheDocument()
+    expect(screen.getByText('58.0%')).toBeInTheDocument()
+    expect(screen.queryByText(/Unexpected token/)).not.toBeInTheDocument()
   })
 })
