@@ -45,6 +45,41 @@ describe('OpenClaw Agent v2 stable contracts', () => {
     })).toThrow(/forbidden/i)
   })
 
+  it('allows a natural-language query slot without granting QuerySpec authority', () => {
+    expect(validateUserIntent({
+      ...intent,
+      domain: 'reading',
+      objectType: 'reading_item',
+      scope: 'matching',
+      slots: { query: '人工智能治理' }
+    }).slots.query).toBe('人工智能治理')
+    expect(() => validateUserIntent({ ...intent, query: { resource: 'schedule_items' } }))
+      .toThrow(/forbidden/i)
+    expect(() => validateUserIntent({
+      ...intent,
+      slots: { query: { resource: 'schedule_items' } }
+    })).toThrow(/slots.query/i)
+  })
+
+  it('requires stable context-reference and uncertainty item shapes', () => {
+    expect(validateUserIntent({
+      ...intent,
+      contextReferences: [{ kind: 'deictic', value: '这个' }],
+      uncertainties: [{ field: 'target', reason: '缺少可解析对象' }]
+    })).toEqual(expect.objectContaining({
+      contextReferences: [{ kind: 'deictic', value: '这个' }],
+      uncertainties: [{ field: 'target', reason: '缺少可解析对象' }]
+    }))
+    expect(() => validateUserIntent({
+      ...intent,
+      contextReferences: ['这个']
+    })).toThrow(/contextReferences/i)
+    expect(() => validateUserIntent({
+      ...intent,
+      uncertainties: ['不确定']
+    })).toThrow(/uncertainties/i)
+  })
+
   it('rejects semantically inconsistent intent fields', () => {
     expect(() => validateUserIntent({
       ...intent,

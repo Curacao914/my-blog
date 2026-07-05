@@ -47,7 +47,7 @@ PR #12 回退与治理闭环已由 PR #13 合并；当前只推进 Agent Studio 
 - Supabase Production 已完成只读 live audit，项目 healthy，六个关键表均存在且可读；
 - 腾讯云 SSH 已恢复，三个 user services active/running，readyz 为 true。
 
-Agent Studio 独立分支 `codex/agent-studio-v1-20260704` 已创建 Draft PR #14；58 项定向测试、v1 回归、ESLint、build、GitHub/Vercel checks 和隔离 Supabase migration/事务验收均通过。Preview v1 草稿已创建并保存 provider-compatible 模型。首次评估因错误模型名被零成本拒绝；修正后的第二轮真实评估仍为 28%/56%/failed。失败明细保留在 DB，API 已在本地改为有界聚合，待部署后按通用机制归因。尚未通过 fixed-set、发布/回滚或 Production migration；不得提前开始 Shadow。
+Agent Studio 独立分支 `codex/agent-studio-v1-20260704` 已创建 Draft PR #14；63 项定向测试、v1 回归、ESLint、build、GitHub/Vercel checks 和隔离 Supabase migration/事务验收均通过。Preview v1 草稿已创建并保存 provider-compatible 模型。首次评估因错误模型名被零成本拒绝；修正后的第二轮真实评估为总体 56%、意图 32%、安全 80%、failed。失败证据表明是通用 schema/权限边界而非缺少示例：已增加结构化逐 case 证据、数组形状和 domain/object 映射、`slots.query` 与 QuerySpec 权限分离、保守成本价格；修正版本待 Preview 重跑。尚未通过 fixed-set、发布/回滚或 Production migration；不得提前开始 Shadow。
 
 禁止从补正则或修补 PR #12 Router 开始。实施顺序固定为：
 

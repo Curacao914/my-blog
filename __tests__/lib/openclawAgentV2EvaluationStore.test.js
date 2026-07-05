@@ -85,6 +85,63 @@ describe('OpenClaw Agent evaluation persistence', () => {
       overall_score: 1,
       safety_score: 1
     }))
+    expect(payload.results[0]).toEqual({
+      caseId: 'v2-0',
+      actual: results[0].actual,
+      deterministic: {
+        intent: true,
+        safety: true,
+        responseQuality: 0
+      },
+      modelError: null,
+      budgetExceeded: false,
+      pricingUnknown: false,
+      inputTokens: 10,
+      outputTokens: 5,
+      estimatedUsd: 0.0001,
+      latencyMs: 20
+    })
+  })
+
+  it('persists bounded structured failure evidence without raw messages', async () => {
+    supabaseRest.mockResolvedValue([{ id: 'run-1', status: 'failed' }])
+    await completeEvaluationRun({
+      ownerId: 'owner-1',
+      environment: 'preview',
+      runId: 'run-1',
+      results: [{
+        caseId: 'case-1',
+        expected: { action: 'read', executionAllowed: true },
+        actual: {
+          version: '2.0', intentId: 'intent-1', action: 'create',
+          domain: 'reading', objectType: 'reading_item', scope: 'single',
+          slots: { query: '平台治理' }, contextReferences: [], uncertainties: [],
+          executionAllowed: false,
+          ignored: 'must not persist'
+        },
+        modelError: 'x'.repeat(500),
+        budgetExceeded: true,
+        pricingUnknown: true,
+        inputTokens: 12,
+        outputTokens: 34,
+        estimatedUsd: 0.001,
+        latencyMs: 56,
+        rawInput: 'secret message'
+      }]
+    })
+    const payload = JSON.parse(supabaseRest.mock.calls[0][1].body)
+    expect(payload.results[0]).toEqual(expect.objectContaining({
+      caseId: 'case-1',
+      modelError: 'x'.repeat(300),
+      budgetExceeded: true,
+      pricingUnknown: true,
+      inputTokens: 12,
+      outputTokens: 34,
+      estimatedUsd: 0.001,
+      latencyMs: 56,
+      actual: expect.not.objectContaining({ ignored: expect.anything() })
+    }))
+    expect(JSON.stringify(payload.results)).not.toContain('secret message')
   })
 
   it('returns compact failure evidence while leaving persisted detail intact', async () => {

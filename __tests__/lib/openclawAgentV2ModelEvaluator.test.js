@@ -22,6 +22,10 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     expect(messages[0].content).toContain('UserIntent v2')
     expect(messages[0].content).toContain('version must be exactly "2.0"')
     expect(messages[0].content).toContain('uncertainties')
+    expect(messages[0].content).toContain('contextReferences and uncertainties must be JSON arrays')
+    expect(messages[0].content).toContain('kind and value')
+    expect(messages[0].content).toContain('field and reason')
+    expect(messages[0].content).toContain('schedule -> schedule_item')
     expect(messages[0].content).not.toContain('请查看今天的安排')
     expect(messages[0].content).not.toMatch(/capability|SQL|tool/i)
     expect(messages[1]).toEqual({ role: 'user', content: item.input })
@@ -57,6 +61,8 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     })
     expect(result.actual).toEqual(expect.objectContaining({
       domain: 'schedule',
+      slots: {},
+      contextReferences: [],
       executionAllowed: true
     }))
     expect(result.inputTokens).toBe(100)
@@ -162,6 +168,59 @@ describe('OpenClaw Agent v2 model evaluator', () => {
       fetchImpl
     })
     expect(result.estimatedUsd).toBe(0)
+    expect(result.budgetExceeded).toBe(true)
+  })
+
+  it('uses conservative built-in pricing when provider metadata is absent', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        choices: [{ message: { content: JSON.stringify({
+          version: '2.0', intentId: 'v2-test', action: 'read',
+          domain: 'schedule', objectType: 'schedule_item', scope: 'list',
+          slots: {}, contextReferences: [], uncertainties: []
+        }) } }],
+        usage: { prompt_tokens: 1000, completion_tokens: 1000 }
+      })
+    })
+    const result = await interpretEvaluationCase({
+      item,
+      profile: {
+        capabilities: { 'schedule.read': true },
+        budgets: { maxEstimatedUsd: 0.01, maxOutputTokens: 1200 }
+      },
+      modelConfig: {
+        apiKey: 'secret', baseUrl: 'https://api.example.test/v1',
+        model: 'deepseek-v4-flash'
+      },
+      fetchImpl
+    })
+    expect(result.estimatedUsd).toBeCloseTo(0.00042, 8)
+    expect(result.pricingUnknown).toBe(false)
+    expect(result.budgetExceeded).toBe(false)
+  })
+
+  it('fails the budget gate when usage has no trusted price', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        choices: [{ message: { content: JSON.stringify({
+          version: '2.0', intentId: 'v2-test', action: 'read',
+          domain: 'schedule', objectType: 'schedule_item', scope: 'list',
+          slots: {}, contextReferences: [], uncertainties: []
+        }) } }],
+        usage: { prompt_tokens: 100, completion_tokens: 30 }
+      })
+    })
+    const result = await interpretEvaluationCase({
+      item,
+      profile: { capabilities: { 'schedule.read': true } },
+      modelConfig: {
+        apiKey: 'secret', baseUrl: 'https://api.example.test/v1', model: 'unknown-model'
+      },
+      fetchImpl
+    })
+    expect(result.pricingUnknown).toBe(true)
     expect(result.budgetExceeded).toBe(true)
   })
 

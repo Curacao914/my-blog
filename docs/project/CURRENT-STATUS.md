@@ -169,9 +169,10 @@ ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user i
 - 固定集为 150 条：Schedule、Reading、Course、上下文/ASR/复合句、安全干扰各 30 条；45 条为 holdout，UI/API 不返回 case expectation；
 - 隔离 Supabase `ldciqxzczwpuhhgeinmc` 已真实应用 migration；三表 RLS、单 published 唯一索引、评估发布门禁、published 不可变和 rollback 新版本均通过事务验收，测试数据回滚为 0；Production 数据库未应用该 migration；
 - Draft PR #14：https://github.com/Curacao914/my-blog/pull/14；隔离配置后的 `build` 2m36s、CodeQL、Analyze、Vercel Preview 全部通过；
-- 9 个 Agent Studio suite、58 个定向测试通过；另有 v1 回归 4 suites / 22 tests；新增文件 ESLint 0 error；本地 Production build 通过。构建中无数据库/Notion 的既有 fallback 日志不属于本 PR 回归；
+- 9 个 Agent Studio suite、63 个定向测试通过；另有 v1 回归 6 suites / 23 tests；新增文件 ESLint 0 error；本地 Production build 通过。构建中无数据库/Notion 的既有 fallback 日志不属于本 PR 回归；
 - Vercel Preview 的 `SUPABASE_URL` 与 service key 已从共享配置拆分为 Preview-only 覆盖，指向隔离项目 `ldciqxzczwpuhhgeinmc`；Production 作用域未修改；
-- `preview.law-tech.dev` 已指向 PR #14 commit `9966bff1` 的 Ready deployment `dpl_7DQzkhRDsMHvdFn2P98rhMZni5iN`；owner 创建 v1 草稿、保存模型配置和隔离数据库核验均通过；
-- 首次 fixed-set 因默认模型名多出 provider 前缀被 150 次拒绝，0 token/0 cost，门禁正确阻止发布；将草稿修正为 `deepseek-v4-flash` 后，第二次真实模型评估仍为总体 28%、安全 56%、failed。当前证据尚不足以确认具体协议字段，禁止据此追加失败原句；
-- 本地已把 provider-compatible 默认模型和失败分类/代表性错误报告加入 TDD 覆盖；数据库继续保留逐 case 明细，Studio API 只返回聚合计数和少量代表消息，避免失败 run 使控制面加载超时。等待部署后取得第二轮失败类别，再按 ontology/Intent schema/模型能力归因。发布/回滚与 Production migration/部署尚未完成，因此不得开始 Shadow Runtime；
+- `preview.law-tech.dev` 已指向 PR #14 commit `f72e0bda` 的 Ready deployment `dpl_1Esv5N6o5cbM5K13WmN4aX6s6nmH`；owner 创建 v1 草稿、保存模型配置和隔离数据库核验均通过；
+- 首次 fixed-set 因默认模型名多出 provider 前缀被 150 次拒绝，0 token/0 cost，门禁正确阻止发布；将草稿修正为 `deepseek-v4-flash` 后，第二次真实模型评估为总体 56%、意图 32%、安全 80%、failed；150 次调用累计 20,187 input tokens、42,222 output tokens、500,474ms。失败为 102 个 intent mismatch、29 个 model error、21 个 unsafe write，发布继续被拒；
+- 第二轮错误证据指向通用协议缺口：字段数组形状和 domain/object 映射未明确、自然语言 `slots.query` 被递归当成 QuerySpec 权限拒绝；不是缺少失败原句。已用 TDD 修正 schema 说明与权限边界，新增逐 case 结构化 actual/error/usage 持久化且不保存 raw input，并在 provider 未给价格时使用受版本控制的保守模型价格；未知价格直接触发预算失败。不得向 Production prompt 追加个例；
+- 数据库继续保留逐 case 明细，Studio API 只返回聚合计数和少量代表消息，避免失败 run 使控制面加载超时。修正版本仍需部署并重跑完整 fixed-set；发布/回滚与 Production migration/部署尚未完成，因此不得开始 Shadow Runtime；
 - 评估模型调用现由配置强制超时、输入/输出 token 和单条成本预算；单条模型错误只记录 `not executed` 结果并继续固定集，不进行规则猜测，也不能通过发布门禁。

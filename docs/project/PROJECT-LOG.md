@@ -177,8 +177,8 @@
 - 从该 exact main 创建 `codex/agent-studio-v1-20260704`；没有修改微信 command 入口、v1 Router 或业务 Tool。
 - 完成 v2 稳定契约、受约束版本配置、150 条 development/holdout 评估内核、owner-only Studio、三张 additive 数据表和数据库发布/回滚门禁。
 - 隔离 Supabase restore `ldciqxzczwpuhhgeinmc` 真实执行 migration；RLS、唯一 published、低于 98%/安全低于 100% 拒绝发布、published 不可变、rollback 生成新版本均通过，事务测试数据回滚为 0。
-- 本地 Agent Studio 9 suites / 58 tests、v1 回归 4 suites / 22 tests、增量 ESLint 与 Production build 通过。评估调用强制执行超时、token/成本预算；单条模型错误形成未执行结果并继续测试，不回退为规则猜测；草稿父版本必须属于同 owner、同 environment。
+- 本地 Agent Studio 9 suites / 63 tests、v1 回归 6 suites / 23 tests、增量 ESLint 与 Production build 通过。评估调用强制执行超时、token/成本预算；单条模型错误形成未执行结果并继续测试，不回退为规则猜测；草稿父版本必须属于同 owner、同 environment。
 - Draft PR #14 创建后，将 Vercel Preview 的 Supabase URL/service key 拆分为 Preview-only 覆盖并指向已迁移的隔离 restore；Production 环境变量未修改。隔离配置后的 `build` 2m36s、CodeQL、Analyze 与 Vercel checks 通过。
-- `preview.law-tech.dev` 已切到 commit `9966bff1` 的 `dpl_7DQzkhRDsMHvdFn2P98rhMZni5iN`；owner 创建并保存 v1 草稿后，隔离 Supabase 仅有一条 `preview/draft` 配置。
-- 第一次 150 条评估暴露默认模型名错误：provider 仅接受 `deepseek-v4-flash`/`deepseek-v4-pro`，原值带 `deepseek/` 前缀；该轮 0 token/0 cost 且发布被拒。草稿修正后第二轮真实评估仍为 28%/56%/failed，尚待失败报告 UI 部署后取得可归因证据；未追加个例 prompt。
-- 两轮逐 case failure 明细导致 Studio GET 超过 30 秒；本地改为数据库保留原始明细、API 聚合类别计数和代表消息，门禁证据不丢失且控制面响应有界。
+- `preview.law-tech.dev` 已切到 commit `f72e0bda` 的 `dpl_1Esv5N6o5cbM5K13WmN4aX6s6nmH`；owner 创建并保存 v1 草稿后，隔离 Supabase 仅有一条 `preview/draft` 配置。
+- 第一次 150 条评估暴露默认模型名错误：provider 仅接受 `deepseek-v4-flash`/`deepseek-v4-pro`，原值带 `deepseek/` 前缀；该轮 0 token/0 cost 且发布被拒。草稿修正后第二轮真实评估为总体 56%、意图 32%、安全 80%、failed，累计 20,187 input tokens、42,222 output tokens、500,474ms；102 个 intent mismatch、29 个 model error、21 个 unsafe write。未追加个例 prompt。
+- 两轮逐 case failure 明细导致 Studio GET 超过 30 秒；已改为数据库保留原始明细、API 聚合类别计数和代表消息。进一步 TDD 增加无 raw message 的逐 case 结构化 actual/error/usage 证据、通用数组形状与 domain/object 映射、`slots.query` 与代码 QuerySpec 的权限分离，以及缺省保守价格/未知价格预算失败。修正版本待 Preview 重跑。
