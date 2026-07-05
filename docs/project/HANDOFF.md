@@ -36,9 +36,9 @@
 
 ## 当前唯一主线
 
-PR #12 回退与治理闭环已由 PR #13 合并；当前只推进 Agent Studio + Evaluation Kernel，完成前不开始 Shadow Runtime。
+PR #12 回退与治理闭环已由 PR #13 合并；Agent Studio 已由 PR #14 合并。当前只推进 default-off Shadow Runtime Draft PR #15，不开始 Canary。
 
-截至 2026-07-04：
+截至 2026-07-05：
 
 - GitHub main 为 `cd963867682ea388cb45aa30687631a235288c62`；
 - Production rollback redeploy `dpl_3DRvnp53MBjXdECgRd6nx87WVRCS` Ready，`OPENCLAW_AGENT_V1_ENABLED` 已在 Production 添加为 false；
@@ -47,7 +47,7 @@ PR #12 回退与治理闭环已由 PR #13 合并；当前只推进 Agent Studio 
 - Supabase Production 已完成只读 live audit，项目 healthy，六个关键表均存在且可读；
 - 腾讯云 SSH 已恢复，三个 user services active/running，readyz 为 true。
 
-Agent Studio 独立分支 `codex/agent-studio-v1-20260704` 的 Draft PR #14 已形成 release candidate `490a5367`。固定拓扑、三张 additive 表、隔离 migration/事务、150 条 development/holdout、可恢复 24 条分批账本、严格 Function Schema、UI/API/数据库发布门禁均已验收。strict Flash/Pro 意图均为 52%，安全分别 97.33%/99.33%，因此都被正确拒绝发布；没有 published profile，也没有接入微信流量。下一步是合并 PR #14、应用 Production additive migration/验收控制面，然后另开 default-off Shadow PR；未达门禁的配置不得启用 Shadow。
+PR #14 已以 merge commit `9042a93641da292150040bd7ef933ec802be0599` 进入 main。strict Flash/Pro 仍未达发布门禁，因此没有 published profile。Draft PR #15 已交付代码层 Shadow：default-off、后台执行、无 Tool、加密 trace、确定性 Planner/Semantic Gate、只读 Resource 与结构化上下文。Production Studio migration 前备份被 Supabase Management API 临时角色初始化阻塞，未写数据库；下一步是完成有效备份与 additive migrations、Preview 验收、checks 和合并，未达门禁不得开启 Shadow。
 
 禁止从补正则或修补 PR #12 Router 开始。实施顺序固定为：
 

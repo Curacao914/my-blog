@@ -187,3 +187,13 @@
 - 将评估改为 24 条一批的可恢复账本协议，真实完成中断续跑 24→48→72→96→120→144→150；不再依赖单个长 HTTP 连接。
 - DeepSeek `json_schema` 不可用、Thinking 下 forced tool choice 被拒；依据官方 strict mode 规范改为 `/beta`、`thinking=disabled`、强制 `emit_user_intent` Function Schema。真实探针通过，content-only JSON 被代码拒绝。
 - strict Flash 150 条结果为总体 74.67%、意图 52%、安全 97.33%、USD 0.037189；strict Pro 为总体 75.67%、意图 52%、安全 99.33%、USD 0.116434。两者均未达门槛并被拒绝发布；未把 development 规则模拟写入生产代码。
+
+## 2026-07-05
+
+### Agent Studio merge 与 Shadow Draft PR
+
+- PR #14 合并，merge commit `9042a93641da292150040bd7ef933ec802be0599`；未产生 published Agent profile。
+- 从 exact main 创建 `codex/agent-v2-shadow-20260705`，提交 `16e6052d` 并创建 Draft PR #15。
+- PR #15 实现共享 strict Interpreter、代码所有的 Capability Registry/Planner/Semantic Gate、Schedule/Reading/Course 只读 Resource、真实对象/结构化上下文解析、零模型 Session Control、default-off `waitUntil` Shadow 和独立加密 trace；未导入业务 Tool。
+- 5 suites / 42 tests、`git diff --check`、JSON 解析和 `LAW_TECH_STATIC_PREFETCH_MODE=skip` build 通过。
+- Production Studio migration 前备份两次停在 Supabase Management API 临时登录角色初始化；0B 文件不算备份，已停止且未执行数据库写入。Production Studio/Shadow migration、Preview、Production 与微信 Shadow 仍未验收。
