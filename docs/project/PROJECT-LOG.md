@@ -184,3 +184,6 @@
 - 两轮逐 case failure 明细导致 Studio GET 超过 30 秒；已改为数据库保留原始明细、API 聚合类别计数和代表消息。进一步 TDD 增加无 raw message 的逐 case 结构化 actual/error/usage 证据、通用数组形状与 domain/object 映射、`slots.query` 与代码 QuerySpec 的权限分离，以及缺省保守价格/未知价格预算失败。修正版本待 Preview 重跑。
 - commit `66042bd7` / deployment `dpl_5P8FtF4Po2Tqk2bC9kP6qfzMu4ky` checks 全通过。第三轮真实评估为总体 58%、意图 39.3%、安全 76.7%、USD 0.017674，仍被门禁拒绝；development 结构化 actual 证明是通用 ontology 和 uncertainty 读写门禁问题，未读取 holdout 期望明细。TDD 新增 `requestMode`/`additionalActions` 语言态、action/scope 语义和安全读取分离，待下一 Preview 重跑。
 - 第三轮数据库已完成但浏览器收到非 JSON 网关页；Studio 现按 content-type 安全解析，并在长评估连接中断时刷新服务器 run 状态，错误页不再污染控制面。
+- 将评估改为 24 条一批的可恢复账本协议，真实完成中断续跑 24→48→72→96→120→144→150；不再依赖单个长 HTTP 连接。
+- DeepSeek `json_schema` 不可用、Thinking 下 forced tool choice 被拒；依据官方 strict mode 规范改为 `/beta`、`thinking=disabled`、强制 `emit_user_intent` Function Schema。真实探针通过，content-only JSON 被代码拒绝。
+- strict Flash 150 条结果为总体 74.67%、意图 52%、安全 97.33%、USD 0.037189；strict Pro 为总体 75.67%、意图 52%、安全 99.33%、USD 0.116434。两者均未达门槛并被拒绝发布；未把 development 规则模拟写入生产代码。

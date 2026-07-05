@@ -178,3 +178,11 @@ Owner 可以从加密 `user_integrations` 读取 AI 配置。没有某个 `SCHED
 ### 不要重复小步包
 
 复杂闭环应交付 ZIP：README、apply-test-push、patch/files、rollback（必要时）、manifest SHA。失败后根据准确阶段续跑，不让用户不断下载一串脚本。
+
+### JSON mode 不等于稳定协议
+
+`response_format=json_object` 仍会被推理 token 截断或返回空/非法 content；增加 JSON 提示词不能建立安全边界。应使用 provider 的 strict Function Schema、固定序列化函数和关闭 Thinking，再由代码执行第二次 schema/语义校验。若 provider 不支持，配置不得发布。
+
+### development 改善不代表 holdout 改善
+
+对 scope 的规则归一化在 development 明显提分，但 holdout 没有收益且安全下降，因此未进入生产代码。ontology、Planner 或模型调整必须同时看 development 与隐藏 holdout 聚合，不把失败原句或开发集特征写成规则。

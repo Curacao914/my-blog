@@ -97,12 +97,12 @@
   "agent_v2": {
     "architecture": "UserIntent -> Deterministic Planner -> Semantic Gate -> Resource -> Risk Policy -> Tool -> Response -> Trace",
     "model_direct_permissions": [],
-    "next_closure": "finish_agent_studio_pr_preview_model_eval_and_release",
+    "next_closure": "merge_agent_studio_apply_production_additive_migration_then_start_default_off_shadow_pr",
     "studio": {
       "branch": "codex/agent-studio-v1-20260704",
       "base_commit": "cd963867682ea388cb45aa30687631a235288c62",
       "pull_request": 14,
-      "status": "draft_pr_preview_write_passed_model_eval_failed_generic_contract_fix_pending_rerun",
+      "status": "release_candidate_strict_serialization_and_resumable_eval_verified_publish_correctly_blocked",
       "targeted_tests": "9_studio_suites_66_tests_and_6_v1_suites_23_tests_passed",
       "eslint": "passed_for_new_files",
       "local_build": "passed",
@@ -113,9 +113,9 @@
       "preview_database_override": "ldciqxzczwpuhhgeinmc",
       "first_pr_checks": "build_179_seconds_codeql_analyze_vercel_passed",
       "isolated_preview_checks": "build_156_seconds_codeql_analyze_vercel_passed",
-      "latest_preview_deployment": "dpl_5P8FtF4Po2Tqk2bC9kP6qfzMu4ky",
+      "latest_preview_deployment": "pending_for_commit_490a5367",
       "preview_ui_api": "owner_get_create_save_and_fixed_topology_passed",
-      "preview_model_evaluation": "third_run_58_percent_overall_39_3_percent_intent_76_7_percent_safety_failed_development_confusion_diagnosed_ontology_and_read_write_gate_fix_pending_rerun",
+      "preview_model_evaluation": "strict_flash_74_67_overall_52_intent_97_33_safety_and_strict_pro_75_67_overall_52_intent_99_33_safety_both_failed_and_publish_blocked",
       "production_migration": "not_applied",
       "wechat_runtime_changed": false
     },
