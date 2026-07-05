@@ -4,6 +4,18 @@ import {
   runFixedSetEvaluation
 } from '@/lib/openclaw/agent-v2/evaluation/modelEvaluator'
 
+function toolMessage(value) {
+  return {
+    tool_calls: [{
+      type: 'function',
+      function: {
+        name: 'emit_user_intent',
+        arguments: typeof value === 'string' ? value : JSON.stringify(value)
+      }
+    }]
+  }
+}
+
 describe('OpenClaw Agent v2 model evaluator', () => {
   const item = {
     id: 'v2-test',
@@ -41,7 +53,7 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     const fetchImpl = jest.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        choices: [{ message: { content: JSON.stringify({
+        choices: [{ message: toolMessage({
           version: '2.0',
           intentId: 'v2-test',
           action: 'read',
@@ -51,7 +63,7 @@ describe('OpenClaw Agent v2 model evaluator', () => {
           slots: { requestMode: 'execute', additionalActions: [], values: [] },
           contextReferences: [],
           uncertainties: []
-        }) } }],
+        }) }],
         usage: { prompt_tokens: 100, completion_tokens: 30 }
       })
     })
@@ -74,11 +86,21 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     expect(result.inputTokens).toBe(100)
     expect(fetchImpl.mock.calls[0][1].headers.authorization).toBe('Bearer secret')
     const requestBody = JSON.parse(fetchImpl.mock.calls[0][1].body)
-    expect(requestBody.response_format).toEqual(expect.objectContaining({
-      type: 'json_schema',
-      json_schema: expect.objectContaining({ name: 'user_intent_v2', strict: true })
-    }))
-    expect(requestBody.response_format.json_schema.schema.additionalProperties).toBe(false)
+    expect(requestBody.thinking).toEqual({ type: 'disabled' })
+    expect(requestBody.tool_choice).toEqual({
+      type: 'function', function: { name: 'emit_user_intent' }
+    })
+    expect(requestBody.tools).toEqual([
+      expect.objectContaining({
+        function: expect.objectContaining({
+          name: 'emit_user_intent',
+          strict: true,
+          parameters: expect.objectContaining({ additionalProperties: false })
+        })
+      })
+    ])
+    expect(requestBody.response_format).toBeUndefined()
+    expect(fetchImpl.mock.calls[0][0]).toBe('https://api.example.test/v1/chat/completions')
   })
 
   it('enforces the configured timeout and output-token ceiling on every model call', async () => {
@@ -88,12 +110,12 @@ describe('OpenClaw Agent v2 model evaluator', () => {
       return Promise.resolve({
         ok: true,
         json: () => Promise.resolve({
-          choices: [{ message: { content: JSON.stringify({
+          choices: [{ message: toolMessage({
             version: '2.0', intentId: 'v2-test', action: 'read',
             domain: 'schedule', objectType: 'schedule_item', scope: 'list',
             slots: { requestMode: 'execute', additionalActions: [], values: [] },
             contextReferences: [], uncertainties: []
-          }) } }]
+          }) }]
         })
       })
     })
@@ -114,7 +136,7 @@ describe('OpenClaw Agent v2 model evaluator', () => {
   it('does not guess when model output is invalid', async () => {
     const fetchImpl = jest.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ choices: [{ message: { content: 'not json' } }] })
+      json: () => Promise.resolve({ choices: [{ message: toolMessage('not json') }] })
     })
     await expect(interpretEvaluationCase({
       item,
@@ -126,7 +148,7 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     })).rejects.toThrow(/json/i)
   })
 
-  it('accepts a single fenced JSON object without repairing its semantics', async () => {
+  it('rejects content-only JSON instead of falling back from forced serialization', async () => {
     const content = JSON.stringify({
       version: '2.0',
       intentId: 'v2-test',
@@ -144,31 +166,26 @@ describe('OpenClaw Agent v2 model evaluator', () => {
         choices: [{ message: { content: `\`\`\`json\n${content}\n\`\`\`` } }]
       })
     })
-    const result = await interpretEvaluationCase({
+    await expect(interpretEvaluationCase({
       item,
       profile: { capabilities: { 'schedule.read': true } },
       modelConfig: {
         apiKey: 'secret', baseUrl: 'https://api.example.test/v1', model: 'm'
       },
       fetchImpl
-    })
-    expect(result.actual).toEqual(expect.objectContaining({
-      action: 'read',
-      domain: 'schedule',
-      executionAllowed: true
-    }))
+    })).rejects.toThrow(/structured/i)
   })
 
   it('marks a model call that exceeds the configured per-message budget', async () => {
     const fetchImpl = jest.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        choices: [{ message: { content: JSON.stringify({
+        choices: [{ message: toolMessage({
           version: '2.0', intentId: 'v2-test', action: 'read',
           domain: 'schedule', objectType: 'schedule_item', scope: 'list',
           slots: { requestMode: 'execute', additionalActions: [], values: [] },
           contextReferences: [], uncertainties: []
-        }) } }],
+        }) }],
         usage: { prompt_tokens: 1000, completion_tokens: 1000 }
       })
     })
@@ -191,12 +208,12 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     const responseFor = slots => ({
       ok: true,
       json: () => Promise.resolve({
-        choices: [{ message: { content: JSON.stringify({
+        choices: [{ message: toolMessage({
           version: '2.0', intentId: 'v2-test', action: 'read',
           domain: 'schedule', objectType: 'schedule_item', scope: 'list',
           slots, contextReferences: [],
           uncertainties: [{ field: 'date', reason: '相对日期需解析' }]
-        }) } }]
+        }) }]
       })
     })
     const base = {
@@ -234,12 +251,12 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     const fetchImpl = jest.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        choices: [{ message: { content: JSON.stringify({
+        choices: [{ message: toolMessage({
           version: '2.0', intentId: 'v2-test', action: 'read',
           domain: 'schedule', objectType: 'schedule_item', scope: 'list',
           slots: { requestMode: 'execute', additionalActions: [], values: [] },
           contextReferences: [], uncertainties: []
-        }) } }],
+        }) }],
         usage: { prompt_tokens: 6001, completion_tokens: 10 }
       })
     })
@@ -266,12 +283,12 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     const fetchImpl = jest.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        choices: [{ message: { content: JSON.stringify({
+        choices: [{ message: toolMessage({
           version: '2.0', intentId: 'v2-test', action: 'read',
           domain: 'schedule', objectType: 'schedule_item', scope: 'list',
           slots: { requestMode: 'execute', additionalActions: [], values: [] },
           contextReferences: [], uncertainties: []
-        }) } }],
+        }) }],
         usage: { prompt_tokens: 1000, completion_tokens: 1000 }
       })
     })
@@ -282,11 +299,12 @@ describe('OpenClaw Agent v2 model evaluator', () => {
         budgets: { maxEstimatedUsd: 0.01, maxOutputTokens: 1200 }
       },
       modelConfig: {
-        apiKey: 'secret', baseUrl: 'https://api.example.test/v1',
+        apiKey: 'secret', baseUrl: 'https://api.deepseek.com/v1',
         model: 'deepseek-v4-flash'
       },
       fetchImpl
     })
+    expect(fetchImpl.mock.calls[0][0]).toBe('https://api.deepseek.com/beta/chat/completions')
     expect(result.estimatedUsd).toBeCloseTo(0.00042, 8)
     expect(result.pricingUnknown).toBe(false)
     expect(result.budgetExceeded).toBe(false)
@@ -296,12 +314,12 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     const fetchImpl = jest.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        choices: [{ message: { content: JSON.stringify({
+        choices: [{ message: toolMessage({
           version: '2.0', intentId: 'v2-test', action: 'read',
           domain: 'schedule', objectType: 'schedule_item', scope: 'list',
           slots: { requestMode: 'execute', additionalActions: [], values: [] },
           contextReferences: [], uncertainties: []
-        }) } }],
+        }) }],
         usage: { prompt_tokens: 100, completion_tokens: 30 }
       })
     })
@@ -323,12 +341,12 @@ describe('OpenClaw Agent v2 model evaluator', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({
-          choices: [{ message: { content: JSON.stringify({
+          choices: [{ message: toolMessage({
             version: '2.0', intentId: 'v2-test-2', action: 'read',
             domain: 'schedule', objectType: 'schedule_item', scope: 'list',
             slots: { requestMode: 'execute', additionalActions: [], values: [] },
             contextReferences: [], uncertainties: []
-          }) } }]
+          }) }]
         })
       })
     const second = { ...item, id: 'v2-test-2' }

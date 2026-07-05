@@ -50,7 +50,7 @@ describe('OpenClaw Agent v2 stable contracts', () => {
       additionalProperties: false,
       required: ['requestMode', 'additionalActions', 'values']
     }))
-    expect(USER_INTENT_JSON_SCHEMA.properties.slots.properties.values.maxItems).toBeLessThanOrEqual(16)
+    expect(JSON.stringify(USER_INTENT_JSON_SCHEMA)).not.toMatch(/minLength|maxLength|maxItems/)
   })
 
   it.each(['capability', 'tool', 'sql', 'risk', 'riskLevel', 'query']) (
@@ -133,6 +133,24 @@ describe('OpenClaw Agent v2 stable contracts', () => {
       ...intent,
       slots: { ...emptySlots, additionalActions: ['sql'] }
     })).toThrow(/additionalActions/i)
+  })
+
+  it('enforces provider-unsupported size limits in deterministic validation', () => {
+    expect(() => validateUserIntent({
+      ...intent,
+      slots: {
+        ...emptySlots,
+        values: Array.from({ length: 17 }, (_, index) => ({
+          key: 'query', value: `value-${index}`
+        }))
+      }
+    })).toThrow(/values/i)
+    expect(() => validateUserIntent({
+      ...intent,
+      uncertainties: Array.from({ length: 9 }, (_, index) => ({
+        field: `field-${index}`, reason: 'ambiguous'
+      }))
+    })).toThrow(/uncertainties/i)
   })
 
   it('rejects semantically inconsistent intent fields', () => {
