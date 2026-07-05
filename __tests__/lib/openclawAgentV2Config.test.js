@@ -24,6 +24,10 @@ describe('OpenClaw Agent v2 profile configuration', () => {
     expect(profile.budgets.maxInputTokens).toBeLessThanOrEqual(6000)
     expect(profile.budgets.maxOutputTokens).toBeLessThanOrEqual(800)
     expect(profile.budgets.maxEstimatedUsd).toBeLessThanOrEqual(0.01)
+    expect(profile.models).toEqual({
+      interpreter: 'deepseek-v4-flash',
+      responder: 'deepseek-v4-flash'
+    })
   })
 
   it('allows capabilities, aliases and stricter thresholds but not unsafe topology', () => {

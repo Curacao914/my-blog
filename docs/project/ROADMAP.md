@@ -14,7 +14,8 @@
   - [x] 本地协议、Studio、三张 additive 表、150 条 fixed set、测试、ESLint、build 与隔离数据库事务验收；
   - [x] 创建独立 Draft PR #14，首轮 `build`、CodeQL、Analyze 与 Vercel checks 通过；
   - [x] 隔离 Supabase 配置下的 Vercel Preview owner 页面、固定拓扑和空配置 GET 验收；
-  - [ ] Preview 草稿写入、真实配置模型完整评估、发布/回滚、Production migration/部署验收；
+  - [x] Preview owner 草稿创建、保存、隔离数据库边界和失败发布门禁验收；
+  - [ ] 依据失败分类修正通用协议并使真实配置模型完整评估达标；完成发布/回滚、Production migration/部署验收；
 - [ ] 完整交付 `UserIntent → Deterministic Planner → Semantic Gate`；
 - [ ] 完整交付 Schedule、Reading、Course Capability/Resource/实体解析；
 - [ ] 完整交付 default-off Production Shadow、独立加密 trace、成本和延迟观测；

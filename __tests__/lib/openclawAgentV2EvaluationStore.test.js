@@ -1,6 +1,7 @@
 import {
   completeEvaluationRun,
   createEvaluationRun,
+  listEvaluationRuns,
   syncFixedEvaluationCases
 } from '@/lib/server/openclawAgentEvaluations'
 import { encryptUserSecret } from '@/lib/server/secretCrypto'
@@ -84,5 +85,26 @@ describe('OpenClaw Agent evaluation persistence', () => {
       overall_score: 1,
       safety_score: 1
     }))
+  })
+
+  it('returns compact failure evidence while leaving persisted detail intact', async () => {
+    supabaseRest.mockResolvedValue([{
+      id: 'run-failed',
+      status: 'failed',
+      failure_categories: [
+        { caseId: 'a', category: 'model_error', message: 'invalid JSON' },
+        { caseId: 'b', category: 'model_error', message: 'invalid JSON' },
+        { caseId: 'a', category: 'intent_mismatch', critical: true }
+      ]
+    }])
+    const runs = await listEvaluationRuns({
+      ownerId: 'owner-1',
+      environment: 'preview'
+    })
+    expect(runs[0].failure_categories).toEqual([
+      { category: 'model_error', count: 2, critical: false, message: 'invalid JSON' },
+      { category: 'intent_mismatch', count: 1, critical: true }
+    ])
+    expect(supabaseRest.mock.results[0].value).toBeDefined()
   })
 })

@@ -9,8 +9,8 @@ const profile = {
     'risk_policy', 'tool', 'response', 'trace'
   ],
   models: {
-    interpreter: 'deepseek/deepseek-v4-flash',
-    responder: 'deepseek/deepseek-v4-flash'
+    interpreter: 'deepseek-v4-flash',
+    responder: 'deepseek-v4-flash'
   },
   plannerMode: 'deterministic',
   capabilities: {
@@ -71,10 +71,28 @@ describe('OpenClawAgentStudio', () => {
     expect(await screen.findByText('Agent Studio')).toBeInTheDocument()
     ;['消息', '意图', '规划', '语义门禁', '资源', '风险策略', '工具', '回复', '追踪']
       .forEach(label => expect(screen.getByText(label)).toBeInTheDocument())
-    expect(await screen.findByLabelText('理解模型')).toHaveValue('deepseek/deepseek-v4-flash')
+    expect(await screen.findByLabelText('理解模型')).toHaveValue('deepseek-v4-flash')
     expect(screen.getByLabelText('自动解析阈值')).toHaveValue(0.98)
     expect(screen.queryByLabelText(/system prompt/i)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/sql/i)).not.toBeInTheDocument()
+  })
+
+  it('uses the provider-compatible model for the first draft', async () => {
+    global.fetch = jest.fn().mockImplementation(() => apiResponse({
+      ok: true,
+      environment: 'preview',
+      configs: [],
+      evaluationRuns: []
+    }))
+    render(<OpenClawAgentStudio />)
+    expect(await screen.findByText(/尚无配置版本/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '新建草稿' }))
+    await waitFor(() => {
+      const createCall = global.fetch.mock.calls.find(([, options]) => options?.method === 'POST')
+      const body = JSON.parse(createCall[1].body)
+      expect(body.profile.models.interpreter).toBe('deepseek-v4-flash')
+      expect(body.profile.models.responder).toBe('deepseek-v4-flash')
+    })
   })
 
   it('keeps publish disabled until a matching run passes every gate', async () => {
@@ -82,6 +100,30 @@ describe('OpenClawAgentStudio', () => {
     const publish = await screen.findByRole('button', { name: '发布此版本' })
     expect(publish).toBeDisabled()
     expect(screen.getByText(/需要 150 条/)).toBeInTheDocument()
+  })
+
+  it('shows deterministic failure categories and representative model errors', async () => {
+    global.fetch = jest.fn().mockImplementation(() => apiResponse({
+      ok: true,
+      environment: 'preview',
+      configs: [{
+        id: 'config-1', version_number: 1, status: 'draft',
+        checksum: 'abc', profile
+      }],
+      evaluationRuns: [{
+        id: 'run-failed', config_id: 'config-1', status: 'failed',
+        case_count: 150, overall_score: 0.28, safety_score: 0.56,
+        failure_categories: [
+          { caseId: 'a', category: 'model_error', message: 'Model returned invalid JSON' },
+          { caseId: 'b', category: 'model_error', message: 'Model returned invalid JSON' },
+          { caseId: 'a', category: 'intent_mismatch' }
+        ]
+      }]
+    }))
+    render(<OpenClawAgentStudio />)
+    expect(await screen.findByText('model_error × 2')).toBeInTheDocument()
+    expect(screen.getByText('intent_mismatch × 1')).toBeInTheDocument()
+    expect(screen.getByText('Model returned invalid JSON')).toBeInTheDocument()
   })
 
   it('switches Preview and Production without mixing requests', async () => {
