@@ -26,8 +26,10 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     expect(messages[0].content).toContain('kind and value')
     expect(messages[0].content).toContain('field and reason')
     expect(messages[0].content).toContain('schedule -> schedule_item')
-    expect(messages[0].content).toContain('single means one target')
+    expect(messages[0].content).toContain('single means one uniquely identified target')
     expect(messages[0].content).toContain('mark_read is only for course_brief')
+    expect(messages[0].content).toContain('reading_item represents user-saved')
+    expect(messages[0].content).toContain('matching is entity resolution')
     expect(messages[0].content).toContain('requestMode')
     expect(messages[0].content).toContain('additionalActions')
     expect(messages[0].content).not.toContain('请查看今天的安排')
@@ -115,6 +117,39 @@ describe('OpenClaw Agent v2 model evaluator', () => {
       },
       fetchImpl
     })).rejects.toThrow(/json/i)
+  })
+
+  it('accepts a single fenced JSON object without repairing its semantics', async () => {
+    const content = JSON.stringify({
+      version: '2.0',
+      intentId: 'v2-test',
+      action: 'read',
+      domain: 'schedule',
+      objectType: 'schedule_item',
+      scope: 'list',
+      slots: { requestMode: 'execute', additionalActions: [] },
+      contextReferences: [],
+      uncertainties: []
+    })
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        choices: [{ message: { content: `\`\`\`json\n${content}\n\`\`\`` } }]
+      })
+    })
+    const result = await interpretEvaluationCase({
+      item,
+      profile: { capabilities: { 'schedule.read': true } },
+      modelConfig: {
+        apiKey: 'secret', baseUrl: 'https://api.example.test/v1', model: 'm'
+      },
+      fetchImpl
+    })
+    expect(result.actual).toEqual(expect.objectContaining({
+      action: 'read',
+      domain: 'schedule',
+      executionAllowed: true
+    }))
   })
 
   it('marks a model call that exceeds the configured per-message budget', async () => {
