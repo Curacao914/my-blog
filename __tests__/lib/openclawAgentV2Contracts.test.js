@@ -20,7 +20,11 @@ describe('OpenClaw Agent v2 stable contracts', () => {
     domain: 'schedule',
     objectType: 'schedule_item',
     scope: 'single',
-    slots: { date: '2026-07-04' },
+    slots: {
+      date: '2026-07-04',
+      requestMode: 'execute',
+      additionalActions: []
+    },
     contextReferences: [],
     uncertainties: []
   }
@@ -78,6 +82,27 @@ describe('OpenClaw Agent v2 stable contracts', () => {
       ...intent,
       uncertainties: ['不确定']
     })).toThrow(/uncertainties/i)
+  })
+
+  it('validates linguistic control slots without treating them as authorization', () => {
+    expect(validateUserIntent({
+      ...intent,
+      slots: {
+        requestMode: 'negated',
+        additionalActions: ['delete']
+      }
+    }).slots).toEqual({
+      requestMode: 'negated',
+      additionalActions: ['delete']
+    })
+    expect(() => validateUserIntent({
+      ...intent,
+      slots: { requestMode: 'allow_write', additionalActions: [] }
+    })).toThrow(/requestMode/i)
+    expect(() => validateUserIntent({
+      ...intent,
+      slots: { requestMode: 'execute', additionalActions: ['sql'] }
+    })).toThrow(/additionalActions/i)
   })
 
   it('rejects semantically inconsistent intent fields', () => {

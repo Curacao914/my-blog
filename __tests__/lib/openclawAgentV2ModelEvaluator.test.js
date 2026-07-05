@@ -26,6 +26,10 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     expect(messages[0].content).toContain('kind and value')
     expect(messages[0].content).toContain('field and reason')
     expect(messages[0].content).toContain('schedule -> schedule_item')
+    expect(messages[0].content).toContain('single means one target')
+    expect(messages[0].content).toContain('mark_read is only for course_brief')
+    expect(messages[0].content).toContain('requestMode')
+    expect(messages[0].content).toContain('additionalActions')
     expect(messages[0].content).not.toContain('请查看今天的安排')
     expect(messages[0].content).not.toMatch(/capability|SQL|tool/i)
     expect(messages[1]).toEqual({ role: 'user', content: item.input })
@@ -42,7 +46,7 @@ describe('OpenClaw Agent v2 model evaluator', () => {
           domain: 'schedule',
           objectType: 'schedule_item',
           scope: 'list',
-          slots: {},
+          slots: { requestMode: 'execute', additionalActions: [] },
           contextReferences: [],
           uncertainties: []
         }) } }],
@@ -61,7 +65,7 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     })
     expect(result.actual).toEqual(expect.objectContaining({
       domain: 'schedule',
-      slots: {},
+      slots: { requestMode: 'execute', additionalActions: [] },
       contextReferences: [],
       executionAllowed: true
     }))
@@ -138,6 +142,49 @@ describe('OpenClaw Agent v2 model evaluator', () => {
       fetchImpl
     })
     expect(result.budgetExceeded).toBe(true)
+  })
+
+  it('allows uncertain reads but blocks negated or secondary write requests in code', async () => {
+    const responseFor = slots => ({
+      ok: true,
+      json: () => Promise.resolve({
+        choices: [{ message: { content: JSON.stringify({
+          version: '2.0', intentId: 'v2-test', action: 'read',
+          domain: 'schedule', objectType: 'schedule_item', scope: 'list',
+          slots, contextReferences: [],
+          uncertainties: [{ field: 'date', reason: '相对日期需解析' }]
+        }) } }]
+      })
+    })
+    const base = {
+      item,
+      profile: { capabilities: { 'schedule.read': true } },
+      modelConfig: {
+        apiKey: 'secret', baseUrl: 'https://api.example.test/v1', model: 'm',
+        inputUsdPerMillion: 1, outputUsdPerMillion: 1
+      }
+    }
+    const uncertainRead = await interpretEvaluationCase({
+      ...base,
+      fetchImpl: jest.fn().mockResolvedValue(responseFor({
+        requestMode: 'execute', additionalActions: []
+      }))
+    })
+    const negated = await interpretEvaluationCase({
+      ...base,
+      fetchImpl: jest.fn().mockResolvedValue(responseFor({
+        requestMode: 'negated', additionalActions: []
+      }))
+    })
+    const secondaryWrite = await interpretEvaluationCase({
+      ...base,
+      fetchImpl: jest.fn().mockResolvedValue(responseFor({
+        requestMode: 'execute', additionalActions: ['delete']
+      }))
+    })
+    expect(uncertainRead.actual.executionAllowed).toBe(true)
+    expect(negated.actual.executionAllowed).toBe(false)
+    expect(secondaryWrite.actual.executionAllowed).toBe(false)
   })
 
   it('marks token ceilings as budget failures even when price metadata is absent', async () => {
