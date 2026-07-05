@@ -28,6 +28,7 @@ import {
   handleModelFirstOpenClawCommand,
   modelFirstOpenClawEnabled
 } from '@/lib/server/openclawAgentHandler'
+import { attachOpenClawAgentV2Shadow } from '@/lib/openclaw/agent-v2/shadowRunner'
 
 function readBearerToken(req) {
   const authorization = String(req.headers.authorization || '')
@@ -210,6 +211,28 @@ export default async function handler(req, res) {
     }
     const stored = await getOpenClawConversationState(conversationKey)
     const state = stored?.state || {}
+    attachOpenClawAgentV2Shadow({
+      req,
+      res,
+      context: {
+        ownerId: profile.id,
+        profile,
+        channel: 'openclaw-weixin',
+        senderId,
+        threadId,
+        messageId,
+        message: rawCommand,
+        sessionState: {
+          activeFocus:
+            state.lastSelectedObject ||
+            state.lastMutationObject ||
+            state.lastObject ||
+            null,
+          resultSet: Array.isArray(state.candidates) ? state.candidates : [],
+          pendingConfirmation: state.pendingAction || null
+        }
+      }
+    })
     const now = req.body?.receivedAt ? new Date(String(req.body.receivedAt)) : new Date()
     const safeNow = Number.isNaN(now.getTime()) ? new Date() : now
     const normalizedInput = normalizeOpenClawInput(rawCommand, {
