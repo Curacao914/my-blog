@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "as_of": "2026-07-05T19:45:00+08:00",
+  "as_of": "2026-07-06T00:30:00+08:00",
   "repository": "Curacao914/my-blog",
   "production": "https://law-tech.dev",
   "git": {
@@ -15,8 +15,8 @@
   },
   "vercel": {
     "project": "curacaos-projects/curacao-top",
-    "current_production_deployment_id": "dpl_G6rgPZh2QM3Lh5hUhbrEUawsToMH",
-    "current_production_commit": "cd963867682ea388cb45aa30687631a235288c62",
+    "current_production_deployment_id": "dpl_C17Vd3SBeovrFPYhcuc5wUyeghsi",
+    "current_production_commit": "9042a93641da292150040bd7ef933ec802be0599",
     "current_production_status": "ready",
     "rollback_deployment_id": "dpl_3DRvnp53MBjXdECgRd6nx87WVRCS",
     "rollback_deployment_commit": "9163826c3a78fa1254683c7682286a528a8ce280",
@@ -31,7 +31,7 @@
     },
     "authenticated_command_verified": true,
     "real_wechat_verified": true,
-    "verification_note": "Real WeChat legacy query and disposable schedule-item create/delete acceptance passed after the v1 flag rollback."
+    "verification_note": "After PR 14 Supabase environment drift caused command failures, Production variables were restored to htbbkcxevcouwehpugwc and exact main was redeployed. Tencent-side authenticated read-only command returned HTTP 200, ok true, and 33 results."
   },
   "database": {
     "provider": "Supabase",

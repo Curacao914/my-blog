@@ -42,6 +42,7 @@ PR #12 回退与治理闭环已由 PR #13 合并；Agent Studio 已由 PR #14 �
 
 - GitHub main 为 `cd963867682ea388cb45aa30687631a235288c62`；
 - Production rollback redeploy `dpl_3DRvnp53MBjXdECgRd6nx87WVRCS` Ready，`OPENCLAW_AGENT_V1_ENABLED` 已在 Production 添加为 false；
+- PR #14 部署后的 Supabase 环境漂移已于 2026-07-06 修复；当前 exact-main deployment `dpl_C17Vd3SBeovrFPYhcuc5wUyeghsi` Ready，腾讯端 authenticated command 只读查询 HTTP 200 / 33 条结果；
 - 真实微信 legacy 查询及可清理事项创建/删除已通过；
 - main 已恢复保护：必须经 PR，required check 为 `build`，禁止 force-push/deletion；
 - Supabase Production 已完成只读 live audit，项目 healthy，六个关键表均存在且可读；

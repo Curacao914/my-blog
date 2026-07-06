@@ -167,6 +167,7 @@ MANIFEST-SHA256.txt
 - 发布顺序固定为 Studio/Evaluation → Shadow → 只读 Canary → 可逆写 Canary；每一步是独立 PR、独立 flag 和独立回滚锚点。
 - Studio migration 必须先在隔离 Supabase 项目执行：确认三张目标表不存在，应用 SQL，核验 RLS/唯一 published 索引/事务函数，再在单一 `BEGIN ... ROLLBACK` 中验证低分拒绝、published 不可变和 rollback 新版本；确认测试行计数为 0 后才允许进入 Preview。
 - Production additive migration 只能在 Studio PR、Preview、隔离数据库事务和真实模型门禁行为均验收后执行；模型未达 fixed-set 时允许部署控制面，但不得产生 published profile，也不得开启 Shadow/Canary runtime。
+- 任何 Preview/Production Supabase 环境变量拆分后，redeploy 前必须从目标环境执行关键业务表只读探针；变量“存在”不等于指向正确项目。微信最低探针必须覆盖 `openclaw_conversation_states`，禁止仅用首页 200 作为数据库切换验收。
 - Shadow 不回复、不调用 Tool、不改变 legacy 结果；模型或 trace 失败只记录，不影响用户路径。
 - Shadow flag 仅接受显式 `true/1`，未配置即关闭；Production trace 必须绑定实际 published config 版本。没有 published config 时直接 skip，不调用模型。
 - Shadow migration 只创建 `openclaw_agent_shadow_traces`；原文/legacy 回复加密，标识哈希化，30 天 cron 清理。备份文件为 0B 或 dump 未退出 0 均不得视为有效备份，也不得继续 migration。

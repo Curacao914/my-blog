@@ -38,6 +38,7 @@
 - 当前 GitHub main：`cd963867682ea388cb45aa30687631a235288c62`；
 - exact-main Production deployment：`dpl_G6rgPZh2QM3Lh5hUhbrEUawsToMH` Ready，首页 HTTP 200；
 - 2026-07-04 已在 Production 新增 `OPENCLAW_AGENT_V1_ENABLED=false` 并从该 main commit 重新部署；deployment `dpl_3DRvnp53MBjXdECgRd6nx87WVRCS` 为 Ready，`law-tech.dev` alias 已指向该 deployment；
+- 2026-07-05 15:02 的 PR #14 Production deployment 使用了缺少 `openclaw_conversation_states` 的 Supabase 配置，导致微信命令从 15:05 起持续失败；2026-07-06 已将 Production `SUPABASE_URL`/service role 恢复到 `htbbkcxevcouwehpugwc` 并 redeploy exact main，deployment `dpl_C17Vd3SBeovrFPYhcuc5wUyeghsi` Ready；腾讯端真实 relay token 只读查询返回 HTTP 200、`ok:true`、33 条结果；
 - 首页 HTTP 200；真实微信已完成 legacy 查询以及可清理事项的创建/删除验收，v1 help 错路由未再接管；
 - Production Supabase ref：`htbbkcxevcouwehpugwc`；
 - 7 列 schedule semantics additive repair 已完成隔离恢复、隔离验收和 Production 执行；

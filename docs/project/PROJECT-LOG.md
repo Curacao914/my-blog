@@ -197,3 +197,10 @@
 - PR #15 实现共享 strict Interpreter、代码所有的 Capability Registry/Planner/Semantic Gate、Schedule/Reading/Course 只读 Resource、真实对象/结构化上下文解析、零模型 Session Control、default-off `waitUntil` Shadow 和独立加密 trace；未导入业务 Tool。
 - 5 suites / 43 tests、`git diff --check`、JSON 解析和 `LAW_TECH_STATIC_PREFETCH_MODE=skip` build 通过。
 - Production Studio migration 前备份两次停在 Supabase Management API 临时登录角色初始化；0B 文件不算备份，已停止且未执行数据库写入。Production Studio/Shadow migration、Preview、Production 与微信 Shadow 仍未验收。
+
+### PR #14 Production Supabase 漂移与微信恢复
+
+- 腾讯日志证明 2026-07-05 13:13 relay capture 仍成功；PR #14 Production deployment 15:02 上线后，15:05 起所有入站 capture 变为 `ok:false`，三个 user services 始终 active。
+- 从腾讯端使用当前 relay token 复现得到 HTTP 404：Production Supabase schema cache 找不到 `public.openclaw_conversation_states`；不是 PR #15、Shadow 或服务进程故障。
+- 将 Vercel Production `SUPABASE_URL` 与 `SUPABASE_SERVICE_ROLE_KEY` 恢复到项目 `htbbkcxevcouwehpugwc`，secret 通过管理面内存管道更新，未输出或落盘。
+- redeploy PR #14 exact main 后，deployment `dpl_C17Vd3SBeovrFPYhcuc5wUyeghsi` Ready 并 alias 到 `law-tech.dev`；腾讯端 authenticated 只读查询返回 HTTP 200、`ok:true`、33 条结果。未重启腾讯服务、未写业务数据。
