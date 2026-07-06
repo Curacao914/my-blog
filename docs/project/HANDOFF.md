@@ -36,19 +36,19 @@
 
 ## 当前唯一主线
 
-PR #12 回退与治理闭环已由 PR #13 合并；Agent Studio 已由 PR #14 合并。当前只推进 default-off Shadow Runtime Draft PR #15，不开始 Canary。
+PR #12 回退与治理闭环已由 PR #13 合并；Agent Studio 已由 PR #14 合并；default-off Shadow Runtime 已由 PR #15 合并并部署。当前只推进评估语义收敛与 published profile，不开始 Canary。
 
 截至 2026-07-05：
 
-- GitHub main 为 `cd963867682ea388cb45aa30687631a235288c62`；
+- GitHub main 为 `b9110b1b17886f226b6d1ca9f97fbe3c79fa884f`；
 - Production rollback redeploy `dpl_3DRvnp53MBjXdECgRd6nx87WVRCS` Ready，`OPENCLAW_AGENT_V1_ENABLED` 已在 Production 添加为 false；
-- PR #14 部署后的 Supabase 环境漂移已于 2026-07-06 修复；当前 exact-main deployment `dpl_C17Vd3SBeovrFPYhcuc5wUyeghsi` Ready，腾讯端 authenticated command 只读查询 HTTP 200 / 33 条结果；
+- 当前 exact-main deployment `dpl_3RU5GHSpzEPZrBAvDyZGYR4L6dHJ` Ready；Preview/Production Supabase 凭据已拆为四条单环境变量，腾讯端 authenticated command 查询 HTTP 200 / 7 条结果；
 - 真实微信 legacy 查询及可清理事项创建/删除已通过；
 - main 已恢复保护：必须经 PR，required check 为 `build`，禁止 force-push/deletion；
 - Supabase Production 已完成只读 live audit，项目 healthy，六个关键表均存在且可读；
 - 腾讯云 SSH 已恢复，三个 user services active/running，readyz 为 true。
 
-PR #14 已以 merge commit `9042a93641da292150040bd7ef933ec802be0599` 进入 main。strict Flash/Pro 仍未达发布门禁，因此没有 published profile。Production Studio migration 已在有效备份后应用并核验，三表为空。Draft PR #15 已交付代码层 Shadow：default-off、后台执行、无 Tool、加密 trace、确定性 Planner/Semantic Gate、只读 Resource 与结构化上下文。独立 Preview 已备份、应用 Shadow migration、绑定正确 Supabase 项目并通过 PR checks；下一步是合并 PR #15、应用 Production Shadow migration 并在 flag=false 下部署，未达门禁不得开启 Shadow。
+PR #14 已以 merge commit `9042a93641da292150040bd7ef933ec802be0599` 进入 main；PR #15 已以 merge commit `b9110b1b17886f226b6d1ca9f97fbe3c79fa884f` 进入 main。Production Studio/Shadow additive migrations 均在备份后应用，Shadow flag 显式为 false。Preview/Production 的 Supabase URL/service role 已从 Vercel 共用项彻底拆分；修复后腾讯端 authenticated 查询 HTTP 200 / 7 条，审计会话已清理，trace 为 0。strict Flash/Pro 仍未达发布门禁，因此没有 published profile，Shadow 尚未运行。下一步不是给失败原句添提示词，而是继续收敛严格 schema、ontology 与代码所有的语义映射，重跑 development + holdout 达标后才能 publish 并开启 Shadow。
 
 禁止从补正则或修补 PR #12 Router 开始。实施顺序固定为：
 

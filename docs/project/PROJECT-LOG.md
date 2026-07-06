@@ -212,3 +212,11 @@
 - 生成 Production public schema 有效备份后，仅应用 `20260704_openclaw_agent_studio.sql`；三表、RLS、发布/回滚函数与 migration ledger 均通过只读核验，三表和 published 配置计数为 0。
 - 对独立 Preview 项目 `ldciqxzczwpuhhgeinmc` 完成 schema 备份，应用 Studio 账本与 Shadow trace migration；当前 Studio 为 1 个 draft、150 个 eval cases、7 个 eval runs，Shadow traces 为 0，无 published 配置。
 - Vercel Preview `SUPABASE_URL` 与 service role 已显式绑定该 Preview 项目，不与 Production `htbbkcxevcouwehpugwc` 共用。PR #15 的 build、Analyze、CodeQL、Vercel 与 bot checks 全部通过。
+
+### PR #15 merge 与 default-off Production Shadow
+
+- PR #15 以 merge commit `b9110b1b17886f226b6d1ca9f97fbe3c79fa884f` 进入 main；不包含 Tool 调用，不改变 legacy 回复与写入。
+- Production 备份 `law-tech-production-before-agent-shadow-schema.sql` 为 78 KB，SHA-256 `872b007825546f4aad60b8bdfcc1234d212fbcd3dc383325e4afa1e021e4f1f8`；随后仅应用 `20260705_openclaw_agent_shadow_traces.sql`，trace 表为 0，Production ledger `20260704/20260705` 对齐。
+- Production 显式配置 `OPENCLAW_AGENT_V2_SHADOW_ENABLED=false`，因为尚无达标 published profile，Shadow 不运行。
+- merge 部署后的腾讯端 authenticated 探针发现 `SUPABASE_SERVICE_ROLE_KEY` 在 Vercel 仍是 `Preview, Production` 共用项；这会使之前的 Preview key 更新同时污染 Production。删除共用项后，分别新建 Preview/Production URL 与 service role 四条独立变量，`vercel env ls` 已显示互不共享的作用域。
+- 修复后腾讯端 authenticated 查询 HTTP 200、`ok:true`、7 条结果；专用 audit conversation state 已删除，Shadow trace 仍为 0。
