@@ -21,9 +21,10 @@
 - [x] 在 PR #15 代码层交付 `UserIntent → Deterministic Planner → Semantic Gate`；
 - [x] 在 PR #15 代码层交付 Schedule、Reading、Course Capability/只读 Resource/实体与结构化上下文解析；
 - [ ] 完整交付 default-off Production Shadow、独立加密 trace、成本和延迟观测；
-  - [x] Draft PR #15 实现 default-off、无 Tool 的后台 Shadow 与 30 天加密 trace；
+  - [x] PR #15 实现并合并 default-off、无 Tool 的后台 Shadow 与 30 天加密 trace；
   - [x] 完成独立 Preview 备份、migration、环境绑定与 PR checks；
-  - [ ] Production migration、默认关闭部署、显式开启与 trace 验收；
+  - [x] 完成 Production 备份、migration 与显式 flag=false 部署；
+  - [ ] 评估达标并发布 profile 后显式开启，完成 trace 与真实微信 Shadow 验收；
 - [ ] Shadow 连续 7 天、至少 50 条真实消息，关键安全项 100%、固定集总体至少 98%；
 - [ ] 另开只读 Canary PR；只读验收完成后再开单条可逆写 Canary PR；
 - [ ] 写 Canary 真机验收后单独清理历史误创建 Reading。

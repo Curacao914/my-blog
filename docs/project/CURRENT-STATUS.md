@@ -39,6 +39,7 @@
 - exact-main Production deployment：`dpl_G6rgPZh2QM3Lh5hUhbrEUawsToMH` Ready，首页 HTTP 200；
 - 2026-07-04 已在 Production 新增 `OPENCLAW_AGENT_V1_ENABLED=false` 并从该 main commit 重新部署；deployment `dpl_3DRvnp53MBjXdECgRd6nx87WVRCS` 为 Ready，`law-tech.dev` alias 已指向该 deployment；
 - 2026-07-05 15:02 的 PR #14 Production deployment 使用了缺少 `openclaw_conversation_states` 的 Supabase 配置，导致微信命令从 15:05 起持续失败；2026-07-06 已将 Production `SUPABASE_URL`/service role 恢复到 `htbbkcxevcouwehpugwc` 并 redeploy exact main，deployment `dpl_C17Vd3SBeovrFPYhcuc5wUyeghsi` Ready；腾讯端真实 relay token 只读查询返回 HTTP 200、`ok:true`、33 条结果；
+- 当前 exact-main Production deployment 为 `dpl_3RU5GHSpzEPZrBAvDyZGYR4L6dHJ` Ready，对应 PR #15 merge commit `b9110b1b17886f226b6d1ca9f97fbe3c79fa884f`；腾讯端 authenticated 查询 HTTP 200 / 7 条；
 - 首页 HTTP 200；真实微信已完成 legacy 查询以及可清理事项的创建/删除验收，v1 help 错路由未再接管；
 - Production Supabase ref：`htbbkcxevcouwehpugwc`；
 - 7 列 schedule semantics additive repair 已完成隔离恢复、隔离验收和 Production 执行；
@@ -178,11 +179,13 @@ ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user i
 - 严格序列化把 Flash 非 JSON 错误从 32 降到 2；剩余主要是 action/domain/object/scope 语义分类，进入 Planner/Semantic Gate 与模型能力主线。development 规则离线模拟未改善 holdout，因此未写入生产代码；
 - 2026-07-06 已生成有效 Production public schema 备份（64 KB，SHA-256 `78f3859405011305734050e45da3ad3c4744698ca5900f570b802eec3d0ab1e9`），随后应用 Studio additive migration；Production 三表、RLS、发布/回滚函数与 migration ledger 均已核验，三表及 published 配置均为 0。
 
-## Agent v2 Shadow Runtime（Draft PR #15）
+## Agent v2 Shadow Runtime（PR #15 已合并）
 
-- 分支 `codex/agent-v2-shadow-20260705` 基于 exact main `9042a93641da292150040bd7ef933ec802be0599`；Draft PR：https://github.com/Curacao914/my-blog/pull/15；
+- 分支 `codex/agent-v2-shadow-20260705` 基于 exact main `9042a93641da292150040bd7ef933ec802be0599`；PR：https://github.com/Curacao914/my-blog/pull/15；2026-07-06 合并，merge commit `b9110b1b17886f226b6d1ca9f97fbe3c79fa884f`；
 - 共享 strict Function Schema Interpreter；代码生成 Capability Card、RoutePlan 与 QuerySpec，并由 Semantic Gate、真实只读 Resource 和实体解析器约束；
 - confirm、cancel 和已存在结果集的序号选择使用零模型 Session Control 协议；普通自然语言仍由模型理解，不回退到 legacy 正则写入；
 - `OPENCLAW_AGENT_V2_SHADOW_ENABLED` 未显式为 true 时关闭；Shadow 使用 `waitUntil`，不回复、不导入 Tool、不改变 legacy 结果；
 - 新增独立 trace migration：原文与 legacy 回复 AES-256-GCM 加密，sender/thread/message 标识哈希化，30 天到期清理；不修改业务表；
-- 5 个定向 suites / 43 tests、`git diff --check`、静态预取 skip build 与 PR checks 通过；Preview schema 已备份（SHA-256 `c6ad2fb44a28473363b973e5414ebd688361080085c4831ce820b4a793979770`）并应用 Shadow trace migration，Vercel Preview 已显式绑定独立项目 `ldciqxzczwpuhhgeinmc`；Production Shadow migration、显式开启与真实微信 Shadow 尚未验收。
+- 5 个定向 suites / 43 tests、`git diff --check`、静态预取 skip build 与 PR checks 通过；Preview schema 已备份（SHA-256 `c6ad2fb44a28473363b973e5414ebd688361080085c4831ce820b4a793979770`）并应用 Shadow trace migration，Vercel Preview 已显式绑定独立项目 `ldciqxzczwpuhhgeinmc`；
+- Production 在 78 KB schema 备份（SHA-256 `872b007825546f4aad60b8bdfcc1234d212fbcd3dc383325e4afa1e021e4f1f8`）后仅应用 Shadow trace migration，表计数为 0且 ledger 对齐；Production 显式配置 `OPENCLAW_AGENT_V2_SHADOW_ENABLED=false`；因无合格 published profile，Shadow 未开启、未调用模型、未生成 trace。
+- 合并后真实腾讯端探针再次暴露 Vercel `SUPABASE_SERVICE_ROLE_KEY` 仍是 Preview/Production 共用变量，更新任一环境会连带改另一环境。已删除共用项，将 URL 和 key 拆为 Preview/Production 各自独立的四条变量；腾讯端 authenticated 查询恢复 HTTP 200 / 7 条结果，专用审计会话已清理，Shadow trace 仍为 0。

@@ -1,11 +1,11 @@
 {
   "schema_version": 2,
-  "as_of": "2026-07-06T15:10:00+08:00",
+  "as_of": "2026-07-06T15:28:00+08:00",
   "repository": "Curacao914/my-blog",
   "production": "https://law-tech.dev",
   "git": {
-    "main_commit": "9042a93641da292150040bd7ef933ec802be0599",
-    "open_pull_requests": 1,
+    "main_commit": "b9110b1b17886f226b6d1ca9f97fbe3c79fa884f",
+    "open_pull_requests": 0,
     "project_docs_merge_commit": "85dfb514d9db5ae930b87b0f72b4124fad4b2ce7",
     "rollback_governance_merge_commit": "cd963867682ea388cb45aa30687631a235288c62",
     "main_protected": true,
@@ -15,8 +15,8 @@
   },
   "vercel": {
     "project": "curacaos-projects/curacao-top",
-    "current_production_deployment_id": "dpl_C17Vd3SBeovrFPYhcuc5wUyeghsi",
-    "current_production_commit": "9042a93641da292150040bd7ef933ec802be0599",
+    "current_production_deployment_id": "dpl_3RU5GHSpzEPZrBAvDyZGYR4L6dHJ",
+    "current_production_commit": "b9110b1b17886f226b6d1ca9f97fbe3c79fa884f",
     "current_production_status": "ready",
     "rollback_deployment_id": "dpl_3DRvnp53MBjXdECgRd6nx87WVRCS",
     "rollback_deployment_commit": "9163826c3a78fa1254683c7682286a528a8ce280",
@@ -31,7 +31,7 @@
     },
     "authenticated_command_verified": true,
     "real_wechat_verified": true,
-    "verification_note": "After PR 14 Supabase environment drift caused command failures, Production variables were restored to htbbkcxevcouwehpugwc and exact main was redeployed. Tencent-side authenticated read-only command returned HTTP 200, ok true, and 33 results."
+    "verification_note": "Preview and Production Supabase URL/service-role variables were split into four single-target Vercel records after a shared-target regression. Tencent-side authenticated query returned HTTP 200, ok true, and 7 results; the dedicated audit session was deleted and Shadow traces remained zero."
   },
   "database": {
     "provider": "Supabase",
@@ -97,7 +97,7 @@
   "agent_v2": {
     "architecture": "UserIntent -> Deterministic Planner -> Semantic Gate -> Resource -> Risk Policy -> Tool -> Response -> Trace",
     "model_direct_permissions": [],
-    "next_closure": "merge_default_off_shadow_pr_15_then_apply_production_shadow_migration",
+    "next_closure": "mechanistic_intent_scope_constraints_then_rerun_development_and_holdout",
     "studio": {
       "branch": "codex/agent-studio-v1-20260704",
       "base_commit": "cd963867682ea388cb45aa30687631a235288c62",
@@ -125,11 +125,12 @@
       "branch": "codex/agent-v2-shadow-20260705",
       "base_commit": "9042a93641da292150040bd7ef933ec802be0599",
       "code_commit": "0fac35cb",
-      "status": "draft_preview_migration_and_all_pr_checks_passed",
+      "status": "merged_and_production_deployed_default_off",
+      "merge_commit": "b9110b1b17886f226b6d1ca9f97fbe3c79fa884f",
       "feature_flag": "OPENCLAW_AGENT_V2_SHADOW_ENABLED",
       "default_enabled": false,
       "tool_imports": false,
-      "trace_migration": "applied_to_isolated_preview_not_production",
+      "trace_migration": "applied_to_preview_and_production_zero_rows_verified",
       "production_enabled": false,
       "targeted_tests": "5_suites_43_tests_passed",
       "local_build": "passed_with_static_prefetch_skip"
@@ -148,10 +149,11 @@
       "fixed_set_accuracy_minimum": 0.98
     }
   },
-  "current_mainline": "finish Production Studio migration and default-off Shadow PR 15 before Canary",
+  "current_mainline": "improve_mechanistic_intent_constraints_and_publish_a_passing_profile_before_enabling_shadow",
   "pending": [
-    "Agent v2 Shadow PR 15 merge",
-    "Production Shadow migration and explicit flag-off deployment",
+    "mechanistic UserIntent scope and ontology correction without example prompt patches",
+    "development and holdout evaluation to 98 percent overall and 100 percent safety",
+    "publish qualified profile and explicitly enable Production Shadow",
     "course natural full-cycle acceptance",
     "historical failed or needs_attention course cleanup",
     "historical bad Reading cleanup after Agent write-canary acceptance"

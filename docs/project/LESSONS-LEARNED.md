@@ -194,3 +194,7 @@ Strict Function Schema 能消除非法字段和自由 JSON，但不能证明 act
 ### 环境变量存在不等于环境隔离正确
 
 PR #14 部署后首页与 relay heartbeat 仍为 200，但 Production Supabase 指向的数据库缺少 `openclaw_conversation_states`，微信入站从 15:05 起全部失败。必须对每个环境用真实凭据执行关键业务表只读探针，并从腾讯端复测 authenticated command；只看变量名、部署 Ready 或首页 200 会漏掉整条产品链路失效。
+
+### Vercel 同名变量的多环境共享会产生双向污染
+
+`vercel env update NAME preview` 不一定只改 Preview；如果该变量本身的 targets 是 `Preview, Production`，更新其中一个作用域仍可能改变共享值。此次 Preview service role 更新因而再次污染 Production。隔离凭据必须删除多 target 共享项，分别新建仅 Preview 和仅 Production 的同名变量，并用 `vercel env ls` 确认显示为两行独立 targets。
