@@ -204,3 +204,11 @@
 - 从腾讯端使用当前 relay token 复现得到 HTTP 404：Production Supabase schema cache 找不到 `public.openclaw_conversation_states`；不是 PR #15、Shadow 或服务进程故障。
 - 将 Vercel Production `SUPABASE_URL` 与 `SUPABASE_SERVICE_ROLE_KEY` 恢复到项目 `htbbkcxevcouwehpugwc`，secret 通过管理面内存管道更新，未输出或落盘。
 - redeploy PR #14 exact main 后，deployment `dpl_C17Vd3SBeovrFPYhcuc5wUyeghsi` Ready 并 alias 到 `law-tech.dev`；腾讯端 authenticated 只读查询返回 HTTP 200、`ok:true`、33 条结果。未重启腾讯服务、未写业务数据。
+
+## 2026-07-06
+
+### Agent Studio Production migration 与 Shadow Preview 边界
+
+- 生成 Production public schema 有效备份后，仅应用 `20260704_openclaw_agent_studio.sql`；三表、RLS、发布/回滚函数与 migration ledger 均通过只读核验，三表和 published 配置计数为 0。
+- 对独立 Preview 项目 `ldciqxzczwpuhhgeinmc` 完成 schema 备份，应用 Studio 账本与 Shadow trace migration；当前 Studio 为 1 个 draft、150 个 eval cases、7 个 eval runs，Shadow traces 为 0，无 published 配置。
+- Vercel Preview `SUPABASE_URL` 与 service role 已显式绑定该 Preview 项目，不与 Production `htbbkcxevcouwehpugwc` 共用。PR #15 的 build、Analyze、CodeQL、Vercel 与 bot checks 全部通过。

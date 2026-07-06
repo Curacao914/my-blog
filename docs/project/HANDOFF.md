@@ -48,7 +48,7 @@ PR #12 回退与治理闭环已由 PR #13 合并；Agent Studio 已由 PR #14 �
 - Supabase Production 已完成只读 live audit，项目 healthy，六个关键表均存在且可读；
 - 腾讯云 SSH 已恢复，三个 user services active/running，readyz 为 true。
 
-PR #14 已以 merge commit `9042a93641da292150040bd7ef933ec802be0599` 进入 main。strict Flash/Pro 仍未达发布门禁，因此没有 published profile。Draft PR #15 已交付代码层 Shadow：default-off、后台执行、无 Tool、加密 trace、确定性 Planner/Semantic Gate、只读 Resource 与结构化上下文。Production Studio migration 前备份被 Supabase Management API 临时角色初始化阻塞，未写数据库；下一步是完成有效备份与 additive migrations、Preview 验收、checks 和合并，未达门禁不得开启 Shadow。
+PR #14 已以 merge commit `9042a93641da292150040bd7ef933ec802be0599` 进入 main。strict Flash/Pro 仍未达发布门禁，因此没有 published profile。Production Studio migration 已在有效备份后应用并核验，三表为空。Draft PR #15 已交付代码层 Shadow：default-off、后台执行、无 Tool、加密 trace、确定性 Planner/Semantic Gate、只读 Resource 与结构化上下文。独立 Preview 已备份、应用 Shadow migration、绑定正确 Supabase 项目并通过 PR checks；下一步是合并 PR #15、应用 Production Shadow migration 并在 flag=false 下部署，未达门禁不得开启 Shadow。
 
 禁止从补正则或修补 PR #12 Router 开始。实施顺序固定为：
 
