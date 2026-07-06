@@ -16,10 +16,14 @@
   - [x] 隔离 Supabase 配置下的 Vercel Preview owner 页面、固定拓扑和空配置 GET 验收；
   - [x] Preview owner 草稿创建、保存、隔离数据库边界和失败发布门禁验收；
   - [x] 完成 strict Function Schema、可恢复分批评估、真实 Flash/Pro 对比；不合格草稿被三层门禁拒绝发布；
-  - [ ] 合并 PR #14，并完成 Production additive migration/控制面部署验收；不存在合格 published profile 时保持 Agent runtime 关闭；
-- [ ] 完整交付 `UserIntent → Deterministic Planner → Semantic Gate`；
-- [ ] 完整交付 Schedule、Reading、Course Capability/Resource/实体解析；
+  - [x] 合并 PR #14，merge `9042a93641da292150040bd7ef933ec802be0599`；
+  - [x] 完成 Production additive migration/控制面数据库验收；不存在合格 published profile，Agent runtime 保持关闭；
+- [x] 在 PR #15 代码层交付 `UserIntent → Deterministic Planner → Semantic Gate`；
+- [x] 在 PR #15 代码层交付 Schedule、Reading、Course Capability/只读 Resource/实体与结构化上下文解析；
 - [ ] 完整交付 default-off Production Shadow、独立加密 trace、成本和延迟观测；
+  - [x] Draft PR #15 实现 default-off、无 Tool 的后台 Shadow 与 30 天加密 trace；
+  - [x] 完成独立 Preview 备份、migration、环境绑定与 PR checks；
+  - [ ] Production migration、默认关闭部署、显式开启与 trace 验收；
 - [ ] Shadow 连续 7 天、至少 50 条真实消息，关键安全项 100%、固定集总体至少 98%；
 - [ ] 另开只读 Canary PR；只读验收完成后再开单条可逆写 Canary PR；
 - [ ] 写 Canary 真机验收后单独清理历史误创建 Reading。

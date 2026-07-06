@@ -140,3 +140,10 @@
 - 状态：Accepted
 - 决策：DeepSeek 使用 `/beta` strict Function Schema、关闭 Thinking，并强制唯一 `emit_user_intent` 函数参数作为 UserIntent。该函数仅是输出序列化器，不是业务 Tool；模型没有 capability、risk、SQL 或执行权限。
 - 后果：provider 约束字段、枚举和额外属性，代码再校验长度、domain/object 一致性与执行许可。content-only JSON、无 tool call、非法 schema 或 provider 不支持都按 `not executed` 失败，禁止退化为正则猜测。
+
+## D-021：模型理解与代码授权是两套独立门禁
+
+- 日期：2026-07-05
+- 状态：Accepted
+- 决策：模型只负责受约束的语言理解；Capability、QuerySpec、风险、必填写入字段、复合请求、真实对象和上下文来源均由代码生成或验证。confirm、cancel 和已有结果集的序号选择是有限 Session Control 协议，可零模型处理，但不得直接调用业务 Tool。
+- 后果：JSON 结构正确仍不代表可执行；任何不确定、跨域对象、候选差距不足、缺失写入字段、复合动作、预算超限或确认要求都由 Semantic Gate 拒绝。Shadow 永远返回 `executionAllowed=false`。

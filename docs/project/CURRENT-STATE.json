@@ -1,10 +1,10 @@
 {
   "schema_version": 2,
-  "as_of": "2026-07-04T17:35:18+08:00",
+  "as_of": "2026-07-06T15:10:00+08:00",
   "repository": "Curacao914/my-blog",
   "production": "https://law-tech.dev",
   "git": {
-    "main_commit": "cd963867682ea388cb45aa30687631a235288c62",
+    "main_commit": "9042a93641da292150040bd7ef933ec802be0599",
     "open_pull_requests": 1,
     "project_docs_merge_commit": "85dfb514d9db5ae930b87b0f72b4124fad4b2ce7",
     "rollback_governance_merge_commit": "cd963867682ea388cb45aa30687631a235288c62",
@@ -15,8 +15,8 @@
   },
   "vercel": {
     "project": "curacaos-projects/curacao-top",
-    "current_production_deployment_id": "dpl_G6rgPZh2QM3Lh5hUhbrEUawsToMH",
-    "current_production_commit": "cd963867682ea388cb45aa30687631a235288c62",
+    "current_production_deployment_id": "dpl_C17Vd3SBeovrFPYhcuc5wUyeghsi",
+    "current_production_commit": "9042a93641da292150040bd7ef933ec802be0599",
     "current_production_status": "ready",
     "rollback_deployment_id": "dpl_3DRvnp53MBjXdECgRd6nx87WVRCS",
     "rollback_deployment_commit": "9163826c3a78fa1254683c7682286a528a8ce280",
@@ -31,7 +31,7 @@
     },
     "authenticated_command_verified": true,
     "real_wechat_verified": true,
-    "verification_note": "Real WeChat legacy query and disposable schedule-item create/delete acceptance passed after the v1 flag rollback."
+    "verification_note": "After PR 14 Supabase environment drift caused command failures, Production variables were restored to htbbkcxevcouwehpugwc and exact main was redeployed. Tencent-side authenticated read-only command returned HTTP 200, ok true, and 33 results."
   },
   "database": {
     "provider": "Supabase",
@@ -97,12 +97,13 @@
   "agent_v2": {
     "architecture": "UserIntent -> Deterministic Planner -> Semantic Gate -> Resource -> Risk Policy -> Tool -> Response -> Trace",
     "model_direct_permissions": [],
-    "next_closure": "merge_agent_studio_apply_production_additive_migration_then_start_default_off_shadow_pr",
+    "next_closure": "merge_default_off_shadow_pr_15_then_apply_production_shadow_migration",
     "studio": {
       "branch": "codex/agent-studio-v1-20260704",
       "base_commit": "cd963867682ea388cb45aa30687631a235288c62",
       "pull_request": 14,
-      "status": "release_candidate_strict_serialization_and_resumable_eval_verified_publish_correctly_blocked",
+      "status": "merged_strict_serialization_and_resumable_eval_verified_publish_correctly_blocked",
+      "merge_commit": "9042a93641da292150040bd7ef933ec802be0599",
       "targeted_tests": "9_studio_suites_66_tests_and_6_v1_suites_23_tests_passed",
       "eslint": "passed_for_new_files",
       "local_build": "passed",
@@ -113,11 +114,25 @@
       "preview_database_override": "ldciqxzczwpuhhgeinmc",
       "first_pr_checks": "build_179_seconds_codeql_analyze_vercel_passed",
       "isolated_preview_checks": "build_156_seconds_codeql_analyze_vercel_passed",
-      "latest_preview_deployment": "pending_for_commit_490a5367",
+      "latest_preview_deployment": "dpl_7ESUu8Q2YCvBHmQuKJitJyUEsWpK_ready",
       "preview_ui_api": "owner_get_create_save_and_fixed_topology_passed",
       "preview_model_evaluation": "strict_flash_74_67_overall_52_intent_97_33_safety_and_strict_pro_75_67_overall_52_intent_99_33_safety_both_failed_and_publish_blocked",
-      "production_migration": "not_applied",
+      "production_migration": "applied_after_verified_schema_backup_tables_rls_functions_and_zero_rows_verified",
       "wechat_runtime_changed": false
+    },
+    "shadow": {
+      "pull_request": 15,
+      "branch": "codex/agent-v2-shadow-20260705",
+      "base_commit": "9042a93641da292150040bd7ef933ec802be0599",
+      "code_commit": "0fac35cb",
+      "status": "draft_preview_migration_and_all_pr_checks_passed",
+      "feature_flag": "OPENCLAW_AGENT_V2_SHADOW_ENABLED",
+      "default_enabled": false,
+      "tool_imports": false,
+      "trace_migration": "applied_to_isolated_preview_not_production",
+      "production_enabled": false,
+      "targeted_tests": "5_suites_43_tests_passed",
+      "local_build": "passed_with_static_prefetch_skip"
     },
     "execution_order": [
       "finish rollback and governance",
@@ -133,11 +148,10 @@
       "fixed_set_accuracy_minimum": 0.98
     }
   },
-  "current_mainline": "finish Agent Studio and evaluation kernel closure before Shadow Runtime",
+  "current_mainline": "finish Production Studio migration and default-off Shadow PR 15 before Canary",
   "pending": [
-    "Agent Studio PR and Vercel Preview",
-    "real configured-model fixed-set evaluation and publish rollback acceptance",
-    "Agent Studio Production migration and deployment",
+    "Agent v2 Shadow PR 15 merge",
+    "Production Shadow migration and explicit flag-off deployment",
     "course natural full-cycle acceptance",
     "historical failed or needs_attention course cleanup",
     "historical bad Reading cleanup after Agent write-canary acceptance"

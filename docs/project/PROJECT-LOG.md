@@ -187,3 +187,28 @@
 - 将评估改为 24 条一批的可恢复账本协议，真实完成中断续跑 24→48→72→96→120→144→150；不再依赖单个长 HTTP 连接。
 - DeepSeek `json_schema` 不可用、Thinking 下 forced tool choice 被拒；依据官方 strict mode 规范改为 `/beta`、`thinking=disabled`、强制 `emit_user_intent` Function Schema。真实探针通过，content-only JSON 被代码拒绝。
 - strict Flash 150 条结果为总体 74.67%、意图 52%、安全 97.33%、USD 0.037189；strict Pro 为总体 75.67%、意图 52%、安全 99.33%、USD 0.116434。两者均未达门槛并被拒绝发布；未把 development 规则模拟写入生产代码。
+
+## 2026-07-05
+
+### Agent Studio merge 与 Shadow Draft PR
+
+- PR #14 合并，merge commit `9042a93641da292150040bd7ef933ec802be0599`；未产生 published Agent profile。
+- 从 exact main 创建 `codex/agent-v2-shadow-20260705`，提交 `16e6052d` 并创建 Draft PR #15。
+- PR #15 实现共享 strict Interpreter、代码所有的 Capability Registry/Planner/Semantic Gate、Schedule/Reading/Course 只读 Resource、真实对象/结构化上下文解析、零模型 Session Control、default-off `waitUntil` Shadow 和独立加密 trace；未导入业务 Tool。
+- 5 suites / 43 tests、`git diff --check`、JSON 解析和 `LAW_TECH_STATIC_PREFETCH_MODE=skip` build 通过。
+- Production Studio migration 前备份两次停在 Supabase Management API 临时登录角色初始化；0B 文件不算备份，已停止且未执行数据库写入。Production Studio/Shadow migration、Preview、Production 与微信 Shadow 仍未验收。
+
+### PR #14 Production Supabase 漂移与微信恢复
+
+- 腾讯日志证明 2026-07-05 13:13 relay capture 仍成功；PR #14 Production deployment 15:02 上线后，15:05 起所有入站 capture 变为 `ok:false`，三个 user services 始终 active。
+- 从腾讯端使用当前 relay token 复现得到 HTTP 404：Production Supabase schema cache 找不到 `public.openclaw_conversation_states`；不是 PR #15、Shadow 或服务进程故障。
+- 将 Vercel Production `SUPABASE_URL` 与 `SUPABASE_SERVICE_ROLE_KEY` 恢复到项目 `htbbkcxevcouwehpugwc`，secret 通过管理面内存管道更新，未输出或落盘。
+- redeploy PR #14 exact main 后，deployment `dpl_C17Vd3SBeovrFPYhcuc5wUyeghsi` Ready 并 alias 到 `law-tech.dev`；腾讯端 authenticated 只读查询返回 HTTP 200、`ok:true`、33 条结果。未重启腾讯服务、未写业务数据。
+
+## 2026-07-06
+
+### Agent Studio Production migration 与 Shadow Preview 边界
+
+- 生成 Production public schema 有效备份后，仅应用 `20260704_openclaw_agent_studio.sql`；三表、RLS、发布/回滚函数与 migration ledger 均通过只读核验，三表和 published 配置计数为 0。
+- 对独立 Preview 项目 `ldciqxzczwpuhhgeinmc` 完成 schema 备份，应用 Studio 账本与 Shadow trace migration；当前 Studio 为 1 个 draft、150 个 eval cases、7 个 eval runs，Shadow traces 为 0，无 published 配置。
+- Vercel Preview `SUPABASE_URL` 与 service role 已显式绑定该 Preview 项目，不与 Production `htbbkcxevcouwehpugwc` 共用。PR #15 的 build、Analyze、CodeQL、Vercel 与 bot checks 全部通过。

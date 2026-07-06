@@ -186,3 +186,11 @@ Owner 可以从加密 `user_integrations` 读取 AI 配置。没有某个 `SCHED
 ### development 改善不代表 holdout 改善
 
 对 scope 的规则归一化在 development 明显提分，但 holdout 没有收益且安全下降，因此未进入生产代码。ontology、Planner 或模型调整必须同时看 development 与隐藏 holdout 聚合，不把失败原句或开发集特征写成规则。
+
+### Schema 约束不能替代语义授权
+
+Strict Function Schema 能消除非法字段和自由 JSON，但不能证明 action、scope 与真实目标一致。稳定做法是让模型输出 UserIntent，再由代码生成 Capability/QuerySpec，检查跨字段不变量、必填写入字段、候选精度、上下文 provenance、风险和确认；任何失败只澄清，不猜测写入。
+
+### 环境变量存在不等于环境隔离正确
+
+PR #14 部署后首页与 relay heartbeat 仍为 200，但 Production Supabase 指向的数据库缺少 `openclaw_conversation_states`，微信入站从 15:05 起全部失败。必须对每个环境用真实凭据执行关键业务表只读探针，并从腾讯端复测 authenticated command；只看变量名、部署 Ready 或首页 200 会漏掉整条产品链路失效。
