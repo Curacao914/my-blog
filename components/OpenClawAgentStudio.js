@@ -164,7 +164,9 @@ export function OpenClawAgentStudio() {
   )
   const latestFailures = useMemo(() => failureSummary(latestRun), [latestRun])
   const visibleFailures = useMemo(() => (
-    runDetail?.run?.id === latestRun?.id ? (runDetail.failedResults || []) : []
+    runDetail && runDetail.run?.id === latestRun?.id
+      ? (runDetail.failedResults || [])
+      : []
   ), [runDetail, latestRun])
 
   const load = useCallback(async nextEnvironment => {
