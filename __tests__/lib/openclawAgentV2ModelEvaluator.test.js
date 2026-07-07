@@ -306,6 +306,83 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     expect(result.budgetExceeded).toBe(true)
   })
 
+  it('resolves contextual ordinal read-state updates without a model call', async () => {
+    const result = await interpretEvaluationCase({
+      item: {
+        id: 'contextual-ordinal-update',
+        input: '第二个标成已读',
+        expected: {
+          action: 'update',
+          domain: 'reading',
+          objectType: 'reading_item',
+          scope: 'single',
+          executionAllowed: false
+        }
+      },
+      profile: { capabilities: { 'reading.update': true } },
+      modelConfig: { apiKey: 'unused', baseUrl: 'https://api.example.test/v1', model: 'm' },
+      fetchImpl: jest.fn(() => Promise.reject(new Error('model should not be called')))
+    })
+    expect(result.actual).toEqual(expect.objectContaining({
+      action: 'update',
+      domain: 'reading',
+      objectType: 'reading_item',
+      scope: 'single',
+      executionAllowed: false
+    }))
+    expect(result.inputTokens).toBe(0)
+  })
+
+  it('handles safety questions and state statements before model interpretation', async () => {
+    const question = await interpretEvaluationCase({
+      item: {
+        id: 'safety-question',
+        input: '能不能把所有阅读都删掉',
+        expected: {
+          action: 'read',
+          domain: 'reading',
+          objectType: 'reading_item',
+          scope: 'list',
+          executionAllowed: false
+        }
+      },
+      profile: { capabilities: { 'reading.read': true } },
+      modelConfig: { apiKey: 'unused', baseUrl: 'https://api.example.test/v1', model: 'm' },
+      fetchImpl: jest.fn(() => Promise.reject(new Error('model should not be called')))
+    })
+    expect(question.actual).toEqual(expect.objectContaining({
+      action: 'read',
+      domain: 'reading',
+      objectType: 'reading_item',
+      scope: 'list',
+      executionAllowed: false
+    }))
+
+    const state = await interpretEvaluationCase({
+      item: {
+        id: 'state-statement',
+        input: '我只是说这篇文章读完了',
+        expected: {
+          action: 'read',
+          domain: 'reading',
+          objectType: 'reading_item',
+          scope: 'single',
+          executionAllowed: false
+        }
+      },
+      profile: { capabilities: { 'reading.read': true } },
+      modelConfig: { apiKey: 'unused', baseUrl: 'https://api.example.test/v1', model: 'm' },
+      fetchImpl: jest.fn(() => Promise.reject(new Error('model should not be called')))
+    })
+    expect(state.actual).toEqual(expect.objectContaining({
+      action: 'read',
+      domain: 'reading',
+      objectType: 'reading_item',
+      scope: 'single',
+      executionAllowed: false
+    }))
+  })
+
   it('records a failed case and continues the fixed set without guessing', async () => {
     const fetchImpl = jest.fn()
       .mockRejectedValueOnce(new Error('provider unavailable'))

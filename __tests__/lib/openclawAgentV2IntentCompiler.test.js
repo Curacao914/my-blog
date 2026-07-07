@@ -140,6 +140,71 @@ describe('OpenClaw Agent v2 intent compiler', () => {
     expect(intent.slots.values).toEqual([])
   })
 
+  it('normalizes reading mark-read evidence away from course briefs', () => {
+    const intent = compileModelIntentFrame(frame({
+      operation: 'mark_read',
+      objectType: 'course_brief',
+      quantity: 'one',
+      lookup: 'identity',
+      slots: {
+        requestMode: 'execute',
+        additionalActions: [],
+        values: [{ key: 'title', value: '平台治理' }]
+      }
+    }), { intentId: 'intent-reading-mark-read' })
+    expect(intent).toEqual(expect.objectContaining({
+      action: 'update',
+      domain: 'reading',
+      objectType: 'reading_item',
+      scope: 'matching'
+    }))
+  })
+
+  it('keeps ambiguous course brief mark-read operations at matching scope', () => {
+    const intent = compileModelIntentFrame(frame({
+      operation: 'mark_read',
+      objectType: 'course_brief',
+      quantity: 'one',
+      lookup: 'filters',
+      collectionState: 'unread',
+      slots: {
+        requestMode: 'execute',
+        additionalActions: [],
+        values: [{ key: 'read_state', value: 'unread' }]
+      }
+    }), { intentId: 'intent-ambiguous-brief-read' })
+    expect(intent.scope).toBe('matching')
+  })
+
+  it('treats state and cross-domain signals as constrained matching reads', () => {
+    expect(compileModelIntentFrame(frame({
+      objectType: 'course',
+      quantity: 'many',
+      lookup: 'filters',
+      slots: {
+        requestMode: 'execute',
+        additionalActions: [],
+        values: [{ key: 'status', value: '需要注意' }]
+      }
+    }), { intentId: 'intent-course-status' }).scope).toBe('matching')
+
+    expect(compileModelIntentFrame(frame({
+      operation: 'update',
+      objectType: 'schedule_item',
+      quantity: 'one',
+      lookup: 'context',
+      slots: {
+        requestMode: 'execute',
+        additionalActions: ['delete'],
+        values: [{ key: 'new_time', value: '10:00' }]
+      },
+      uncertainties: [{ field: 'lookup', reason: '日程指代不明确' }]
+    }), { intentId: 'intent-cross-domain-write' })).toEqual(expect.objectContaining({
+      action: 'delete',
+      scope: 'matching'
+    }))
+  })
+
   it('rejects inconsistent write cardinality and incompatible operations', () => {
     expect(compileModelIntentFrame(frame({
       operation: 'create', objectType: 'reading_item', quantity: 'one', lookup: 'none'
