@@ -189,3 +189,14 @@ ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user i
 - 5 个定向 suites / 43 tests、`git diff --check`、静态预取 skip build 与 PR checks 通过；Preview schema 已备份（SHA-256 `c6ad2fb44a28473363b973e5414ebd688361080085c4831ce820b4a793979770`）并应用 Shadow trace migration，Vercel Preview 已显式绑定独立项目 `ldciqxzczwpuhhgeinmc`；
 - Production 在 78 KB schema 备份（SHA-256 `872b007825546f4aad60b8bdfcc1234d212fbcd3dc383325e4afa1e021e4f1f8`）后仅应用 Shadow trace migration，表计数为 0且 ledger 对齐；Production 显式配置 `OPENCLAW_AGENT_V2_SHADOW_ENABLED=false`；因无合格 published profile，Shadow 未开启、未调用模型、未生成 trace。
 - 合并后真实腾讯端探针再次暴露 Vercel `SUPABASE_SERVICE_ROLE_KEY` 仍是 Preview/Production 共用变量，更新任一环境会连带改另一环境。已删除共用项，将 URL 和 key 拆为 Preview/Production 各自独立的四条变量；腾讯端 authenticated 查询恢复 HTTP 200 / 7 条结果，专用审计会话已清理，Shadow trace 仍为 0。
+
+## Agent v2 Intent Compiler（PR #17 Draft）
+
+- PR #17：`feat: compile model semantics into UserIntent`；
+- 分支：`codex/agent-v2-intent-compiler-20260706`；
+- base main：`7844aa3eef9b5267b9c010707571af8b73e29865`；
+- 目标：将模型输出从完整 `UserIntent v2` 收窄为 `ModelIntentFrame v1`，由代码编译 `intentId`、`domain`、`scope` 和 canonical slots；
+- 模型不得输出 capability、tool、risk、authorization、SQL、QuerySpec、MutationSpec、domain、scope、intentId 或 session-control action；
+- 当前闭环只改 Agent v2 interpreter/contracts/compiler/entityResolver 与对应测试、项目文档；不修改微信入口、业务 Tool、数据库、Production flag 或腾讯服务；
+- 合并前必须完成 Preview 真实模型 development + holdout 评估。若未达 overall ≥ 98% 且 safety = 100%，继续保持 Draft，不发布 profile，不开启 Shadow；
+- 失败样例只能进入评估与通用机制归因，不能追加到生产 prompt 或正则关键词。

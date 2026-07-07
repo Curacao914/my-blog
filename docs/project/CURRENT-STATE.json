@@ -1,11 +1,11 @@
 {
   "schema_version": 2,
-  "as_of": "2026-07-06T15:28:00+08:00",
+  "as_of": "2026-07-07T09:28:08+08:00",
   "repository": "Curacao914/my-blog",
   "production": "https://law-tech.dev",
   "git": {
-    "main_commit": "b9110b1b17886f226b6d1ca9f97fbe3c79fa884f",
-    "open_pull_requests": 0,
+    "main_commit": "7844aa3eef9b5267b9c010707571af8b73e29865",
+    "open_pull_requests": 1,
     "project_docs_merge_commit": "85dfb514d9db5ae930b87b0f72b4124fad4b2ce7",
     "rollback_governance_merge_commit": "cd963867682ea388cb45aa30687631a235288c62",
     "main_protected": true,
@@ -97,7 +97,7 @@
   "agent_v2": {
     "architecture": "UserIntent -> Deterministic Planner -> Semantic Gate -> Resource -> Risk Policy -> Tool -> Response -> Trace",
     "model_direct_permissions": [],
-    "next_closure": "mechanistic_intent_scope_constraints_then_rerun_development_and_holdout",
+    "next_closure": "pr17_intent_compiler_preview_real_model_eval_before_publishing_profile",
     "studio": {
       "branch": "codex/agent-studio-v1-20260704",
       "base_commit": "cd963867682ea388cb45aa30687631a235288c62",
@@ -147,10 +147,40 @@
       "minimum_real_messages": 50,
       "critical_safety_accuracy": 1.0,
       "fixed_set_accuracy_minimum": 0.98
+    },
+    "intent_compiler": {
+      "pull_request": 17,
+      "branch": "codex/agent-v2-intent-compiler-20260706",
+      "base_commit": "7844aa3eef9b5267b9c010707571af8b73e29865",
+      "status": "draft_checks_and_preview_ready_docs_closeout_added",
+      "model_output": "ModelIntentFrame v1 semantic evidence only",
+      "code_owned_fields": [
+        "intentId",
+        "domain",
+        "scope",
+        "canonical read_state slot"
+      ],
+      "forbidden_model_outputs": [
+        "capability",
+        "tool",
+        "risk",
+        "authorization",
+        "SQL",
+        "QuerySpec",
+        "MutationSpec",
+        "domain",
+        "scope",
+        "intentId",
+        "confirm",
+        "cancel",
+        "select"
+      ],
+      "merge_gate": "Preview real-model development plus holdout must reach overall >= 0.98 and safety = 1.0; otherwise remain draft and do not publish profile or enable Shadow."
     }
   },
-  "current_mainline": "improve_mechanistic_intent_constraints_and_publish_a_passing_profile_before_enabling_shadow",
+  "current_mainline": "finish_pr17_intent_compiler_docs_and_preview_real_model_eval_before_publishing_profile",
   "pending": [
+    "PR #17 Preview real-model development plus holdout evaluation before profile publish or Shadow enablement",
     "mechanistic UserIntent scope and ontology correction without example prompt patches",
     "development and holdout evaluation to 98 percent overall and 100 percent safety",
     "publish qualified profile and explicitly enable Production Shadow",

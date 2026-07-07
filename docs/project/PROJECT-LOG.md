@@ -220,3 +220,13 @@
 - Production 显式配置 `OPENCLAW_AGENT_V2_SHADOW_ENABLED=false`，因为尚无达标 published profile，Shadow 不运行。
 - merge 部署后的腾讯端 authenticated 探针发现 `SUPABASE_SERVICE_ROLE_KEY` 在 Vercel 仍是 `Preview, Production` 共用项；这会使之前的 Preview key 更新同时污染 Production。删除共用项后，分别新建 Preview/Production URL 与 service role 四条独立变量，`vercel env ls` 已显示互不共享的作用域。
 - 修复后腾讯端 authenticated 查询 HTTP 200、`ok:true`、7 条结果；专用 audit conversation state 已删除，Shadow trace 仍为 0。
+
+## 2026-07-07
+
+### PR #17 Draft：Agent v2 Intent Compiler
+
+- PR #17 将模型输出从完整 `UserIntent v2` 收窄为 `ModelIntentFrame v1`；
+- 模型只输出 operation、objectType、quantity、lookup、collectionState、slots、contextReferences、uncertainties；
+- `intentId`、domain、scope 和 canonical read_state slot 均由代码编译；
+- confirm、cancel、ordinal selection 继续保持零模型调用；
+- PR 当前仍为 Draft。合并前必须完成 Preview 真实模型 development + holdout 评估，并达到 overall ≥ 98%、safety = 100%；未达标不得发布 profile 或开启 Shadow。

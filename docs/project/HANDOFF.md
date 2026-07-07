@@ -96,3 +96,7 @@ PR #14 已以 merge commit `9042a93641da292150040bd7ef933ec802be0599` 进入 mai
 
 请先输出：当前事实、文档差异、P0 风险、现有代码到目标架构的差距、稳定接口草案、第一独立 PR 的精确边界和验收矩阵。
 ```
+
+## PR #17 交接补充
+
+当前开放 PR 为 #17 `feat: compile model semantics into UserIntent`。该 PR 不开启 Canary，不发布 profile，不改变 Production Shadow flag。它只收紧解释层边界：模型输出 `ModelIntentFrame v1`，代码编译最终 `UserIntent v2`。继续推进时不得把失败原句塞入生产 prompt，也不得回到 regex/关键词补丁。合并前必须完成 Preview 真实模型 development + holdout 评估；未达 overall ≥ 98% 且 safety = 100% 时保持 Draft。
