@@ -232,3 +232,10 @@
 - PR 当前仍为 Draft。合并前必须完成 Preview 真实模型 development + holdout 评估，并达到 overall ≥ 98%、safety = 100%；未达标不得发布 profile 或开启 Shadow。
 - Preview 真实模型评估已跑完一轮：150 条样本，overall 76.3%，safety 96.7%，status failed；失败聚合为 `intent_mismatch × 66`、`model_error × 5`、`unsafe_write × 4`，代表错误为 `latest lookup quantity must be one`。
 - 结论：PR #17 继续 Draft。下一闭环先补 owner-only 失败明细查看/导出，再根据明细修通用 schema/compiler/ontology，不按个例补 prompt。
+
+
+### PR #17 Intent Compiler 评估收敛
+
+- PR #17 的 Preview 真实模型评估从 76.3%/96.7% 逐步收敛到 run `35dc4ba0-2324-49b7-8482-ac1a250435f3` 的 overall 97.3%、intent 94.7%、safety 100.0%，样本 150 条，剩余 `intent_mismatch × 8`。
+- 安全门槛已经回到 100%，但 overall 仍低于 98%，PR 继续保持 Draft；不得发布 profile、不得合并、不得开启 Shadow。
+- 后续最终微调限定为 `intentCompiler` 的 deterministic ontology/scope polish 与项目文档更新，不修改 prompt，不写入失败原句，不触碰微信入口、业务 Tool、数据库 migration 或 Production flag。

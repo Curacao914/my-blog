@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "as_of": "2026-07-07T10:05:00+08:00",
+  "as_of": "2026-07-07T13:20:00+08:00",
   "repository": "Curacao914/my-blog",
   "production": "https://law-tech.dev",
   "git": {
@@ -152,7 +152,7 @@
       "pull_request": 17,
       "branch": "codex/agent-v2-intent-compiler-20260706",
       "base_commit": "7844aa3eef9b5267b9c010707571af8b73e29865",
-      "status": "draft_preview_eval_failed_details_export_next",
+      "status": "draft_preview_eval_97_3_safety_100_final_deterministic_polish_next",
       "model_output": "ModelIntentFrame v1 semantic evidence only",
       "code_owned_fields": [
         "intentId",
@@ -177,25 +177,30 @@
       ],
       "merge_gate": "Preview real-model development plus holdout must reach overall >= 0.98 and safety = 1.0; otherwise remain draft and do not publish profile or enable Shadow.",
       "latest_preview_evaluation": {
+        "run_id": "35dc4ba0-2324-49b7-8482-ac1a250435f3",
         "sample_count": 150,
-        "overall": 0.763,
-        "safety": 0.967,
+        "overall": 0.973333,
+        "intent": 0.946667,
+        "safety": 1.0,
         "status": "failed",
+        "estimated_cost_usd": 0.09551,
         "failure_categories": {
-          "intent_mismatch": 66,
-          "model_error": 5,
-          "unsafe_write": 4
+          "intent_mismatch": 8
         },
-        "representative_error": "latest lookup quantity must be one",
-        "conclusion": "remain_draft_do_not_publish_profile_or_enable_shadow"
+        "remaining_patterns": [
+          "course_vs_course_brief_object_type",
+          "schedule_same_day_delete_scope",
+          "context_anchored_reading_update_scope"
+        ],
+        "conclusion": "safety_gate_met_but_overall_below_0_98_remain_draft_do_not_publish_profile_or_enable_shadow"
       }
     }
   },
-  "current_mainline": "add_pr17_owner_only_evaluation_failure_detail_before_mechanistic_fix",
+  "current_mainline": "pr17_final_deterministic_polish_after_97_3_preview_eval",
   "pending": [
-    "PR #17 owner-only evaluation failure detail view/export before fixing schema/compiler/ontology",
+    "PR #17 documentation closeout if final Preview gate passes; otherwise record failed 97%+ state and keep Draft",
+    "PR #17 final Preview evaluation after deterministic polish; require overall >= 0.98 and safety = 1.0 before Mark ready",
     "PR #17 Preview real-model development plus holdout evaluation before profile publish or Shadow enablement",
-    "mechanistic UserIntent scope and ontology correction without example prompt patches",
     "development and holdout evaluation to 98 percent overall and 100 percent safety",
     "publish qualified profile and explicitly enable Production Shadow",
     "course natural full-cycle acceptance",

@@ -226,15 +226,36 @@ describe('OpenClaw Agent v2 intent compiler', () => {
     }))
   })
 
-  it('routes unqualified course brief reads without unread state to course records', () => {
-    const intent = compileModelIntentFrame(frame({
+  it('keeps unqualified course brief reads on course_brief unless date evidence targets course records', () => {
+    expect(compileModelIntentFrame(frame({
+      objectType: 'course',
+      quantity: 'one',
+      lookup: 'latest',
+      collectionState: 'any'
+    }), { intentId: 'intent-course-brief-from-course' })).toEqual(expect.objectContaining({
+      action: 'read', domain: 'course', objectType: 'course_brief', scope: 'single'
+    }))
+
+    expect(compileModelIntentFrame(frame({
       objectType: 'course_brief',
       quantity: 'one',
       lookup: 'latest',
       collectionState: 'any'
-    }), { intentId: 'intent-course-not-brief' })
-    expect(intent).toEqual(expect.objectContaining({
-      action: 'read', domain: 'course', objectType: 'course', scope: 'single'
+    }), { intentId: 'intent-course-brief-stays-brief' })).toEqual(expect.objectContaining({
+      action: 'read', domain: 'course', objectType: 'course_brief', scope: 'single'
+    }))
+
+    expect(compileModelIntentFrame(frame({
+      objectType: 'course_brief',
+      quantity: 'many',
+      lookup: 'filters',
+      slots: {
+        requestMode: 'execute',
+        additionalActions: [],
+        values: [{ key: 'date', value: '今天' }]
+      }
+    }), { intentId: 'intent-course-brief-date-course' })).toEqual(expect.objectContaining({
+      action: 'read', domain: 'course', objectType: 'course'
     }))
   })
 
@@ -298,12 +319,36 @@ describe('OpenClaw Agent v2 intent compiler', () => {
       objectType: 'reading_item',
       quantity: 'one',
       lookup: 'context',
+      contextReferences: [{ kind: 'last_created', value: '刚保存的书' }],
+      slots: {
+        requestMode: 'execute',
+        additionalActions: [],
+        values: [{ key: 'read_state', value: 'unread' }]
+      },
+      uncertainties: [{ field: 'new_title', reason: '用户说改名但未提供新书名' }]
+    }), { intentId: 'intent-reading-last-created-single' }).scope).toBe('single')
+
+    expect(compileModelIntentFrame(frame({
+      operation: 'update',
+      objectType: 'reading_item',
+      quantity: 'one',
+      lookup: 'context',
+      contextReferences: [{ kind: 'deictic', value: 'previous user utterance about 文章' }],
+      slots: { requestMode: 'negated', additionalActions: [], values: [] },
+      uncertainties: [{ field: 'objectType', reason: '用户提到文章，需从上下文推断' }]
+    }), { intentId: 'intent-reading-negated-single' }).scope).toBe('single')
+
+    expect(compileModelIntentFrame(frame({
+      operation: 'update',
+      objectType: 'reading_item',
+      quantity: 'one',
+      lookup: 'context',
       contextReferences: [{ kind: 'deictic', value: '把文章改一下' }],
       uncertainties: [{ field: 'operation', reason: '改一下语义模糊，需要澄清修改字段' }]
     }), { intentId: 'intent-context-ambiguous-reading' }).scope).toBe('matching')
   })
 
-  it('keeps date-constrained schedule deletion matching and date search list-like', () => {
+  it('keeps date-constrained schedule deletion matching except concrete same-day targets', () => {
     expect(compileModelIntentFrame(frame({
       operation: 'delete',
       objectType: 'schedule_item',
@@ -318,6 +363,22 @@ describe('OpenClaw Agent v2 intent compiler', () => {
         ]
       }
     }), { intentId: 'intent-date-delete' }).scope).toBe('matching')
+
+    expect(compileModelIntentFrame(frame({
+      operation: 'delete',
+      objectType: 'schedule_item',
+      quantity: 'one',
+      lookup: 'identity',
+      slots: {
+        requestMode: 'execute',
+        additionalActions: [],
+        values: [
+          { key: 'title', value: '跑步' },
+          { key: 'date', value: '今晚' }
+        ]
+      },
+      uncertainties: [{ field: 'date', reason: '今晚是相对时间，需解析为具体日期' }]
+    }), { intentId: 'intent-tonight-date-delete' }).scope).toBe('single')
 
     expect(compileModelIntentFrame(frame({
       objectType: 'schedule_item',

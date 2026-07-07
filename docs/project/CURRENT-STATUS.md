@@ -112,6 +112,15 @@ PR #12 曾将 Production 默认切入一次模型直接选择 capability 的 Age
 - 历史 `needs_attention/failed` 仍需逐项处理；
 - 历史简报补齐不等于所有旧失败课程已经修复。
 
+
+## PR #17 Agent v2 Intent Compiler 当前状态（2026-07-07）
+
+PR #17 仍为 Draft，分支 `codex/agent-v2-intent-compiler-20260706`。本 PR 将模型输出收窄为 `ModelIntentFrame v1`，由代码派生 `intentId`、domain、scope 与 canonical `read_state` slot；模型仍不得输出 capability、tool、risk、authorization、SQL、QuerySpec、MutationSpec、domain、scope、intentId 或 session-control action。
+
+Preview 真实模型评估已从最初 150 条 overall 76.3%、safety 96.7% 收敛至 run `35dc4ba0-2324-49b7-8482-ac1a250435f3` 的 overall 97.3%、intent 94.7%、safety 100.0%。当前 status 仍为 failed，剩余 `intent_mismatch × 8`，因此不得发布 profile、不得合并、不得开启 Shadow。
+
+当前最后一轮修改只允许做 deterministic compiler polish 与文档更新，不修改 prompt，不把失败样例硬编码进提示词。下一步只跑一轮完整 Preview 评估：通过 overall ≥ 98% 且 safety = 100% 后才进入 Mark ready 前检查；未通过则记录结果并继续保持 Draft。
+
 ## 当前 P0
 
 1. 完整交付 Agent Studio + Evaluation Kernel，未完成不得开始 Shadow Runtime；

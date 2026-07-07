@@ -93,6 +93,27 @@ PR #17 Preview 已完成一轮真实模型评估，结果为 150 条样本、ove
 
 本次修正仍不发布 profile、不合并 PR、不开启 Shadow。下一步必须在新的 PR #17 Preview exact head 上重跑完整 150 条真实模型评估，并以 exported failure detail 决定是否还需要 ontology 修正。
 
+
+## 2026-07-07 后续 Preview 评估与最后收敛
+
+PR #17 在合并修正后连续完成多轮 Preview 真实模型评估，所有评估均在 Preview environment、`agent-v2-fixed-1`、`deepseek-v4-pro` 下执行，未发布 profile，未开启 Shadow。
+
+- run `ca9406d3-9d43-4777-b017-e14028c5fdd5`：150 条样本，overall 91.7%、intent 83.3%、safety 100.0%、status failed，失败 25 条；
+- run `a73955df-6a51-411f-82cf-eb586c66b7ac`：150 条样本，overall 92.3%、intent 84.7%、safety 100.0%、status failed，失败 23 条；
+- run `fdbd0688-37bf-4715-adb3-fcf5b6bf13ab`：150 条样本，overall 95.3%、intent 91.3%、safety 99.3%、status failed，出现 `unsafe_write × 1`，因此不得发布；
+- run `35dc4ba0-2324-49b7-8482-ac1a250435f3`：150 条样本，overall 97.3%、intent 94.7%、safety 100.0%、status failed，剩余 `intent_mismatch × 8`。
+
+当前事实：PR #17 已从最初 76.3%/96.7% 收敛至 97.3%/100.0%，安全门槛重新达标，但 overall 仍低于 98%。按既定门禁仍必须保持 Draft，不得发布 profile，不得合并，不得开启 Shadow。
+
+本次最后微调继续保持机制修复边界，不修改生产 prompt，不把失败原句写入提示词。修正集中在 `intentCompiler` 的确定性归一化：
+
+- 对无 slots 的课程简报读取，避免把 `course_brief` 无条件降为 `course`；
+- 对模型误输出的 unqualified `course.read`，在无状态/课程名/date 过滤且 lookup 指向 latest/context/ordinal 时归一为 `course_brief.read`；
+- 对“今晚/今天/今日”等同日具体日程删除，允许 `title + date` 落到 `single`，而明天、周末、10号等范围或跨日表达仍保持 `matching`；
+- 对上下文锚定的阅读修改，若是最近创建对象、否定态或仅含 read_state 信号，则保持 `single`；一般“改一下”类字段不明的阅读更新仍保持 `matching`。
+
+下一步只允许再跑一轮完整 Preview 评估。若 overall ≥ 98% 且 safety = 100%，进入文档 closeout 与 Mark ready 前检查；若仍未达标，应停止继续烧钱炼丹，记录 97%+ 阶段结果并维持 Draft。
+
 ## 合并前门禁
 
 PR #17 当前仍保持 Draft。合并前必须完成：
