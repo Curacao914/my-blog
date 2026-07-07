@@ -36,7 +36,7 @@ describe('OpenClaw Agent v2 intent compiler', () => {
     ],
     [
       {
-        objectType: 'course_brief', quantity: 'all', lookup: 'filters',
+        objectType: 'course_brief', quantity: 'many', lookup: 'filters',
         collectionState: 'unread',
         slots: {
           requestMode: 'execute', additionalActions: [],
@@ -58,14 +58,45 @@ describe('OpenClaw Agent v2 intent compiler', () => {
       .toEqual(expect.objectContaining(expected))
   })
 
-  it('does not turn a filtered unread collection into all_unread without all quantity', () => {
+  it('uses identity-bearing slots to avoid collapsing named targets into single', () => {
     const intent = compileModelIntentFrame(frame({
-      objectType: 'course_brief', quantity: 'many', lookup: 'filters',
+      objectType: 'schedule_item',
+      quantity: 'one',
+      lookup: 'identity',
       slots: {
-        requestMode: 'execute', additionalActions: [],
-        values: [{ key: 'read_state', value: 'unread' }]
+        requestMode: 'execute',
+        additionalActions: [],
+        values: [{ key: 'title', value: '民法讨论会' }]
       }
-    }), { intentId: 'intent-3' })
+    }), { intentId: 'intent-identity' })
+    expect(intent.scope).toBe('matching')
+  })
+
+  it('keeps identity-constrained unread brief operations matching instead of bulk', () => {
+    const intent = compileModelIntentFrame(frame({
+      operation: 'mark_read',
+      objectType: 'course_brief',
+      quantity: 'all',
+      lookup: 'filters',
+      collectionState: 'unread',
+      slots: {
+        requestMode: 'execute',
+        additionalActions: [],
+        values: [
+          { key: 'teacher_name', value: '张老师' },
+          { key: 'read_state', value: 'unread' }
+        ]
+      }
+    }), { intentId: 'intent-matching-unread' })
+    expect(intent.scope).toBe('matching')
+  })
+
+  it('treats recent collection lookups as lists instead of model errors', () => {
+    const intent = compileModelIntentFrame(frame({
+      objectType: 'reading_item',
+      quantity: 'many',
+      lookup: 'latest'
+    }), { intentId: 'intent-latest-many' })
     expect(intent.scope).toBe('list')
   })
 
@@ -75,6 +106,38 @@ describe('OpenClaw Agent v2 intent compiler', () => {
       collectionState: 'unread'
     }), { intentId: 'intent-state' })
     expect(intent.slots.values).toContainEqual({ key: 'read_state', value: 'unread' })
+  })
+
+  it('normalizes non-executing language and read-before-write ambiguity conservatively', () => {
+    expect(compileModelIntentFrame(frame({
+      operation: 'delete',
+      objectType: 'schedule_item',
+      quantity: 'one',
+      lookup: 'none',
+      slots: { requestMode: 'hypothetical', additionalActions: [], values: [] }
+    }), { intentId: 'intent-hypothetical' }).action).toBe('read')
+
+    expect(compileModelIntentFrame(frame({
+      operation: 'mark_read',
+      objectType: 'course_brief',
+      quantity: 'one',
+      lookup: 'latest',
+      slots: { requestMode: 'execute', additionalActions: ['read'], values: [] }
+    }), { intentId: 'intent-read-primary' }).action).toBe('read')
+  })
+
+  it('prunes empty linguistic slots before strict validation', () => {
+    const intent = compileModelIntentFrame(frame({
+      objectType: 'course',
+      quantity: 'many',
+      lookup: 'filters',
+      slots: {
+        requestMode: 'execute',
+        additionalActions: [],
+        values: [{ key: 'query', value: '' }]
+      }
+    }), { intentId: 'intent-empty-slot' })
+    expect(intent.slots.values).toEqual([])
   })
 
   it('rejects inconsistent write cardinality and incompatible operations', () => {

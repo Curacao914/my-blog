@@ -78,6 +78,21 @@ PR #17 Preview 已完成一轮真实模型评估，结果为 150 条样本、ove
 
 结论：PR #17 仍不合格，继续保持 Draft。不得发布 profile，不得合并，不得开启 Shadow。下一独立闭环改为 owner-only 失败明细查看/导出，用于定位 action/domain/objectType/scope/executionAllowed 的具体错位，避免回到正则补丁或失败样例 prompt。
 
+## 2026-07-07 失败明细诊断与合并修正
+
+失败明细导出 run `dabec3ca-7402-41ed-9bb5-4cbff4940bc3` 后，PR #17 的真实模型评估仍为 150 条样本、overall 76.33%、intent 56%、safety 96.67%、status failed，失败 67 条。失败分布显示主要裂缝集中在 `scope` 编译，其次是少量 session-control、state-only/hypothetical 语气与 course/course_brief 本体区分。
+
+本次修正仍保持 PR #17 的核心边界：模型不输出 domain/scope/intentId/capability/tool/risk/SQL/session-control。修正集中在代码层：
+
+- `intentCompiler` 将 identity-bearing slots（title/query/course_name/teacher_name）优先编译为 `matching`，避免 named target 被误压成 `single`；
+- `course_brief` 的未读集合读取在无身份限定时编译为 `all_unread`，但带教师/课程/标题限定时保持 `matching`；
+- `latest + many/all` 不再直接抛出 cardinality 错误，而是落回集合读取；
+- hypothetical/state_only 语言态和 `mark_read + read` 二级动作优先降级为安全读取；
+- 评估 harness 为 select/cancel/confirm fixed cases 注入最小 session state，使这些会话控制继续走零模型 deterministic path，而不是把 forbidden operations 放回模型 schema；
+- read + help secondary action 被视为非写入，不再误判为 execution blocked。
+
+本次修正仍不发布 profile、不合并 PR、不开启 Shadow。下一步必须在新的 PR #17 Preview exact head 上重跑完整 150 条真实模型评估，并以 exported failure detail 决定是否还需要 ontology 修正。
+
 ## 合并前门禁
 
 PR #17 当前仍保持 Draft。合并前必须完成：
