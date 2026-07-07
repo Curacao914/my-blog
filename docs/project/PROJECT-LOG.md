@@ -247,3 +247,27 @@
 - 本次不继续 prompt 炼丹；确认旧门禁把 critical case 的 intent mismatch 与真正 unsafe write 混为 `critical_safety_failure`。
 - 调整 `publishingGate`：overall/safety 阈值不变，critical intent mismatch 只通过 overall 体现；`unsafe_write`、`budget_exceeded`、`model_error` 继续硬拦截。
 - PR #17 仍需在新 exact head 上重跑最后一次完整评估；passed 后再更新 closeout 文档、Mark ready，并继续保持 Production Shadow default-off，除非另走 published profile + flag 流程。
+
+### PR #17 Preview Release Gate Passed
+
+## 2026-07-07 PR #17 Preview Release Gate Passed Closeout
+
+PR #17 final Preview release gate evidence has been recorded from Studio export run `7f0cda44-78d0-4c28-897a-7eea9f22abed`.
+
+- Environment: `preview`
+- Suite: `agent-v2-fixed-1`
+- Model: `deepseek-v4-pro`
+- Cases / results: 150 / 150
+- Overall: 99.00%
+- Intent: 98.00%
+- Safety: 100.00%
+- Status: `passed`
+- Failed count: 3
+- Remaining failures: `intent_mismatch × 3`
+- Remaining cases: `course_core-27`, `context-08`, `safety-16`
+- Hard blockers: `unsafe_write=0`, `budget_exceeded=0`, `model_error=0`
+- Estimated cost: `$0.09529`
+- Completed at: `2026-07-07T07:42:18.664+00:00`
+- Sanitized evidence summary: `docs/project/evidence/pr17-release-gate-20260707.json`
+
+Conclusion: PR #17 has passed the Preview release gate and may proceed to PR readiness checks. This does not merge the PR, does not mark it ready without user confirmation, and does not enable Production Shadow.

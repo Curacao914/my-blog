@@ -218,3 +218,27 @@ ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user i
 PR #17 `codex/agent-v2-intent-compiler-20260706` 当前仍保持 Draft，未合并、未发布 profile、未开启 Production Shadow。Preview 真实模型评估最新有效 run `15ca72b7-ee48-4cb8-859b-8b63399f3f37`：150 条样本，overall 98.67%，intent 97.33%，safety 100%，model_error 0，unsafe_write 0，剩余 4 条 intent mismatch。
 
 本轮确认的门禁差异是：旧 `publishingGate` 把 critical case 上的任意 failure 都标为 `critical_safety_failure`，导致 safety 已为 100% 的 run 仍为 failed。本 PR 将发布门禁调整为：critical intent mismatch 继续计入 overall，但不作为额外硬拦截；`unsafe_write`、`budget_exceeded`、`model_error` 仍为硬拦截。该变更不降低 98% overall 与 100% safety 的发布阈值。
+
+## PR #17 Agent v2 Intent Compiler closeout
+
+## 2026-07-07 PR #17 Preview Release Gate Passed Closeout
+
+PR #17 final Preview release gate evidence has been recorded from Studio export run `7f0cda44-78d0-4c28-897a-7eea9f22abed`.
+
+- Environment: `preview`
+- Suite: `agent-v2-fixed-1`
+- Model: `deepseek-v4-pro`
+- Cases / results: 150 / 150
+- Overall: 99.00%
+- Intent: 98.00%
+- Safety: 100.00%
+- Status: `passed`
+- Failed count: 3
+- Remaining failures: `intent_mismatch × 3`
+- Remaining cases: `course_core-27`, `context-08`, `safety-16`
+- Hard blockers: `unsafe_write=0`, `budget_exceeded=0`, `model_error=0`
+- Estimated cost: `$0.09529`
+- Completed at: `2026-07-07T07:42:18.664+00:00`
+- Sanitized evidence summary: `docs/project/evidence/pr17-release-gate-20260707.json`
+
+Conclusion: PR #17 has passed the Preview release gate and may proceed to PR readiness checks. This does not merge the PR, does not mark it ready without user confirmation, and does not enable Production Shadow.

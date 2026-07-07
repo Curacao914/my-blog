@@ -140,3 +140,25 @@ PR #17 当前仍保持 Draft。合并前必须完成：
 - 不让模型生成或执行自由 SQL；
 - 不改变 legacy 微信回复；
 - 不新增精确到点微信提醒。
+
+## 2026-07-07 PR #17 Preview Release Gate Passed Closeout
+
+PR #17 final Preview release gate evidence has been recorded from Studio export run `7f0cda44-78d0-4c28-897a-7eea9f22abed`.
+
+- Environment: `preview`
+- Suite: `agent-v2-fixed-1`
+- Model: `deepseek-v4-pro`
+- Cases / results: 150 / 150
+- Overall: 99.00%
+- Intent: 98.00%
+- Safety: 100.00%
+- Status: `passed`
+- Failed count: 3
+- Remaining failures: `intent_mismatch × 3`
+- Remaining cases: `course_core-27`, `context-08`, `safety-16`
+- Hard blockers: `unsafe_write=0`, `budget_exceeded=0`, `model_error=0`
+- Estimated cost: `$0.09529`
+- Completed at: `2026-07-07T07:42:18.664+00:00`
+- Sanitized evidence summary: `docs/project/evidence/pr17-release-gate-20260707.json`
+
+Conclusion: PR #17 has passed the Preview release gate and may proceed to PR readiness checks. This does not merge the PR, does not mark it ready without user confirmation, and does not enable Production Shadow.
