@@ -271,3 +271,28 @@ PR #17 final Preview release gate evidence has been recorded from Studio export 
 - Sanitized evidence summary: `docs/project/evidence/pr17-release-gate-20260707.json`
 
 Conclusion: PR #17 has passed the Preview release gate and may proceed to PR readiness checks. This does not merge the PR, does not mark it ready without user confirmation, and does not enable Production Shadow.
+
+### PR #17 main merge closeout
+
+## 2026-07-07 PR #17 main merge closeout
+
+PR #17 `feat: compile model semantics into UserIntent` has been squash-merged into `main`.
+
+- PR: #17
+- Merge commit: `95072accae445b7cef51f042e9c9f5ee07769c29`
+- Merged at: `2026-07-07T08:27:35Z`
+- Release evidence run: `7f0cda44-78d0-4c28-897a-7eea9f22abed`
+- Preview release gate: passed
+- Fixed set: 150 cases
+- Overall: 99.0%
+- Intent: 98.0%
+- Safety: 100.0%
+- Remaining failures: `intent_mismatch × 3`
+- Hard blockers: `unsafe_write=0`, `budget_exceeded=0`, `model_error=0`
+- Main branch checks after merge: `pushUrl`, `CodeQL`, and `Docker ghcr.io/build` succeeded
+- Production root check: `law-tech.dev` returned HTTP 200 after merge
+- Production Shadow: remains default-off; no automatic enablement
+- WeChat production entry: unchanged by this closeout
+- Database / Tencent services: unchanged by this closeout
+
+Conclusion: PR #17 / Agent v2 intent compiler is closed on `main`. The next Agent step, if any, must be a separate explicit flow for published profile verification and Production Shadow flag enablement; do not treat the merge as production write enablement.
