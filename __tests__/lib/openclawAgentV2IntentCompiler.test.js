@@ -160,6 +160,24 @@ describe('OpenClaw Agent v2 intent compiler', () => {
     }))
   })
 
+  it('accepts direct reading mark-read evidence as a reading update', () => {
+    const intent = compileModelIntentFrame(frame({
+      operation: 'mark_read',
+      objectType: 'reading_item',
+      quantity: 'one',
+      lookup: 'context',
+      contextReferences: [{ kind: 'previous_result', value: '文章' }],
+      slots: {
+        requestMode: 'negated',
+        additionalActions: [],
+        values: []
+      }
+    }), { intentId: 'intent-reading-direct-mark-read' })
+    expect(intent).toEqual(expect.objectContaining({
+      action: 'update', domain: 'reading', objectType: 'reading_item', scope: 'single'
+    }))
+  })
+
   it('keeps ambiguous course brief mark-read operations at matching scope', () => {
     const intent = compileModelIntentFrame(frame({
       operation: 'mark_read',
@@ -176,7 +194,7 @@ describe('OpenClaw Agent v2 intent compiler', () => {
     expect(intent.scope).toBe('matching')
   })
 
-  it('treats state and cross-domain signals as constrained matching reads', () => {
+  it('treats course status filters as lists unless the status is a named attention target', () => {
     expect(compileModelIntentFrame(frame({
       objectType: 'course',
       quantity: 'many',
@@ -186,9 +204,79 @@ describe('OpenClaw Agent v2 intent compiler', () => {
         additionalActions: [],
         values: [{ key: 'status', value: '需要注意' }]
       }
-    }), { intentId: 'intent-course-status' }).scope).toBe('matching')
+    }), { intentId: 'intent-course-status-attention' }).scope).toBe('matching')
 
     expect(compileModelIntentFrame(frame({
+      objectType: 'course',
+      quantity: 'many',
+      lookup: 'filters',
+      slots: {
+        requestMode: 'execute',
+        additionalActions: [],
+        values: [{ key: 'status', value: '已完成' }]
+      }
+    }), { intentId: 'intent-course-status-list' }).scope).toBe('list')
+  })
+
+  it('uses recent failure uncertainty to keep course failure lookup singular', () => {
+    const intent = compileModelIntentFrame(frame({
+      objectType: 'course',
+      quantity: 'one',
+      lookup: 'filters',
+      slots: {
+        requestMode: 'execute',
+        additionalActions: [],
+        values: [{ key: 'status', value: 'failed' }]
+      },
+      uncertainties: [{ field: 'lookup', reason: '用户说最近失败了，需要按时间排序取最近一条' }]
+    }), { intentId: 'intent-course-recent-failure' })
+    expect(intent.scope).toBe('single')
+  })
+
+  it('keeps context-anchored writes singular without expanding to matching', () => {
+    const intent = compileModelIntentFrame(frame({
+      operation: 'delete',
+      objectType: 'reading_item',
+      quantity: 'one',
+      lookup: 'filters',
+      contextReferences: [{ kind: 'last_created', value: 'reading_item' }]
+    }), { intentId: 'intent-context-single' })
+    expect(intent.scope).toBe('single')
+  })
+
+  it('keeps date-constrained schedule deletion singular but date search list-like', () => {
+    expect(compileModelIntentFrame(frame({
+      operation: 'delete',
+      objectType: 'schedule_item',
+      quantity: 'one',
+      lookup: 'identity',
+      slots: {
+        requestMode: 'execute',
+        additionalActions: [],
+        values: [
+          { key: 'title', value: '跑步' },
+          { key: 'date', value: '今晚' }
+        ]
+      }
+    }), { intentId: 'intent-date-delete' }).scope).toBe('single')
+
+    expect(compileModelIntentFrame(frame({
+      objectType: 'schedule_item',
+      quantity: 'many',
+      lookup: 'filters',
+      slots: {
+        requestMode: 'execute',
+        additionalActions: [],
+        values: [
+          { key: 'date', value: '10号' },
+          { key: 'query', value: '安排' }
+        ]
+      }
+    }), { intentId: 'intent-date-query-list' }).scope).toBe('list')
+  })
+
+  it('preserves a primary update when a secondary cross-domain delete is present', () => {
+    const intent = compileModelIntentFrame(frame({
       operation: 'update',
       objectType: 'schedule_item',
       quantity: 'one',
@@ -199,22 +287,19 @@ describe('OpenClaw Agent v2 intent compiler', () => {
         values: [{ key: 'new_time', value: '10:00' }]
       },
       uncertainties: [{ field: 'lookup', reason: '日程指代不明确' }]
-    }), { intentId: 'intent-cross-domain-write' })).toEqual(expect.objectContaining({
-      action: 'delete',
-      scope: 'matching'
+    }), { intentId: 'intent-cross-domain-write' })
+    expect(intent).toEqual(expect.objectContaining({
+      action: 'update', scope: 'matching'
     }))
   })
 
-  it('rejects inconsistent write cardinality and incompatible operations', () => {
+  it('rejects inconsistent create cardinality', () => {
     expect(compileModelIntentFrame(frame({
       operation: 'create', objectType: 'reading_item', quantity: 'one', lookup: 'none'
     }), { intentId: 'intent-4' }).scope).toBe('single')
     expect(() => compileModelIntentFrame(frame({
       operation: 'create', objectType: 'reading_item', quantity: 'many', lookup: 'none'
     }), { intentId: 'intent-5' })).toThrow(/quantity/i)
-    expect(() => compileModelIntentFrame(frame({
-      operation: 'mark_read', objectType: 'reading_item'
-    }), { intentId: 'intent-6' })).toThrow(/course_brief/i)
   })
 
   it('uses constrained semantic-frame decoding and compiles the final UserIntent in code', async () => {
