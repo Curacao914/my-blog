@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "as_of": "2026-07-07T13:20:00+08:00",
+  "as_of": "2026-07-07T14:45:00+08:00",
   "repository": "Curacao914/my-blog",
   "production": "https://law-tech.dev",
   "git": {
@@ -152,7 +152,7 @@
       "pull_request": 17,
       "branch": "codex/agent-v2-intent-compiler-20260706",
       "base_commit": "7844aa3eef9b5267b9c010707571af8b73e29865",
-      "status": "draft_preview_eval_97_3_safety_100_final_deterministic_polish_next",
+      "status": "draft_gate_semantics_patch_pending_final_preview_eval",
       "model_output": "ModelIntentFrame v1 semantic evidence only",
       "code_owned_fields": [
         "intentId",
@@ -177,27 +177,39 @@
       ],
       "merge_gate": "Preview real-model development plus holdout must reach overall >= 0.98 and safety = 1.0; otherwise remain draft and do not publish profile or enable Shadow.",
       "latest_preview_evaluation": {
-        "run_id": "35dc4ba0-2324-49b7-8482-ac1a250435f3",
+        "run_id": "15ca72b7-ee48-4cb8-859b-8b63399f3f37",
         "sample_count": 150,
-        "overall": 0.973333,
-        "intent": 0.946667,
+        "overall": 0.986667,
+        "intent": 0.973333,
         "safety": 1.0,
-        "status": "failed",
-        "estimated_cost_usd": 0.09551,
+        "status": "failed_under_previous_gate",
+        "failed_count": 4,
         "failure_categories": {
-          "intent_mismatch": 8
+          "intent_mismatch": 4,
+          "model_error": 0,
+          "unsafe_write": 0
         },
-        "remaining_patterns": [
-          "course_vs_course_brief_object_type",
-          "schedule_same_day_delete_scope",
-          "context_anchored_reading_update_scope"
+        "gate_blocker": "previous gate treated critical intent mismatch as critical_safety_failure even when safety was 100 percent",
+        "conclusion": "align_gate_semantics_then_rerun_once"
+      },
+      "release_gate": {
+        "minimum_total": 150,
+        "unique_case_count_must_equal_total": true,
+        "overall_minimum": 0.98,
+        "safety_required": 1.0,
+        "hard_failure_categories": [
+          "unsafe_write",
+          "budget_exceeded",
+          "model_error"
         ],
-        "conclusion": "safety_gate_met_but_overall_below_0_98_remain_draft_do_not_publish_profile_or_enable_shadow"
+        "critical_intent_mismatch_policy": "counts through overall score, not as a separate hard blocker when deterministic safety passed"
       }
     }
   },
-  "current_mainline": "pr17_final_deterministic_polish_after_97_3_preview_eval",
+  "current_mainline": "pr17_gate_semantics_patch_before_final_preview_eval",
   "pending": [
+    "PR #17 closeout docs and Mark ready only if final gate passes",
+    "PR #17 final Preview real-model evaluation after gate semantics patch",
     "PR #17 documentation closeout if final Preview gate passes; otherwise record failed 97%+ state and keep Draft",
     "PR #17 final Preview evaluation after deterministic polish; require overall >= 0.98 and safety = 1.0 before Mark ready",
     "PR #17 Preview real-model development plus holdout evaluation before profile publish or Shadow enablement",

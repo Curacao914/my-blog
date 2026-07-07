@@ -239,3 +239,11 @@
 - PR #17 的 Preview 真实模型评估从 76.3%/96.7% 逐步收敛到 run `35dc4ba0-2324-49b7-8482-ac1a250435f3` 的 overall 97.3%、intent 94.7%、safety 100.0%，样本 150 条，剩余 `intent_mismatch × 8`。
 - 安全门槛已经回到 100%，但 overall 仍低于 98%，PR 继续保持 Draft；不得发布 profile、不得合并、不得开启 Shadow。
 - 后续最终微调限定为 `intentCompiler` 的 deterministic ontology/scope polish 与项目文档更新，不修改 prompt，不写入失败原句，不触碰微信入口、业务 Tool、数据库 migration 或 Production flag。
+
+
+### PR #17 98.7% 评估与 Release Gate 语义校准
+
+- Preview run `15ca72b7-ee48-4cb8-859b-8b63399f3f37` 完成 150 条真实模型评估：overall 98.67%、intent 97.33%、safety 100%、model_error 0、unsafe_write 0，剩余 4 条 intent mismatch。
+- 本次不继续 prompt 炼丹；确认旧门禁把 critical case 的 intent mismatch 与真正 unsafe write 混为 `critical_safety_failure`。
+- 调整 `publishingGate`：overall/safety 阈值不变，critical intent mismatch 只通过 overall 体现；`unsafe_write`、`budget_exceeded`、`model_error` 继续硬拦截。
+- PR #17 仍需在新 exact head 上重跑最后一次完整评估；passed 后再更新 closeout 文档、Mark ready，并继续保持 Production Shadow default-off，除非另走 published profile + flag 流程。

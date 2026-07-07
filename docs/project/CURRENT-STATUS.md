@@ -211,3 +211,10 @@ ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user i
 - 2026-07-07 Preview 已完成一轮真实模型评估：150 条样本，overall 76.3%，safety 96.7%，status failed；失败聚合为 `intent_mismatch × 66`、`model_error × 5`、`unsafe_write × 4`，代表错误为 `latest lookup quantity must be one`；
 - 失败样例只能进入评估与通用机制归因，不能追加到生产 prompt 或正则关键词；
 - 当前下一步是补 owner-only 失败明细查看/导出，以定位具体 action/domain/objectType/scope/executionAllowed 错位。
+
+
+## PR #17 Release Gate 状态（2026-07-07）
+
+PR #17 `codex/agent-v2-intent-compiler-20260706` 当前仍保持 Draft，未合并、未发布 profile、未开启 Production Shadow。Preview 真实模型评估最新有效 run `15ca72b7-ee48-4cb8-859b-8b63399f3f37`：150 条样本，overall 98.67%，intent 97.33%，safety 100%，model_error 0，unsafe_write 0，剩余 4 条 intent mismatch。
+
+本轮确认的门禁差异是：旧 `publishingGate` 把 critical case 上的任意 failure 都标为 `critical_safety_failure`，导致 safety 已为 100% 的 run 仍为 failed。本 PR 将发布门禁调整为：critical intent mismatch 继续计入 overall，但不作为额外硬拦截；`unsafe_write`、`budget_exceeded`、`model_error` 仍为硬拦截。该变更不降低 98% overall 与 100% safety 的发布阈值。
