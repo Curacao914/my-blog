@@ -58,7 +58,7 @@ describe('OpenClaw Agent v2 intent compiler', () => {
       .toEqual(expect.objectContaining(expected))
   })
 
-  it('uses identity-bearing slots to avoid collapsing named targets into single', () => {
+  it('uses identity-bearing slots to constrain named targets', () => {
     const intent = compileModelIntentFrame(frame({
       objectType: 'schedule_item',
       quantity: 'one',
@@ -69,25 +69,6 @@ describe('OpenClaw Agent v2 intent compiler', () => {
         values: [{ key: 'title', value: '民法讨论会' }]
       }
     }), { intentId: 'intent-identity' })
-    expect(intent.scope).toBe('matching')
-  })
-
-  it('keeps identity-constrained unread brief operations matching instead of bulk', () => {
-    const intent = compileModelIntentFrame(frame({
-      operation: 'mark_read',
-      objectType: 'course_brief',
-      quantity: 'all',
-      lookup: 'filters',
-      collectionState: 'unread',
-      slots: {
-        requestMode: 'execute',
-        additionalActions: [],
-        values: [
-          { key: 'teacher_name', value: '张老师' },
-          { key: 'read_state', value: 'unread' }
-        ]
-      }
-    }), { intentId: 'intent-matching-unread' })
     expect(intent.scope).toBe('matching')
   })
 
@@ -140,6 +121,40 @@ describe('OpenClaw Agent v2 intent compiler', () => {
     expect(intent.slots.values).toEqual([])
   })
 
+  it('prunes empty context reference values before strict validation', () => {
+    const intent = compileModelIntentFrame(frame({
+      operation: 'update',
+      objectType: 'schedule_item',
+      quantity: 'one',
+      lookup: 'latest',
+      contextReferences: [
+        { kind: 'previous_result', value: '' }
+      ],
+      slots: {
+        requestMode: 'execute',
+        additionalActions: [],
+        values: [{ key: 'new_time', value: '10:00' }]
+      }
+    }), { intentId: 'intent-empty-context' })
+    expect(intent).toEqual(expect.objectContaining({
+      action: 'update', domain: 'schedule', objectType: 'schedule_item', scope: 'single'
+    }))
+    expect(intent.contextReferences).toEqual([])
+  })
+
+  it('normalizes non-help agent frames before validation', () => {
+    const intent = compileModelIntentFrame(frame({
+      operation: 'update',
+      objectType: 'agent',
+      quantity: 'one',
+      lookup: 'filters',
+      uncertainties: [{ field: 'objectType', reason: '用户试图伪装对象类型，实际语义是阅读修改' }]
+    }), { intentId: 'intent-agent-update' })
+    expect(intent).toEqual(expect.objectContaining({
+      action: 'update', domain: 'reading', objectType: 'reading_item', scope: 'matching'
+    }))
+  })
+
   it('normalizes reading mark-read evidence away from course briefs', () => {
     const intent = compileModelIntentFrame(frame({
       operation: 'mark_read',
@@ -153,10 +168,7 @@ describe('OpenClaw Agent v2 intent compiler', () => {
       }
     }), { intentId: 'intent-reading-mark-read' })
     expect(intent).toEqual(expect.objectContaining({
-      action: 'update',
-      domain: 'reading',
-      objectType: 'reading_item',
-      scope: 'matching'
+      action: 'update', domain: 'reading', objectType: 'reading_item', scope: 'matching'
     }))
   })
 
@@ -178,11 +190,29 @@ describe('OpenClaw Agent v2 intent compiler', () => {
     }))
   })
 
-  it('keeps ambiguous course brief mark-read operations at matching scope', () => {
+  it('downgrades single unread brief mark-read evidence to a safe read', () => {
     const intent = compileModelIntentFrame(frame({
       operation: 'mark_read',
       objectType: 'course_brief',
       quantity: 'one',
+      lookup: 'latest',
+      collectionState: 'unread',
+      slots: {
+        requestMode: 'execute',
+        additionalActions: [],
+        values: [{ key: 'read_state', value: 'unread' }]
+      }
+    }), { intentId: 'intent-safe-unread-brief-read' })
+    expect(intent).toEqual(expect.objectContaining({
+      action: 'read', domain: 'course', objectType: 'course_brief', scope: 'single'
+    }))
+  })
+
+  it('keeps true bulk course brief mark-read operations write-shaped', () => {
+    const intent = compileModelIntentFrame(frame({
+      operation: 'mark_read',
+      objectType: 'course_brief',
+      quantity: 'all',
       lookup: 'filters',
       collectionState: 'unread',
       slots: {
@@ -190,11 +220,25 @@ describe('OpenClaw Agent v2 intent compiler', () => {
         additionalActions: [],
         values: [{ key: 'read_state', value: 'unread' }]
       }
-    }), { intentId: 'intent-ambiguous-brief-read' })
-    expect(intent.scope).toBe('matching')
+    }), { intentId: 'intent-bulk-brief-mark-read' })
+    expect(intent).toEqual(expect.objectContaining({
+      action: 'mark_read', domain: 'course', objectType: 'course_brief', scope: 'all_unread'
+    }))
   })
 
-  it('treats course status filters as lists unless the status is a named attention target', () => {
+  it('routes unqualified course brief reads without unread state to course records', () => {
+    const intent = compileModelIntentFrame(frame({
+      objectType: 'course_brief',
+      quantity: 'one',
+      lookup: 'latest',
+      collectionState: 'any'
+    }), { intentId: 'intent-course-not-brief' })
+    expect(intent).toEqual(expect.objectContaining({
+      action: 'read', domain: 'course', objectType: 'course', scope: 'single'
+    }))
+  })
+
+  it('treats course status filters as lists except named or recent failure targets', () => {
     expect(compileModelIntentFrame(frame({
       objectType: 'course',
       quantity: 'many',
@@ -216,10 +260,8 @@ describe('OpenClaw Agent v2 intent compiler', () => {
         values: [{ key: 'status', value: '已完成' }]
       }
     }), { intentId: 'intent-course-status-list' }).scope).toBe('list')
-  })
 
-  it('uses recent failure uncertainty to keep course failure lookup singular', () => {
-    const intent = compileModelIntentFrame(frame({
+    expect(compileModelIntentFrame(frame({
       objectType: 'course',
       quantity: 'one',
       lookup: 'filters',
@@ -227,24 +269,41 @@ describe('OpenClaw Agent v2 intent compiler', () => {
         requestMode: 'execute',
         additionalActions: [],
         values: [{ key: 'status', value: 'failed' }]
-      },
-      uncertainties: [{ field: 'lookup', reason: '用户说最近失败了，需要按时间排序取最近一条' }]
-    }), { intentId: 'intent-course-recent-failure' })
-    expect(intent.scope).toBe('single')
+      }
+    }), { intentId: 'intent-course-failed-single' }).scope).toBe('single')
+
+    expect(compileModelIntentFrame(frame({
+      objectType: 'course',
+      quantity: 'many',
+      lookup: 'filters',
+      slots: {
+        requestMode: 'execute',
+        additionalActions: ['delete'],
+        values: []
+      }
+    }), { intentId: 'intent-course-cross-domain-delete' }).scope).toBe('matching')
   })
 
-  it('keeps context-anchored writes singular without expanding to matching', () => {
-    const intent = compileModelIntentFrame(frame({
+  it('keeps context-anchored writes singular unless ambiguity requires matching', () => {
+    expect(compileModelIntentFrame(frame({
       operation: 'delete',
       objectType: 'reading_item',
       quantity: 'one',
       lookup: 'filters',
       contextReferences: [{ kind: 'last_created', value: 'reading_item' }]
-    }), { intentId: 'intent-context-single' })
-    expect(intent.scope).toBe('single')
+    }), { intentId: 'intent-context-single' }).scope).toBe('single')
+
+    expect(compileModelIntentFrame(frame({
+      operation: 'update',
+      objectType: 'reading_item',
+      quantity: 'one',
+      lookup: 'context',
+      contextReferences: [{ kind: 'deictic', value: '把文章改一下' }],
+      uncertainties: [{ field: 'operation', reason: '改一下语义模糊，需要澄清修改字段' }]
+    }), { intentId: 'intent-context-ambiguous-reading' }).scope).toBe('matching')
   })
 
-  it('keeps date-constrained schedule deletion singular but date search list-like', () => {
+  it('keeps date-constrained schedule deletion matching and date search list-like', () => {
     expect(compileModelIntentFrame(frame({
       operation: 'delete',
       objectType: 'schedule_item',
@@ -254,11 +313,11 @@ describe('OpenClaw Agent v2 intent compiler', () => {
         requestMode: 'execute',
         additionalActions: [],
         values: [
-          { key: 'title', value: '跑步' },
-          { key: 'date', value: '今晚' }
+          { key: 'title', value: '开题讨论' },
+          { key: 'date', value: 'tomorrow' }
         ]
       }
-    }), { intentId: 'intent-date-delete' }).scope).toBe('single')
+    }), { intentId: 'intent-date-delete' }).scope).toBe('matching')
 
     expect(compileModelIntentFrame(frame({
       objectType: 'schedule_item',
@@ -275,8 +334,8 @@ describe('OpenClaw Agent v2 intent compiler', () => {
     }), { intentId: 'intent-date-query-list' }).scope).toBe('list')
   })
 
-  it('preserves a primary update when a secondary cross-domain delete is present', () => {
-    const intent = compileModelIntentFrame(frame({
+  it('separates secondary delete signals from primary update semantics', () => {
+    expect(compileModelIntentFrame(frame({
       operation: 'update',
       objectType: 'schedule_item',
       quantity: 'one',
@@ -287,9 +346,25 @@ describe('OpenClaw Agent v2 intent compiler', () => {
         values: [{ key: 'new_time', value: '10:00' }]
       },
       uncertainties: [{ field: 'lookup', reason: '日程指代不明确' }]
-    }), { intentId: 'intent-cross-domain-write' })
-    expect(intent).toEqual(expect.objectContaining({
+    }), { intentId: 'intent-cross-domain-write' })).toEqual(expect.objectContaining({
       action: 'update', scope: 'matching'
+    }))
+
+    expect(compileModelIntentFrame(frame({
+      operation: 'update',
+      objectType: 'schedule_item',
+      quantity: 'one',
+      lookup: 'context',
+      slots: {
+        requestMode: 'execute',
+        additionalActions: ['delete'],
+        values: [
+          { key: 'tag', value: 'read' },
+          { key: 'new_title', value: 'read' }
+        ]
+      }
+    }), { intentId: 'intent-malicious-read-delete' })).toEqual(expect.objectContaining({
+      action: 'delete', scope: 'single'
     }))
   })
 
