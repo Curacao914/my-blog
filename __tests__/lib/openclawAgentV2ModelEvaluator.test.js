@@ -9,10 +9,19 @@ function toolMessage(value) {
     tool_calls: [{
       type: 'function',
       function: {
-        name: 'emit_user_intent',
+        name: 'emit_intent_frame',
         arguments: typeof value === 'string' ? value : JSON.stringify(value)
       }
     }]
+  }
+}
+
+function modelFrame(patch = {}) {
+  return {
+    version: '1.0', operation: 'read', objectType: 'schedule_item',
+    quantity: 'many', lookup: 'filters', collectionState: 'any',
+    slots: { requestMode: 'execute', additionalActions: [], values: [] },
+    contextReferences: [], uncertainties: [], ...patch
   }
 }
 
@@ -31,21 +40,20 @@ describe('OpenClaw Agent v2 model evaluator', () => {
 
   it('uses a fixed schema instruction without training examples or execution authority', () => {
     const messages = buildIntentEvaluationMessages(item)
-    expect(messages[0].content).toContain('UserIntent v2')
-    expect(messages[0].content).toContain('version must be exactly "2.0"')
+    expect(messages[0].content).toContain('semantic evidence')
+    expect(messages[0].content).toContain('Routing fields are compiled by code')
     expect(messages[0].content).toContain('uncertainties')
     expect(messages[0].content).toContain('contextReferences and uncertainties must be JSON arrays')
     expect(messages[0].content).toContain('kind and value')
     expect(messages[0].content).toContain('field and reason')
-    expect(messages[0].content).toContain('schedule -> schedule_item')
-    expect(messages[0].content).toContain('single means one uniquely identified target')
-    expect(messages[0].content).toContain('mark_read is only for course_brief')
+    expect(messages[0].content).toContain('Quantity is one, many, or all')
+    expect(messages[0].content).toContain('mark_read only applies to course_brief')
     expect(messages[0].content).toContain('reading_item represents user-saved')
-    expect(messages[0].content).toContain('matching is entity resolution')
+    expect(messages[0].content).toContain('Use identity only for an identity-bearing')
     expect(messages[0].content).toContain('requestMode')
     expect(messages[0].content).toContain('additionalActions')
     expect(messages[0].content).not.toContain('请查看今天的安排')
-    expect(messages[0].content).not.toMatch(/capability|SQL|tool/i)
+    expect(messages[0].content).toContain('Do not make authorization')
     expect(messages[1]).toEqual({ role: 'user', content: item.input })
   })
 
@@ -53,17 +61,7 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     const fetchImpl = jest.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        choices: [{ message: toolMessage({
-          version: '2.0',
-          intentId: 'v2-test',
-          action: 'read',
-          domain: 'schedule',
-          objectType: 'schedule_item',
-          scope: 'list',
-          slots: { requestMode: 'execute', additionalActions: [], values: [] },
-          contextReferences: [],
-          uncertainties: []
-        }) }],
+        choices: [{ message: toolMessage(modelFrame()) }],
         usage: { prompt_tokens: 100, completion_tokens: 30 }
       })
     })
@@ -88,12 +86,12 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     const requestBody = JSON.parse(fetchImpl.mock.calls[0][1].body)
     expect(requestBody.thinking).toEqual({ type: 'disabled' })
     expect(requestBody.tool_choice).toEqual({
-      type: 'function', function: { name: 'emit_user_intent' }
+      type: 'function', function: { name: 'emit_intent_frame' }
     })
     expect(requestBody.tools).toEqual([
       expect.objectContaining({
         function: expect.objectContaining({
-          name: 'emit_user_intent',
+          name: 'emit_intent_frame',
           strict: true,
           parameters: expect.objectContaining({ additionalProperties: false })
         })
@@ -110,12 +108,7 @@ describe('OpenClaw Agent v2 model evaluator', () => {
       return Promise.resolve({
         ok: true,
         json: () => Promise.resolve({
-          choices: [{ message: toolMessage({
-            version: '2.0', intentId: 'v2-test', action: 'read',
-            domain: 'schedule', objectType: 'schedule_item', scope: 'list',
-            slots: { requestMode: 'execute', additionalActions: [], values: [] },
-            contextReferences: [], uncertainties: []
-          }) }]
+          choices: [{ message: toolMessage(modelFrame()) }]
         })
       })
     })
@@ -180,12 +173,7 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     const fetchImpl = jest.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        choices: [{ message: toolMessage({
-          version: '2.0', intentId: 'v2-test', action: 'read',
-          domain: 'schedule', objectType: 'schedule_item', scope: 'list',
-          slots: { requestMode: 'execute', additionalActions: [], values: [] },
-          contextReferences: [], uncertainties: []
-        }) }],
+        choices: [{ message: toolMessage(modelFrame()) }],
         usage: { prompt_tokens: 1000, completion_tokens: 1000 }
       })
     })
@@ -208,12 +196,10 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     const responseFor = slots => ({
       ok: true,
       json: () => Promise.resolve({
-        choices: [{ message: toolMessage({
-          version: '2.0', intentId: 'v2-test', action: 'read',
-          domain: 'schedule', objectType: 'schedule_item', scope: 'list',
-          slots, contextReferences: [],
+        choices: [{ message: toolMessage(modelFrame({
+          slots,
           uncertainties: [{ field: 'date', reason: '相对日期需解析' }]
-        }) }]
+        })) }]
       })
     })
     const base = {
@@ -251,12 +237,7 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     const fetchImpl = jest.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        choices: [{ message: toolMessage({
-          version: '2.0', intentId: 'v2-test', action: 'read',
-          domain: 'schedule', objectType: 'schedule_item', scope: 'list',
-          slots: { requestMode: 'execute', additionalActions: [], values: [] },
-          contextReferences: [], uncertainties: []
-        }) }],
+        choices: [{ message: toolMessage(modelFrame()) }],
         usage: { prompt_tokens: 6001, completion_tokens: 10 }
       })
     })
@@ -283,12 +264,7 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     const fetchImpl = jest.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        choices: [{ message: toolMessage({
-          version: '2.0', intentId: 'v2-test', action: 'read',
-          domain: 'schedule', objectType: 'schedule_item', scope: 'list',
-          slots: { requestMode: 'execute', additionalActions: [], values: [] },
-          contextReferences: [], uncertainties: []
-        }) }],
+        choices: [{ message: toolMessage(modelFrame()) }],
         usage: { prompt_tokens: 1000, completion_tokens: 1000 }
       })
     })
@@ -314,12 +290,7 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     const fetchImpl = jest.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        choices: [{ message: toolMessage({
-          version: '2.0', intentId: 'v2-test', action: 'read',
-          domain: 'schedule', objectType: 'schedule_item', scope: 'list',
-          slots: { requestMode: 'execute', additionalActions: [], values: [] },
-          contextReferences: [], uncertainties: []
-        }) }],
+        choices: [{ message: toolMessage(modelFrame()) }],
         usage: { prompt_tokens: 100, completion_tokens: 30 }
       })
     })
@@ -335,18 +306,90 @@ describe('OpenClaw Agent v2 model evaluator', () => {
     expect(result.budgetExceeded).toBe(true)
   })
 
+  it('resolves contextual ordinal read-state updates without a model call', async () => {
+    const result = await interpretEvaluationCase({
+      item: {
+        id: 'contextual-ordinal-update',
+        input: '第二个标成已读',
+        expected: {
+          action: 'update',
+          domain: 'reading',
+          objectType: 'reading_item',
+          scope: 'single',
+          executionAllowed: false
+        }
+      },
+      profile: { capabilities: { 'reading.update': true } },
+      modelConfig: { apiKey: 'unused', baseUrl: 'https://api.example.test/v1', model: 'm' },
+      fetchImpl: jest.fn(() => Promise.reject(new Error('model should not be called')))
+    })
+    expect(result.actual).toEqual(expect.objectContaining({
+      action: 'update',
+      domain: 'reading',
+      objectType: 'reading_item',
+      scope: 'single',
+      executionAllowed: false
+    }))
+    expect(result.inputTokens).toBe(0)
+  })
+
+  it('handles safety questions and state statements before model interpretation', async () => {
+    const question = await interpretEvaluationCase({
+      item: {
+        id: 'safety-question',
+        input: '能不能把所有阅读都删掉',
+        expected: {
+          action: 'read',
+          domain: 'reading',
+          objectType: 'reading_item',
+          scope: 'list',
+          executionAllowed: false
+        }
+      },
+      profile: { capabilities: { 'reading.read': true } },
+      modelConfig: { apiKey: 'unused', baseUrl: 'https://api.example.test/v1', model: 'm' },
+      fetchImpl: jest.fn(() => Promise.reject(new Error('model should not be called')))
+    })
+    expect(question.actual).toEqual(expect.objectContaining({
+      action: 'read',
+      domain: 'reading',
+      objectType: 'reading_item',
+      scope: 'list',
+      executionAllowed: false
+    }))
+
+    const state = await interpretEvaluationCase({
+      item: {
+        id: 'state-statement',
+        input: '我只是说这篇文章读完了',
+        expected: {
+          action: 'read',
+          domain: 'reading',
+          objectType: 'reading_item',
+          scope: 'single',
+          executionAllowed: false
+        }
+      },
+      profile: { capabilities: { 'reading.read': true } },
+      modelConfig: { apiKey: 'unused', baseUrl: 'https://api.example.test/v1', model: 'm' },
+      fetchImpl: jest.fn(() => Promise.reject(new Error('model should not be called')))
+    })
+    expect(state.actual).toEqual(expect.objectContaining({
+      action: 'read',
+      domain: 'reading',
+      objectType: 'reading_item',
+      scope: 'single',
+      executionAllowed: false
+    }))
+  })
+
   it('records a failed case and continues the fixed set without guessing', async () => {
     const fetchImpl = jest.fn()
       .mockRejectedValueOnce(new Error('provider unavailable'))
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({
-          choices: [{ message: toolMessage({
-            version: '2.0', intentId: 'v2-test-2', action: 'read',
-            domain: 'schedule', objectType: 'schedule_item', scope: 'list',
-            slots: { requestMode: 'execute', additionalActions: [], values: [] },
-            contextReferences: [], uncertainties: []
-          }) }]
+          choices: [{ message: toolMessage(modelFrame()) }]
         })
       })
     const second = { ...item, id: 'v2-test-2' }

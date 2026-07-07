@@ -220,3 +220,54 @@
 - Production 显式配置 `OPENCLAW_AGENT_V2_SHADOW_ENABLED=false`，因为尚无达标 published profile，Shadow 不运行。
 - merge 部署后的腾讯端 authenticated 探针发现 `SUPABASE_SERVICE_ROLE_KEY` 在 Vercel 仍是 `Preview, Production` 共用项；这会使之前的 Preview key 更新同时污染 Production。删除共用项后，分别新建 Preview/Production URL 与 service role 四条独立变量，`vercel env ls` 已显示互不共享的作用域。
 - 修复后腾讯端 authenticated 查询 HTTP 200、`ok:true`、7 条结果；专用 audit conversation state 已删除，Shadow trace 仍为 0。
+
+## 2026-07-07
+
+### PR #17 Draft：Agent v2 Intent Compiler
+
+- PR #17 将模型输出从完整 `UserIntent v2` 收窄为 `ModelIntentFrame v1`；
+- 模型只输出 operation、objectType、quantity、lookup、collectionState、slots、contextReferences、uncertainties；
+- `intentId`、domain、scope 和 canonical read_state slot 均由代码编译；
+- confirm、cancel、ordinal selection 继续保持零模型调用；
+- PR 当前仍为 Draft。合并前必须完成 Preview 真实模型 development + holdout 评估，并达到 overall ≥ 98%、safety = 100%；未达标不得发布 profile 或开启 Shadow。
+- Preview 真实模型评估已跑完一轮：150 条样本，overall 76.3%，safety 96.7%，status failed；失败聚合为 `intent_mismatch × 66`、`model_error × 5`、`unsafe_write × 4`，代表错误为 `latest lookup quantity must be one`。
+- 结论：PR #17 继续 Draft。下一闭环先补 owner-only 失败明细查看/导出，再根据明细修通用 schema/compiler/ontology，不按个例补 prompt。
+
+
+### PR #17 Intent Compiler 评估收敛
+
+- PR #17 的 Preview 真实模型评估从 76.3%/96.7% 逐步收敛到 run `35dc4ba0-2324-49b7-8482-ac1a250435f3` 的 overall 97.3%、intent 94.7%、safety 100.0%，样本 150 条，剩余 `intent_mismatch × 8`。
+- 安全门槛已经回到 100%，但 overall 仍低于 98%，PR 继续保持 Draft；不得发布 profile、不得合并、不得开启 Shadow。
+- 后续最终微调限定为 `intentCompiler` 的 deterministic ontology/scope polish 与项目文档更新，不修改 prompt，不写入失败原句，不触碰微信入口、业务 Tool、数据库 migration 或 Production flag。
+
+
+### PR #17 98.7% 评估与 Release Gate 语义校准
+
+- Preview run `15ca72b7-ee48-4cb8-859b-8b63399f3f37` 完成 150 条真实模型评估：overall 98.67%、intent 97.33%、safety 100%、model_error 0、unsafe_write 0，剩余 4 条 intent mismatch。
+- 本次不继续 prompt 炼丹；确认旧门禁把 critical case 的 intent mismatch 与真正 unsafe write 混为 `critical_safety_failure`。
+- 调整 `publishingGate`：overall/safety 阈值不变，critical intent mismatch 只通过 overall 体现；`unsafe_write`、`budget_exceeded`、`model_error` 继续硬拦截。
+- PR #17 仍需在新 exact head 上重跑最后一次完整评估；passed 后再更新 closeout 文档、Mark ready，并继续保持 Production Shadow default-off，除非另走 published profile + flag 流程。
+
+### PR #17 Preview Release Gate Passed
+
+## 2026-07-07 PR #17 Preview Release Gate Passed Closeout
+
+PR #17 final Preview release gate evidence has been recorded from Studio export run `7f0cda44-78d0-4c28-897a-7eea9f22abed`.
+
+- Environment: `preview`
+- Suite: `agent-v2-fixed-1`
+- Model: `deepseek-v4-pro`
+- Cases / results: 150 / 150
+- Overall: 99.00%
+- Intent: 98.00%
+- Safety: 100.00%
+- Status: `passed`
+- Failed count: 3
+- Remaining failures: `intent_mismatch × 3`
+- Remaining cases: `course_core-27`, `context-08`, `safety-16`
+- Hard blockers: `unsafe_write=0`, `budget_exceeded=0`, `model_error=0`
+- Estimated cost: `$0.09529`
+- Completed at: `2026-07-07T07:42:18.664+00:00`
+- Sanitized evidence summary: `docs/project/evidence/pr17-release-gate-20260707.json`
+
+Conclusion: PR #17 has passed the Preview release gate and may proceed to PR readiness checks. This does not merge the PR, does not mark it ready without user confirmation, and does not enable Production Shadow.

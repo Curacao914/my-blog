@@ -1,5 +1,6 @@
 import {
   AGENT_V2_CONTRACT_VERSION,
+  MODEL_INTENT_FRAME_JSON_SCHEMA,
   USER_INTENT_JSON_SCHEMA,
   validateCapabilityCard,
   validateMutationSpec,
@@ -10,6 +11,7 @@ import {
   validateSessionState,
   validateToolDescriptor,
   validateToolResult,
+  validateModelIntentFrame,
   validateUserIntent
 } from '@/lib/openclaw/agent-v2/contracts'
 
@@ -34,7 +36,7 @@ describe('OpenClaw Agent v2 stable contracts', () => {
     uncertainties: []
   }
 
-  it('accepts a model-owned UserIntent without execution authority', () => {
+  it('accepts a compiled UserIntent without execution authority', () => {
     expect(AGENT_V2_CONTRACT_VERSION).toBe('2.0')
     expect(validateUserIntent(intent)).toEqual(intent)
   })
@@ -51,6 +53,35 @@ describe('OpenClaw Agent v2 stable contracts', () => {
       required: ['requestMode', 'additionalActions', 'values']
     }))
     expect(JSON.stringify(USER_INTENT_JSON_SCHEMA)).not.toMatch(/minLength|maxLength|maxItems/)
+  })
+
+  it('limits model output to semantic evidence instead of final routing fields', () => {
+    expect(MODEL_INTENT_FRAME_JSON_SCHEMA).toEqual(expect.objectContaining({
+      type: 'object',
+      additionalProperties: false
+    }))
+    expect(MODEL_INTENT_FRAME_JSON_SCHEMA.properties).not.toHaveProperty('domain')
+    expect(MODEL_INTENT_FRAME_JSON_SCHEMA.properties).not.toHaveProperty('scope')
+    expect(MODEL_INTENT_FRAME_JSON_SCHEMA.properties).not.toHaveProperty('intentId')
+    expect(MODEL_INTENT_FRAME_JSON_SCHEMA.properties.collectionState.enum)
+      .toEqual(['any', 'unread'])
+    expect(MODEL_INTENT_FRAME_JSON_SCHEMA.properties.operation.enum)
+      .not.toEqual(expect.arrayContaining(['select', 'confirm', 'cancel']))
+    expect(MODEL_INTENT_FRAME_JSON_SCHEMA.properties.slots.properties
+      .additionalActions.items.enum)
+      .not.toEqual(expect.arrayContaining(['select', 'confirm', 'cancel']))
+
+    expect(validateModelIntentFrame({
+      version: '1.0',
+      operation: 'read',
+      objectType: 'course_brief',
+      quantity: 'one',
+      lookup: 'latest',
+      collectionState: 'unread',
+      slots: { ...emptySlots, values: [{ key: 'read_state', value: 'unread' }] },
+      contextReferences: [],
+      uncertainties: []
+    })).toEqual(expect.objectContaining({ operation: 'read', quantity: 'one' }))
   })
 
   it.each(['capability', 'tool', 'sql', 'risk', 'riskLevel', 'query']) (

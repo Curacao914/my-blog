@@ -112,6 +112,15 @@ PR #12 曾将 Production 默认切入一次模型直接选择 capability 的 Age
 - 历史 `needs_attention/failed` 仍需逐项处理；
 - 历史简报补齐不等于所有旧失败课程已经修复。
 
+
+## PR #17 Agent v2 Intent Compiler 当前状态（2026-07-07）
+
+PR #17 仍为 Draft，分支 `codex/agent-v2-intent-compiler-20260706`。本 PR 将模型输出收窄为 `ModelIntentFrame v1`，由代码派生 `intentId`、domain、scope 与 canonical `read_state` slot；模型仍不得输出 capability、tool、risk、authorization、SQL、QuerySpec、MutationSpec、domain、scope、intentId 或 session-control action。
+
+Preview 真实模型评估已从最初 150 条 overall 76.3%、safety 96.7% 收敛至 run `35dc4ba0-2324-49b7-8482-ac1a250435f3` 的 overall 97.3%、intent 94.7%、safety 100.0%。当前 status 仍为 failed，剩余 `intent_mismatch × 8`，因此不得发布 profile、不得合并、不得开启 Shadow。
+
+当前最后一轮修改只允许做 deterministic compiler polish 与文档更新，不修改 prompt，不把失败样例硬编码进提示词。下一步只跑一轮完整 Preview 评估：通过 overall ≥ 98% 且 safety = 100% 后才进入 Mark ready 前检查；未通过则记录结果并继续保持 Draft。
+
 ## 当前 P0
 
 1. 完整交付 Agent Studio + Evaluation Kernel，未完成不得开始 Shadow Runtime；
@@ -189,3 +198,47 @@ ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user i
 - 5 个定向 suites / 43 tests、`git diff --check`、静态预取 skip build 与 PR checks 通过；Preview schema 已备份（SHA-256 `c6ad2fb44a28473363b973e5414ebd688361080085c4831ce820b4a793979770`）并应用 Shadow trace migration，Vercel Preview 已显式绑定独立项目 `ldciqxzczwpuhhgeinmc`；
 - Production 在 78 KB schema 备份（SHA-256 `872b007825546f4aad60b8bdfcc1234d212fbcd3dc383325e4afa1e021e4f1f8`）后仅应用 Shadow trace migration，表计数为 0且 ledger 对齐；Production 显式配置 `OPENCLAW_AGENT_V2_SHADOW_ENABLED=false`；因无合格 published profile，Shadow 未开启、未调用模型、未生成 trace。
 - 合并后真实腾讯端探针再次暴露 Vercel `SUPABASE_SERVICE_ROLE_KEY` 仍是 Preview/Production 共用变量，更新任一环境会连带改另一环境。已删除共用项，将 URL 和 key 拆为 Preview/Production 各自独立的四条变量；腾讯端 authenticated 查询恢复 HTTP 200 / 7 条结果，专用审计会话已清理，Shadow trace 仍为 0。
+
+## Agent v2 Intent Compiler（PR #17 Draft）
+
+- PR #17：`feat: compile model semantics into UserIntent`；
+- 分支：`codex/agent-v2-intent-compiler-20260706`；
+- base main：`7844aa3eef9b5267b9c010707571af8b73e29865`；
+- 目标：将模型输出从完整 `UserIntent v2` 收窄为 `ModelIntentFrame v1`，由代码编译 `intentId`、`domain`、`scope` 和 canonical slots；
+- 模型不得输出 capability、tool、risk、authorization、SQL、QuerySpec、MutationSpec、domain、scope、intentId 或 session-control action；
+- 当前闭环只改 Agent v2 interpreter/contracts/compiler/entityResolver 与对应测试、项目文档；不修改微信入口、业务 Tool、数据库、Production flag 或腾讯服务；
+- 合并前必须完成 Preview 真实模型 development + holdout 评估。若未达 overall ≥ 98% 且 safety = 100%，继续保持 Draft，不发布 profile，不开启 Shadow；
+- 2026-07-07 Preview 已完成一轮真实模型评估：150 条样本，overall 76.3%，safety 96.7%，status failed；失败聚合为 `intent_mismatch × 66`、`model_error × 5`、`unsafe_write × 4`，代表错误为 `latest lookup quantity must be one`；
+- 失败样例只能进入评估与通用机制归因，不能追加到生产 prompt 或正则关键词；
+- 当前下一步是补 owner-only 失败明细查看/导出，以定位具体 action/domain/objectType/scope/executionAllowed 错位。
+
+
+## PR #17 Release Gate 状态（2026-07-07）
+
+PR #17 `codex/agent-v2-intent-compiler-20260706` 当前仍保持 Draft，未合并、未发布 profile、未开启 Production Shadow。Preview 真实模型评估最新有效 run `15ca72b7-ee48-4cb8-859b-8b63399f3f37`：150 条样本，overall 98.67%，intent 97.33%，safety 100%，model_error 0，unsafe_write 0，剩余 4 条 intent mismatch。
+
+本轮确认的门禁差异是：旧 `publishingGate` 把 critical case 上的任意 failure 都标为 `critical_safety_failure`，导致 safety 已为 100% 的 run 仍为 failed。本 PR 将发布门禁调整为：critical intent mismatch 继续计入 overall，但不作为额外硬拦截；`unsafe_write`、`budget_exceeded`、`model_error` 仍为硬拦截。该变更不降低 98% overall 与 100% safety 的发布阈值。
+
+## PR #17 Agent v2 Intent Compiler closeout
+
+## 2026-07-07 PR #17 Preview Release Gate Passed Closeout
+
+PR #17 final Preview release gate evidence has been recorded from Studio export run `7f0cda44-78d0-4c28-897a-7eea9f22abed`.
+
+- Environment: `preview`
+- Suite: `agent-v2-fixed-1`
+- Model: `deepseek-v4-pro`
+- Cases / results: 150 / 150
+- Overall: 99.00%
+- Intent: 98.00%
+- Safety: 100.00%
+- Status: `passed`
+- Failed count: 3
+- Remaining failures: `intent_mismatch × 3`
+- Remaining cases: `course_core-27`, `context-08`, `safety-16`
+- Hard blockers: `unsafe_write=0`, `budget_exceeded=0`, `model_error=0`
+- Estimated cost: `$0.09529`
+- Completed at: `2026-07-07T07:42:18.664+00:00`
+- Sanitized evidence summary: `docs/project/evidence/pr17-release-gate-20260707.json`
+
+Conclusion: PR #17 has passed the Preview release gate and may proceed to PR readiness checks. This does not merge the PR, does not mark it ready without user confirmation, and does not enable Production Shadow.

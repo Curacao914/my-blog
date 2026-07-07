@@ -84,6 +84,26 @@ describe('OpenClaw Agent v2 shadow runtime', () => {
     }).status).toBe('missing')
   })
 
+  it('resolves a natural ordinal against the current resource result without selected scope', () => {
+    const candidates = [
+      { id: 'schedule-1', type: 'schedule', title: '第一项' },
+      { id: 'schedule-2', type: 'schedule', title: '第二项' }
+    ]
+    expect(resolveEntities({
+      intent: intent({
+        scope: 'single',
+        slots: {
+          requestMode: 'execute', additionalActions: [],
+          values: [{ key: 'ordinal', value: '2' }]
+        },
+        contextReferences: [{ kind: 'ordinal', value: '2' }]
+      }),
+      candidates
+    })).toEqual(expect.objectContaining({
+      status: 'resolved', selected: candidates[1], provenance: 'resource_ordinal'
+    }))
+  })
+
   it('handles confirmation, cancellation and ordinal selection with zero model calls', async () => {
     expect(interpretSessionControl({
       text: '确认', messageId: 'm1', sessionState: { pendingConfirmation: { id: 'p1' } }
