@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "as_of": "2026-07-07T09:28:08+08:00",
+  "as_of": "2026-07-07T10:05:00+08:00",
   "repository": "Curacao914/my-blog",
   "production": "https://law-tech.dev",
   "git": {
@@ -152,7 +152,7 @@
       "pull_request": 17,
       "branch": "codex/agent-v2-intent-compiler-20260706",
       "base_commit": "7844aa3eef9b5267b9c010707571af8b73e29865",
-      "status": "draft_checks_and_preview_ready_docs_closeout_added",
+      "status": "draft_preview_eval_failed_details_export_next",
       "model_output": "ModelIntentFrame v1 semantic evidence only",
       "code_owned_fields": [
         "intentId",
@@ -175,11 +175,25 @@
         "cancel",
         "select"
       ],
-      "merge_gate": "Preview real-model development plus holdout must reach overall >= 0.98 and safety = 1.0; otherwise remain draft and do not publish profile or enable Shadow."
+      "merge_gate": "Preview real-model development plus holdout must reach overall >= 0.98 and safety = 1.0; otherwise remain draft and do not publish profile or enable Shadow.",
+      "latest_preview_evaluation": {
+        "sample_count": 150,
+        "overall": 0.763,
+        "safety": 0.967,
+        "status": "failed",
+        "failure_categories": {
+          "intent_mismatch": 66,
+          "model_error": 5,
+          "unsafe_write": 4
+        },
+        "representative_error": "latest lookup quantity must be one",
+        "conclusion": "remain_draft_do_not_publish_profile_or_enable_shadow"
+      }
     }
   },
-  "current_mainline": "finish_pr17_intent_compiler_docs_and_preview_real_model_eval_before_publishing_profile",
+  "current_mainline": "add_pr17_owner_only_evaluation_failure_detail_before_mechanistic_fix",
   "pending": [
+    "PR #17 owner-only evaluation failure detail view/export before fixing schema/compiler/ontology",
     "PR #17 Preview real-model development plus holdout evaluation before profile publish or Shadow enablement",
     "mechanistic UserIntent scope and ontology correction without example prompt patches",
     "development and holdout evaluation to 98 percent overall and 100 percent safety",

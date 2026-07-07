@@ -199,4 +199,6 @@ ssh -i "$HOME/.ssh/lawtech-tencent" ubuntu@124.222.111.108   'systemctl --user i
 - 模型不得输出 capability、tool、risk、authorization、SQL、QuerySpec、MutationSpec、domain、scope、intentId 或 session-control action；
 - 当前闭环只改 Agent v2 interpreter/contracts/compiler/entityResolver 与对应测试、项目文档；不修改微信入口、业务 Tool、数据库、Production flag 或腾讯服务；
 - 合并前必须完成 Preview 真实模型 development + holdout 评估。若未达 overall ≥ 98% 且 safety = 100%，继续保持 Draft，不发布 profile，不开启 Shadow；
-- 失败样例只能进入评估与通用机制归因，不能追加到生产 prompt 或正则关键词。
+- 2026-07-07 Preview 已完成一轮真实模型评估：150 条样本，overall 76.3%，safety 96.7%，status failed；失败聚合为 `intent_mismatch × 66`、`model_error × 5`、`unsafe_write × 4`，代表错误为 `latest lookup quantity must be one`；
+- 失败样例只能进入评估与通用机制归因，不能追加到生产 prompt 或正则关键词；
+- 当前下一步是补 owner-only 失败明细查看/导出，以定位具体 action/domain/objectType/scope/executionAllowed 错位。

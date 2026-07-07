@@ -1,6 +1,7 @@
 import indexHandler from '@/pages/api/settings/openclaw-agent/index'
 import publishHandler from '@/pages/api/settings/openclaw-agent/publish'
 import configHandler from '@/pages/api/settings/openclaw-agent/config'
+import detailHandler from '@/pages/api/settings/openclaw-agent/evaluation-run'
 
 import { requireWorkspaceRequest } from '@/lib/auth/serverAdmin'
 import {
@@ -8,7 +9,10 @@ import {
   listAgentConfigs,
   publishAgentConfig
 } from '@/lib/server/openclawAgentConfigs'
-import { listEvaluationRuns } from '@/lib/server/openclawAgentEvaluations'
+import {
+  getEvaluationRun,
+  listEvaluationRuns
+} from '@/lib/server/openclawAgentEvaluations'
 
 jest.mock('@/lib/auth/serverAdmin', () => ({ requireWorkspaceRequest: jest.fn() }))
 jest.mock('@/lib/server/openclawAgentConfigs', () => ({
@@ -19,6 +23,7 @@ jest.mock('@/lib/server/openclawAgentConfigs', () => ({
   updateAgentConfigDraft: jest.fn()
 }))
 jest.mock('@/lib/server/openclawAgentEvaluations', () => ({
+  getEvaluationRun: jest.fn(),
   listEvaluationRuns: jest.fn()
 }))
 
@@ -122,5 +127,36 @@ describe('/api/settings/openclaw-agent', () => {
       body: { environment: 'preview', configId: 'config-1', profile: {} }
     }, res)
     expect(res.statusCode).toBe(400)
+  })
+
+  it('returns failed evaluation detail without exposing raw fixture prompts', async () => {
+    getEvaluationRun.mockResolvedValue({
+      id: 'run-failed',
+      environment: 'preview',
+      status: 'failed',
+      results: [{
+        caseId: 'schedule_core-01',
+        actual: {
+          action: 'read',
+          domain: 'course',
+          objectType: 'course',
+          scope: 'list',
+          executionAllowed: true
+        },
+        modelError: null
+      }]
+    })
+    const res = response()
+    await detailHandler({
+      method: 'GET',
+      query: { environment: 'preview', runId: 'run-failed' }
+    }, res)
+    expect(res.statusCode).toBe(200)
+    expect(res.body.failedResults[0]).toEqual(expect.objectContaining({
+      caseId: 'schedule_core-01',
+      failures: ['intent_mismatch'],
+      mismatchedFields: expect.arrayContaining(['domain', 'objectType'])
+    }))
+    expect(JSON.stringify(res.body)).not.toContain('今天有什么安排')
   })
 })

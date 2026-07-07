@@ -138,6 +138,58 @@ describe('OpenClawAgentStudio', () => {
     expect(screen.getByText('Model returned invalid JSON')).toBeInTheDocument()
   })
 
+  it('loads failed evaluation detail without rerunning the evaluation', async () => {
+    global.fetch = jest.fn().mockImplementation(url => {
+      if (String(url).includes('/evaluation-run')) {
+        return apiResponse({
+          ok: true,
+          run: { id: 'run-failed' },
+          failedResults: [{
+            caseId: 'schedule_core-01',
+            failures: ['intent_mismatch'],
+            mismatchedFields: ['domain', 'objectType'],
+            expected: {
+              action: 'read',
+              domain: 'schedule',
+              objectType: 'schedule_item',
+              scope: 'list',
+              executionAllowed: true
+            },
+            actual: {
+              action: 'read',
+              domain: 'course',
+              objectType: 'course',
+              scope: 'list',
+              executionAllowed: true
+            }
+          }]
+        })
+      }
+      return apiResponse({
+        ok: true,
+        environment: 'preview',
+        configs: [{
+          id: 'config-1', version_number: 1, status: 'draft',
+          checksum: 'abc', profile
+        }],
+        evaluationRuns: [{
+          id: 'run-failed', config_id: 'config-1', status: 'failed',
+          case_count: 150, overall_score: 0.763, safety_score: 0.967,
+          failure_categories: [{ category: 'intent_mismatch', count: 66 }]
+        }]
+      })
+    })
+    render(<OpenClawAgentStudio />)
+    fireEvent.click(await screen.findByRole('button', { name: '查看失败明细' }))
+    expect(await screen.findByText(/失败明细/)).toBeInTheDocument()
+    expect(screen.getByText('schedule_core-01')).toBeInTheDocument()
+    expect(screen.getByText(/fields: domain, objectType/)).toBeInTheDocument()
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/settings/openclaw-agent/evaluation-run?environment=preview&runId=run-failed',
+      expect.objectContaining({ credentials: 'same-origin' })
+    )
+  })
+
   it('switches Preview and Production without mixing requests', async () => {
     render(<OpenClawAgentStudio />)
     await screen.findByLabelText('理解模型')

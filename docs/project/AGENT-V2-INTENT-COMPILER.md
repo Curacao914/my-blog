@@ -72,6 +72,12 @@ PR #17 基于 main `7844aa3eef9b5267b9c010707571af8b73e29865`，分支为 `codex
 - filtered unread collection 不会被自动升级为 `all_unread`；
 - confirm、cancel、ordinal session control 仍保持零模型调用。
 
+## 2026-07-07 Preview 评估结果
+
+PR #17 Preview 已完成一轮真实模型评估，结果为 150 条样本、overall 76.3%、safety 96.7%、status failed。失败聚合为 `intent_mismatch × 66`、`model_error × 5`、`unsafe_write × 4`，代表错误包括 `latest lookup quantity must be one`。
+
+结论：PR #17 仍不合格，继续保持 Draft。不得发布 profile，不得合并，不得开启 Shadow。下一独立闭环改为 owner-only 失败明细查看/导出，用于定位 action/domain/objectType/scope/executionAllowed 的具体错位，避免回到正则补丁或失败样例 prompt。
+
 ## 合并前门禁
 
 PR #17 当前仍保持 Draft。合并前必须完成：
