@@ -1,9 +1,11 @@
 const fs = require('fs')
 const path = require('path')
+
 const root = path.join(__dirname, '../..')
 const contentPage = fs.readFileSync(path.join(root, 'pages/content/index.js'), 'utf8')
 const searchPage = fs.readFileSync(path.join(root, 'pages/search/index.js'), 'utf8')
 const publicCard = fs.readFileSync(path.join(root, 'components/content/PublicContentCard.js'), 'utf8')
+
 describe('public browse surface polish', () => {
   it('keeps content directory on the lighter browse surface system', () => {
     expect(contentPage).toContain('public-browse-surface-v1')
@@ -15,6 +17,7 @@ describe('public browse surface polish', () => {
     expect(contentPage).not.toContain('backdrop-filter: blur(22px) saturate(1.08)')
     expect(contentPage).not.toContain('min-height: 220px')
   })
+
   it('keeps search page lighter than the old dense glass workspace', () => {
     expect(searchPage).toContain('public-search-surface-v1')
     expect(searchPage).toContain('grid-template-columns: 210px minmax(0,1fr)')
@@ -23,6 +26,7 @@ describe('public browse surface polish', () => {
     expect(searchPage).not.toContain('grid-template-columns: 230px minmax(0,1fr)')
     expect(searchPage).not.toContain('backdrop-filter: blur(22px)')
   })
+
   it('reduces the shared public content card weight', () => {
     expect(publicCard).toContain('public-content-card-surface-v1')
     expect(publicCard).toContain('min-height: 104px')
