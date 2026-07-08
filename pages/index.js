@@ -7,10 +7,8 @@ import { LawTechIcon } from '@/components/LawTechIcons'
 import { loadPublicContentIndex } from '@/lib/content/publicIndex'
 import {
   publicContentCategory,
-  publicContentCollection,
   publicContentDate,
   publicContentHref,
-  publicContentTags,
   publicContentTypeLabel,
   selectRecentPublicContent
 } from '@/lib/content/publicContent'
@@ -44,21 +42,9 @@ function formatDate(value) {
   }).format(date)
 }
 
-function FeaturedSignal({ item }) {
-  if (!item) return <div className='home-system-signal is-empty'><span>Latest</span><strong>还没有公开内容</strong><p>内容发布后会出现在这里。</p></div>
-  const category = publicContentCategory(item)
-  const collection = publicContentCollection(item)
-  return <Link className='home-system-signal' href={publicContentHref(item)}>
-    <span>{[publicContentTypeLabel(item.type), category, formatDate(publicContentDate(item))].filter(Boolean).join(' · ')}</span>
-    <strong>{item.title || '未命名内容'}</strong>
-    {item.summary ? <p>{item.summary}</p> : null}
-    <small>{collection || '继续阅读'} ↗</small>
-  </Link>
-}
-
-function HomeEntry({ href, icon, label, meta, primary = false }) {
-  return <Link className={`home-entry ${primary ? 'is-primary' : ''}`} href={href}>
-    <LawTechIcon name={icon} size={18} />
+function HomeEntry({ href, icon, label, meta }) {
+  return <Link className='home-entry' href={href}>
+    <LawTechIcon name={icon} size={17} />
     <span><strong>{label}</strong><small>{meta}</small></span>
     <b>↗</b>
   </Link>
@@ -78,89 +64,83 @@ function RecentLine({ item }) {
 
 function TopicPath({ category, count }) {
   return <Link className='home-topic-path' href={`/category/${encodeURIComponent(category)}`}>
-    <span>{category}</span>
-    <small>{count} 条内容</small>
-    <b>进入路径 ↗</b>
+    <strong>{category}</strong>
+    <span>{count} 条内容</span>
   </Link>
 }
 
 export default function HomePage({ recentContent = [], contentCount = 0, categories = {}, types = {} }) {
-  const featured = recentContent[0] || null
-  const updates = recentContent.slice(0, 5)
+  const updates = recentContent.slice(0, 6)
   const articleCount = types.article || 0
   const courseCount = types['course-note'] || 0
-  const tagCount = recentContent.reduce((count, item) => count + publicContentTags(item).length, 0)
   const quickLinks = publicHomeQuickLinks.slice(0, 6)
 
   return <>
     <Head>
       <title>law-tech.dev</title>
-      <meta name='description' content='法学、写作、课程整理与工具实验的个人工作系统。' />
+      <meta name='description' content='法学笔记、写作与工具实验。' />
       <meta name='theme-color' content='#f5f3eb' />
     </Head>
 
-    <main className='lawtech-public-page public-home home-revolution-v2'>
+    <main className='lawtech-public-page public-home home-editorial-v3'>
       <div className='public-aurora public-aurora-one' aria-hidden='true' />
       <div className='public-aurora public-aurora-two' aria-hidden='true' />
       <div className='public-shell'>
         <PublicHeader />
 
-        <section className='home-system-hero' aria-label='law-tech.dev 入口'>
-          <div className='home-system-copy'>
-            <span className='eyebrow'>law-tech.dev</span>
-            <h1>法学、写作、课程与工具的个人工作系统。</h1>
-            <p>这里存放课程笔记、文章、读书记录、工具实验和私人工作台。公开页面负责呈现可以被看见的内容，工作台负责继续生产、整理和回到现实任务。</p>
-            <form className='home-command-search' action='/search' method='get'>
-              <LawTechIcon name='search' size={18} />
-              <input name='q' type='search' placeholder='搜索文章、课程、栏目或标签' aria-label='搜索公开内容' />
-              <button type='submit'>搜索</button>
-            </form>
-            <nav className='home-primary-entries' aria-label='核心入口'>
-              <HomeEntry href='/content' icon='content' label='内容库' meta={`${contentCount} 条公开内容`} primary />
-              <HomeEntry href='/search' icon='search' label='搜索' meta='全文与标签' />
-              <HomeEntry href='/tools' icon='spark' label='工具' meta='OCR、引注与工作流' />
-              <HomeEntry href='/desk' icon='calendar' label='工作台' meta='日程、课程与写作' />
-            </nav>
+        <section className='home-editorial-hero' aria-label='law-tech.dev'>
+          <div className='home-hero-copy'>
+            <div className='home-hero-kicker'>
+              <span>law-tech.dev</span>
+              <small>私人法学工作台</small>
+            </div>
+            <h1>法学笔记、写作与工具实验。</h1>
+            <p>课程、文章、读书记录、OCR 与引注工具在这里汇合；公开内容留给阅读，工作台留给继续整理。</p>
           </div>
 
-          <aside className='home-system-panel'>
-            <div className='home-system-status'>
-              <span>System</span>
-              <strong>{contentCount}</strong>
-              <small>条公开内容</small>
-            </div>
-            <dl className='home-system-metrics'>
-              <div><dt>{articleCount}</dt><dd>文章</dd></div>
-              <div><dt>{courseCount}</dt><dd>课程笔记</dd></div>
-              <div><dt>{Object.keys(categories).length}</dt><dd>栏目</dd></div>
-              <div><dt>{tagCount}</dt><dd>近期标签</dd></div>
-            </dl>
-            <FeaturedSignal item={featured} />
-          </aside>
+          <form className='home-search' action='/search' method='get'>
+            <LawTechIcon name='search' size={18} />
+            <input name='q' type='search' placeholder='搜索文章、课程、栏目或标签' aria-label='搜索公开内容' />
+            <button type='submit'>搜索</button>
+          </form>
+
+          <div className='home-stat-row' aria-label='站点统计'>
+            <div><strong>{contentCount}</strong><span>公开内容</span></div>
+            <div><strong>{articleCount}</strong><span>文章</span></div>
+            <div><strong>{courseCount}</strong><span>课程笔记</span></div>
+            <div><strong>{Object.keys(categories).length}</strong><span>栏目</span></div>
+          </div>
+
+          <nav className='home-entry-grid' aria-label='核心入口'>
+            <HomeEntry href='/content' icon='content' label='内容库' meta='文章、课程与项目' />
+            <HomeEntry href='/search' icon='search' label='搜索' meta='全文与标签' />
+            <HomeEntry href='/tools' icon='spark' label='工具' meta='OCR、引注与工作流' />
+            <HomeEntry href='/desk' icon='calendar' label='工作台' meta='日程、课程与写作' />
+          </nav>
         </section>
 
-        <section className='home-operating-board' aria-label='公开内容与工具路径'>
-          <div className='home-board-column home-board-routes'>
-            <header><span>Paths</span><h2>从哪里进入</h2></header>
-            <div className='home-route-list'>
+        <section className='home-editorial-board' aria-label='内容路径与最近更新'>
+          <div className='home-paths'>
+            <header><span>Paths</span><h2>路径</h2></header>
+            <div>
               {categoryOrder.map(category => <TopicPath category={category} count={categories[category] || 0} key={category} />)}
             </div>
           </div>
 
-          <div className='home-board-column home-board-updates'>
+          <div className='home-latest'>
             <header>
               <div><span>Latest</span><h2>最近更新</h2></div>
               <Link href='/archive'>时间归档 ↗</Link>
             </header>
             <div className='home-recent-list'>
               {updates.map(item => <RecentLine item={item} key={item.id || `${item.source}:${item.slug}`} />)}
-              {!updates.length ? <p className='home-quiet-empty'>还没有公开内容。</p> : null}
+              {!updates.length ? <p className='home-empty'>还没有公开内容。</p> : null}
             </div>
           </div>
         </section>
 
-        <section className='home-tool-dock' aria-label='常用工具'>
-          <header><span>Command Dock</span><h2>常用入口</h2></header>
+        <section className='home-dock' aria-label='常用入口'>
+          <header><span>Dock</span><h2>常用入口</h2></header>
           <div>
             {quickLinks.map(item => <Link className='home-dock-item' href={item.href} key={item.label} rel={item.href.startsWith('http') ? 'noreferrer' : undefined}>
               <LawTechIcon name={item.icon} size={16} />
@@ -171,70 +151,91 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
       </div>
 
       <style jsx global>{`
-        .home-revolution-v2 { padding-bottom:82px; }
-        .home-system-hero {
-          display:grid;
-          grid-template-columns:minmax(0,1.06fr) minmax(330px,.52fr);
-          gap:18px;
-          padding:34px 0 18px;
-        }
-        .home-system-copy,
-        .home-system-panel,
-        .home-operating-board,
-        .home-tool-dock {
+        .home-editorial-v3 { padding-bottom:82px; }
+        .home-editorial-hero,
+        .home-editorial-board,
+        .home-dock {
           border:1px solid rgba(255,255,255,.7);
           background:rgba(255,255,255,.48);
           box-shadow:0 18px 48px rgba(24,63,50,.055),inset 0 1px 0 rgba(255,255,255,.84);
           backdrop-filter:blur(14px) saturate(1.04);
         }
-        .home-system-copy {
+        .home-editorial-hero {
           position:relative;
+          display:grid;
+          grid-template-columns:minmax(0,1fr);
+          gap:20px;
           overflow:hidden;
+          margin-top:28px;
           border-radius:30px;
-          padding:clamp(28px,5vw,54px);
+          padding:clamp(28px,4.6vw,50px);
         }
-        .home-system-copy::before {
+        .home-editorial-hero::after {
           position:absolute;
-          inset:auto -16% -38% auto;
-          width:360px;
-          height:360px;
-          border:1px solid rgba(141,170,183,.22);
+          right:-120px;
+          bottom:-190px;
+          width:420px;
+          height:420px;
+          border:1px solid rgba(141,170,183,.2);
           border-radius:50%;
           content:'';
+          pointer-events:none;
         }
-        .home-system-copy h1 {
+        .home-hero-copy {
           position:relative;
+          z-index:1;
+          display:grid;
+          gap:16px;
           max-width:820px;
-          margin:12px 0 0;
-          font-family:var(--display-serif);
-          font-size:clamp(42px,6.4vw,82px);
-          font-weight:620;
-          line-height:.98;
-          letter-spacing:-.07em;
         }
-        .home-system-copy p {
-          position:relative;
-          max-width:690px;
-          margin:22px 0 0;
+        .home-hero-kicker {
+          display:flex;
+          flex-wrap:wrap;
+          gap:10px 14px;
+          align-items:baseline;
+        }
+        .home-hero-kicker span {
+          color:var(--leaf);
+          font-size:12px;
+          font-weight:760;
+          letter-spacing:.24em;
+          text-transform:uppercase;
+        }
+        .home-hero-kicker small {
+          color:var(--quiet);
+          font-size:11px;
+        }
+        .home-hero-copy h1 {
+          margin:0;
+          max-width:760px;
+          font-family:var(--display-serif);
+          font-size:clamp(42px,5.6vw,70px);
+          font-weight:620;
+          line-height:1.02;
+          letter-spacing:-.065em;
+        }
+        .home-hero-copy p {
+          margin:0;
+          max-width:680px;
           color:var(--muted);
           font-size:15px;
           line-height:1.9;
         }
-        .home-command-search {
+        .home-search {
           position:relative;
+          z-index:1;
           display:grid;
           grid-template-columns:auto minmax(0,1fr) auto;
           align-items:center;
           gap:10px;
-          max-width:720px;
-          margin-top:28px;
+          max-width:760px;
           border:1px solid rgba(17,63,49,.08);
           border-radius:18px;
           padding:8px 8px 8px 14px;
           background:rgba(255,255,255,.64);
           box-shadow:0 10px 30px rgba(24,63,50,.045),inset 0 1px 0 rgba(255,255,255,.9);
         }
-        .home-command-search input {
+        .home-search input {
           min-width:0;
           border:0;
           padding:10px 0;
@@ -243,7 +244,7 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
           outline:none;
           font-size:13px;
         }
-        .home-command-search button {
+        .home-search button {
           border:0;
           border-radius:12px;
           padding:10px 15px;
@@ -252,12 +253,57 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
           cursor:pointer;
           font-weight:680;
         }
-        .home-primary-entries {
+        .home-stat-row {
           position:relative;
+          z-index:1;
+          display:grid;
+          grid-template-columns:repeat(4,minmax(0,1fr));
+          gap:8px;
+          max-width:760px;
+        }
+        .home-stat-row div {
+          border:1px solid rgba(17,63,49,.06);
+          border-radius:15px;
+          padding:11px 12px;
+          background:rgba(255,255,255,.36);
+        }
+        .home-stat-row strong {
+          display:block;
+          color:var(--leaf);
+          font-family:var(--display-serif);
+          font-size:27px;
+          font-weight:520;
+          line-height:1;
+        }
+        .home-stat-row span {
+          display:block;
+          margin-top:4px;
+          color:var(--quiet);
+          font-size:9px;
+        }
+        .home-entry-grid {
+          position:relative;
+          z-index:1;
           display:grid;
           grid-template-columns:repeat(4,minmax(0,1fr));
           gap:9px;
-          margin-top:18px;
+          margin-top:2px;
+        }
+        .home-entry,
+        .home-topic-path,
+        .home-recent-line,
+        .home-dock-item {
+          border:1px solid rgba(17,63,49,.06);
+          background:rgba(255,255,255,.42);
+          transition:transform .18s ease,border-color .18s ease,background .18s ease;
+        }
+        .home-entry:hover,
+        .home-topic-path:hover,
+        .home-recent-line:hover,
+        .home-dock-item:hover {
+          transform:translateY(-2px);
+          border-color:rgba(49,90,140,.16);
+          background:rgba(255,255,255,.7);
         }
         .home-entry {
           display:grid;
@@ -265,22 +311,9 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
           align-items:center;
           gap:9px;
           min-width:0;
-          border:1px solid rgba(17,63,49,.07);
           border-radius:16px;
           padding:12px;
           color:var(--muted);
-          background:rgba(255,255,255,.4);
-          transition:transform .18s ease,border-color .18s ease,background .18s ease;
-        }
-        .home-entry:hover {
-          transform:translateY(-2px);
-          border-color:rgba(49,90,140,.16);
-          background:rgba(255,255,255,.68);
-        }
-        .home-entry.is-primary {
-          color:#fffaf0;
-          border-color:rgba(24,63,50,.22);
-          background:linear-gradient(145deg,rgba(24,63,50,.96),rgba(37,80,67,.9));
         }
         .home-entry span,
         .home-dock-item span {
@@ -295,184 +328,84 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
         .home-entry small,
         .home-dock-item small {
           overflow:hidden;
-          color:inherit;
-          opacity:.68;
+          color:var(--quiet);
           font-size:9px;
           text-overflow:ellipsis;
           white-space:nowrap;
         }
         .home-entry b {
-          color:currentColor;
+          color:var(--leaf);
           font-weight:500;
         }
-        .home-system-panel {
+        .home-editorial-board {
           display:grid;
-          align-content:start;
-          gap:12px;
-          border-radius:30px;
-          padding:18px;
-        }
-        .home-system-status {
-          display:grid;
-          min-height:150px;
-          align-content:end;
-          border-radius:22px;
-          padding:18px;
-          color:#fffaf0;
-          background:
-            radial-gradient(circle at 80% 12%,rgba(141,170,183,.32),transparent 38%),
-            linear-gradient(145deg,#183f32,#315a8c);
-        }
-        .home-system-status span {
-          font-size:9px;
-          letter-spacing:.14em;
-          text-transform:uppercase;
-          opacity:.7;
-        }
-        .home-system-status strong {
-          margin-top:10px;
-          font-family:var(--display-serif);
-          font-size:54px;
-          font-weight:520;
-          line-height:.9;
-        }
-        .home-system-status small {
-          margin-top:4px;
-          font-size:11px;
-          opacity:.75;
-        }
-        .home-system-metrics {
-          display:grid;
-          grid-template-columns:repeat(2,minmax(0,1fr));
-          gap:8px;
-          margin:0;
-        }
-        .home-system-metrics div {
-          border:1px solid rgba(17,63,49,.06);
-          border-radius:16px;
-          padding:11px;
-          background:rgba(255,255,255,.42);
-        }
-        .home-system-metrics dt {
-          color:var(--leaf);
-          font-family:var(--display-serif);
-          font-size:26px;
-        }
-        .home-system-metrics dd {
-          margin:2px 0 0;
-          color:var(--quiet);
-          font-size:9px;
-        }
-        .home-system-signal {
-          display:grid;
-          gap:7px;
-          border-top:1px solid rgba(17,63,49,.08);
-          padding:14px 3px 0;
-        }
-        .home-system-signal span {
-          color:var(--blue);
-          font-size:9px;
-        }
-        .home-system-signal strong {
-          font-family:var(--display-serif);
-          font-size:23px;
-          line-height:1.22;
-        }
-        .home-system-signal p {
-          display:-webkit-box;
-          overflow:hidden;
-          margin:0;
-          color:var(--muted);
-          font-size:11px;
-          line-height:1.65;
-          -webkit-box-orient:vertical;
-          -webkit-line-clamp:3;
-        }
-        .home-system-signal small {
-          color:var(--leaf);
-          font-size:10px;
-        }
-        .home-operating-board {
-          display:grid;
-          grid-template-columns:minmax(280px,.72fr) minmax(0,1fr);
+          grid-template-columns:minmax(260px,.48fr) minmax(0,1fr);
           gap:18px;
           margin-top:18px;
           border-radius:30px;
           padding:18px;
         }
-        .home-board-column {
+        .home-paths,
+        .home-latest {
           min-width:0;
         }
-        .home-board-column > header,
-        .home-tool-dock > header {
+        .home-paths header,
+        .home-latest header,
+        .home-dock header {
           display:flex;
           align-items:end;
           justify-content:space-between;
           gap:16px;
           margin-bottom:13px;
         }
-        .home-board-column header span,
-        .home-tool-dock header span {
+        .home-paths header span,
+        .home-latest header span,
+        .home-dock header span {
           color:var(--quiet);
           font-size:9px;
           letter-spacing:.12em;
           text-transform:uppercase;
         }
-        .home-board-column h2,
-        .home-tool-dock h2 {
+        .home-paths h2,
+        .home-latest h2,
+        .home-dock h2 {
           margin:4px 0 0;
           font-family:var(--display-serif);
           font-size:27px;
           font-weight:600;
         }
-        .home-board-column header a {
+        .home-latest header a {
           color:var(--leaf);
           font-size:10px;
         }
-        .home-route-list,
+        .home-paths > div,
         .home-recent-list {
           display:grid;
           gap:8px;
         }
-        .home-topic-path,
-        .home-recent-line {
-          display:grid;
-          align-items:center;
-          min-width:0;
-          border:1px solid rgba(17,63,49,.06);
-          border-radius:16px;
-          background:rgba(255,255,255,.42);
-          transition:transform .18s ease,border-color .18s ease,background .18s ease;
-        }
         .home-topic-path {
-          grid-template-columns:minmax(0,1fr) auto;
-          gap:10px;
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:12px;
+          border-radius:16px;
           padding:13px 14px;
         }
-        .home-topic-path:hover,
-        .home-recent-line:hover,
-        .home-dock-item:hover {
-          transform:translateY(-2px);
-          border-color:rgba(49,90,140,.16);
-          background:rgba(255,255,255,.7);
+        .home-topic-path strong {
+          font-family:var(--display-serif);
+          font-size:20px;
+          font-weight:580;
         }
         .home-topic-path span {
-          font-family:var(--display-serif);
-          font-size:21px;
-        }
-        .home-topic-path small {
           color:var(--quiet);
           font-size:10px;
         }
-        .home-topic-path b {
-          grid-column:1 / -1;
-          color:var(--leaf);
-          font-size:9px;
-          font-weight:600;
-        }
         .home-recent-line {
+          display:grid;
           grid-template-columns:52px minmax(0,1fr) auto;
+          align-items:center;
           gap:12px;
+          border-radius:16px;
           padding:12px;
         }
         .home-recent-line time {
@@ -500,12 +433,12 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
           color:var(--leaf);
           font-weight:500;
         }
-        .home-tool-dock {
+        .home-dock {
           margin-top:18px;
           border-radius:28px;
           padding:16px 18px 18px;
         }
-        .home-tool-dock > div {
+        .home-dock > div {
           display:grid;
           grid-template-columns:repeat(6,minmax(0,1fr));
           gap:8px;
@@ -516,66 +449,54 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
           align-items:center;
           gap:8px;
           min-width:0;
-          border:1px solid rgba(17,63,49,.06);
           border-radius:15px;
           padding:11px;
           color:var(--muted);
-          background:rgba(255,255,255,.38);
-          transition:transform .18s ease,border-color .18s ease,background .18s ease;
         }
-        .home-quiet-empty {
+        .home-empty {
           margin:0;
           color:var(--quiet);
           font-size:12px;
         }
         @media (max-width:1080px) {
-          .home-system-hero,
-          .home-operating-board {
+          .home-entry-grid,
+          .home-dock > div {
+            grid-template-columns:repeat(2,minmax(0,1fr));
+          }
+          .home-editorial-board {
             grid-template-columns:1fr;
-          }
-          .home-system-panel {
-            grid-template-columns:minmax(210px,.7fr) minmax(0,1fr);
-          }
-          .home-system-signal {
-            grid-column:1 / -1;
-          }
-          .home-tool-dock > div {
-            grid-template-columns:repeat(3,minmax(0,1fr));
           }
         }
-        @media (max-width:760px) {
-          .home-system-hero {
-            padding-top:22px;
+        @media (max-width:720px) {
+          .home-editorial-hero {
+            margin-top:20px;
+            padding:24px;
           }
-          .home-primary-entries,
-          .home-system-panel,
-          .home-tool-dock > div {
+          .home-search {
             grid-template-columns:1fr;
           }
-          .home-command-search {
-            grid-template-columns:1fr;
-          }
-          .home-command-search svg {
+          .home-search svg {
             display:none;
           }
-          .home-command-search button {
+          .home-search button {
             min-height:42px;
+          }
+          .home-stat-row,
+          .home-entry-grid,
+          .home-dock > div {
+            grid-template-columns:1fr;
           }
         }
         @media (max-width:560px) {
-          .home-system-copy,
-          .home-system-panel,
-          .home-operating-board,
-          .home-tool-dock {
+          .home-editorial-hero,
+          .home-editorial-board,
+          .home-dock {
             border-radius:22px;
           }
-          .home-system-copy {
-            padding:24px;
+          .home-hero-copy h1 {
+            font-size:clamp(36px,11vw,52px);
           }
-          .home-system-copy h1 {
-            font-size:clamp(38px,12vw,54px);
-          }
-          .home-system-metrics,
+          .home-topic-path,
           .home-recent-line {
             grid-template-columns:1fr;
           }
