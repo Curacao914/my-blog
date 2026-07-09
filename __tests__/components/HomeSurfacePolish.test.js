@@ -3,29 +3,36 @@ const path = require('path')
 
 const root = path.join(__dirname, '../..')
 const home = fs.readFileSync(path.join(root, 'pages/index.js'), 'utf8')
+const header = fs.readFileSync(path.join(root, 'components/law-tech/PublicHeader.js'), 'utf8')
+const deskStyles = fs.readFileSync(path.join(root, 'components/LawTechDeskStyles.js'), 'utf8')
 
-describe('homepage editorial v3', () => {
-  it('replaces the failed system billboard with a calmer editorial homepage', () => {
-    expect(home).toContain('home-editorial-v3')
-    expect(home).toContain('home-editorial-hero')
-    expect(home).toContain('home-editorial-board')
-    expect(home).not.toContain('home-revolution-v2')
-    expect(home).not.toContain('home-system-panel')
-    expect(home).not.toContain('home-system-status')
+describe('macOS glass unified surface', () => {
+  it('moves the homepage into the macOS-inspired single-screen workspace', () => {
+    expect(home).toContain('mac-home-v3')
+    expect(home).toContain('mac-home-workspace')
+    expect(home).toContain('HomePanelDeck')
+    expect(home).toContain('home-panel-viewport')
+    expect(home).not.toContain('home-editorial-v3')
+    expect(home).not.toContain('home-editorial-hero')
   })
 
-  it('keeps direct navigation without returning to the old card wall', () => {
-    expect(home).toContain('home-entry-grid')
-    expect(home).toContain('home-topic-path')
-    expect(home).toContain('home-recent-line')
-    expect(home).not.toContain('home-dashboard')
-    expect(home).not.toContain('home-feature')
-    expect(home).not.toContain('home-topic-card')
+  it('keeps recent content data-driven and reuses the dynamic signature', () => {
+    expect(home).toContain('selectRecentPublicContent(items, 7)')
+    expect(home).toContain('updates.map(item => <RecentLine')
+    expect(home).toContain('DynamicSignature compact')
+    expect(home).toContain('publicHomeDailyLines')
   })
 
-  it('removes generated cover logic from the homepage', () => {
-    expect(home).not.toContain('publicContentStableHue')
-    expect(home).not.toContain('generated-cover')
-    expect(home).not.toContain('home-feature-cover')
+  it('keeps search in the top menu rather than the dock', () => {
+    expect(header).toContain('mac-public-search')
+    expect(header).toContain("action='/search'")
+    expect(home).toContain("item.href !== '/search'")
+  })
+
+  it('keeps the shared hover-follow and glass vocabulary available across pages', () => {
+    expect(header).toContain('mac-public-nav-indicator')
+    expect(header).toContain('--header-light-x')
+    expect(deskStyles).toContain('macos-glass-unified-v1')
+    expect(deskStyles).toContain('--glass-border')
   })
 })

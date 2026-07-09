@@ -7754,6 +7754,77 @@ html.course-focus-open body { overflow:hidden; }
   }
 }
 
+/* macos-glass-unified-v1 */
+/* macos-glass-unified-v1: shared public/workbench material tuning */
+:root {
+  --glass-border: rgba(255,255,255,0.68);
+  --glass-hairline: rgba(255,255,255,0.52);
+  --glass-light: rgba(255,255,255,0.42);
+  --glass-faint: rgba(255,255,255,0.2);
+  --mac-shadow: 0 20px 58px rgba(24,63,50,0.08);
+  --mac-shadow-deep: 0 30px 80px rgba(24,63,50,0.12);
+  --sans-serif: -apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC","Noto Sans SC","Segoe UI",sans-serif;
+}
+
+body {
+  background:
+    radial-gradient(circle at 10% 8%, rgba(242,208,129,.20), transparent 25rem),
+    radial-gradient(circle at 88% 5%, rgba(152,198,210,.22), transparent 32rem),
+    radial-gradient(circle at 65% 88%, rgba(194,221,198,.20), transparent 30rem),
+    linear-gradient(140deg,#f7f0de,#edf3ef 56%,#dceaf0);
+}
+
+body::before {
+  opacity: .22;
+  background-size: 26px 26px;
+}
+
+.lawtech-public-page,
+.public-directory-page,
+.public-tools-page,
+.public-about-page {
+  font-family: var(--sans-serif);
+}
+
+.glass-card,
+.desk-card,
+.workflow-card,
+.tool-card,
+.desk-sidebar,
+.desk-page,
+.public-directory-selected,
+.public-directory-groups,
+.public-content-card {
+  border-color: var(--glass-border)!important;
+  background: linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,.2))!important;
+  box-shadow: var(--mac-shadow), inset 0 1px 0 rgba(255,255,255,.72)!important;
+  backdrop-filter: blur(22px) saturate(1.12)!important;
+}
+
+.desk-topbar,
+.topbar {
+  border-color: var(--glass-border)!important;
+  background: linear-gradient(180deg,rgba(255,255,255,.46),rgba(255,255,255,.22))!important;
+  box-shadow: 0 18px 50px rgba(24,63,50,.08), inset 0 1px 0 rgba(255,255,255,.74)!important;
+  backdrop-filter: blur(24px) saturate(1.14)!important;
+}
+
+.view-tabs button[aria-pressed='true'],
+.carry-strip button[aria-pressed='true'],
+.upcoming-strip button[aria-pressed='true'] {
+  color: #fffcef;
+  background: radial-gradient(circle at 38% 24%,rgba(255,255,255,.32),transparent 34%),linear-gradient(135deg,rgba(24,63,50,.96),rgba(45,89,138,.88));
+  box-shadow: 0 12px 28px rgba(24,63,50,.18), inset 0 1px 0 rgba(255,255,255,.28);
+}
+
+.desk-nav a:hover,
+.desk-nav a[aria-current='page'],
+.nav a:hover,
+.ghost-link:hover {
+  background: rgba(255,255,255,.34);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.58);
+}
+/* /macos-glass-unified-v1 */
 `}</style>
   )
 }
