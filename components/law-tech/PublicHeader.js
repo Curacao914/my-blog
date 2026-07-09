@@ -1,74 +1,41 @@
 import Link from 'next/link'
-import { useCallback, useEffect, useRef } from 'react'
+import { useMemo, useState } from 'react'
 
-import { LawTechIcon } from '@/components/LawTechIcons'
 import { WorkspaceAccountMenu } from '@/components/WorkspaceAccountMenu'
 import { publicNav } from '@/lib/domain/navigation'
 import { AdminContentSync } from '@/components/law-tech/AdminContentSync'
 import { PublicHeaderSignal } from '@/components/law-tech/PublicHeaderSignal'
-
-function activeMatch(active, item) {
-  return active === item.key || (active && item.href.includes(active))
-}
+import { LawTechIcon } from '@/components/LawTechIcons'
 
 export function PublicHeader({ active = '' }) {
-  const navRef = useRef(null)
-  const linkRefs = useRef([])
-  const headerRef = useRef(null)
-  const navItems = publicNav.filter(item => item.href !== '/desk')
-
-  const moveIndicator = useCallback((index, visible = true) => {
-    const nav = navRef.current
-    const link = linkRefs.current[index]
-    if (!nav || !link) return
-    const navBox = nav.getBoundingClientRect()
-    const linkBox = link.getBoundingClientRect()
-    nav.style.setProperty('--public-nav-x', `${linkBox.left - navBox.left}px`)
-    nav.style.setProperty('--public-nav-w', `${linkBox.width}px`)
-    nav.classList.toggle('is-following', visible)
-  }, [])
-
-  useEffect(() => {
-    const current = navItems.findIndex(item => activeMatch(active, item))
-    if (current >= 0) moveIndicator(current, false)
-  }, [active, moveIndicator, navItems])
+  const navItems = useMemo(() => publicNav.filter(item => item.href !== '/desk' && item.key !== 'search'), [])
+  const activeIndex = Math.max(0, navItems.findIndex(item => active === item.key || (active && item.href.includes(active))))
+  const [hoveredIndex, setHoveredIndex] = useState(null)
+  const visualIndex = hoveredIndex ?? activeIndex
 
   return <>
-    <header className='public-header public-header-macos' ref={headerRef} onPointerMove={event => {
-      const box = headerRef.current?.getBoundingClientRect()
-      if (!box) return
-      headerRef.current.style.setProperty('--header-light-x', `${event.clientX - box.left}px`)
-    }}>
-      <div className='public-header-left'>
-        <PublicHeaderSignal />
-      </div>
+    <header className='public-header public-header-glass-v3' style={{ '--nav-count': navItems.length, '--nav-index': visualIndex }}>
+      <PublicHeaderSignal />
 
-      <div className='public-header-center'>
-        <nav className='public-nav' aria-label='公开导航' ref={navRef} onMouseLeave={() => {
-          const current = navItems.findIndex(item => activeMatch(active, item))
-          if (current >= 0) moveIndicator(current, false)
-        }}>
-          <i className='public-nav-indicator' aria-hidden='true' />
-          {navItems.map((item, index) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={activeMatch(active, item) ? 'page' : undefined}
-              onMouseEnter={() => moveIndicator(index, true)}
-              ref={node => { linkRefs.current[index] = node }}
-            >
-              {item.key === 'search' ? <LawTechIcon name='search' size={14} /> : null}
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+      <nav className='public-nav' aria-label='公开导航' onMouseLeave={() => setHoveredIndex(null)}>
+        <i className='public-nav-indicator' aria-hidden='true' />
+        {navItems.map((item, index) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-current={active === item.key || (active && item.href.includes(active)) ? 'page' : undefined}
+            onMouseEnter={() => setHoveredIndex(index)}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </nav>
 
-        <form className='public-header-search' action='/search' method='get'>
-          <LawTechIcon name='search' size={14} />
-          <input name='q' type='search' placeholder='搜索内容、课程或标签' aria-label='搜索公开内容' />
-          <span>⌘K</span>
-        </form>
-      </div>
+      <form className='public-header-search' action='/search' method='get'>
+        <LawTechIcon name='search' size={14} />
+        <input name='q' type='search' placeholder='搜索内容、课程或标签' aria-label='搜索公开内容' />
+        <kbd>⌘K</kbd>
+      </form>
 
       <div className='public-header-actions'>
         <AdminContentSync compact />
@@ -77,140 +44,134 @@ export function PublicHeader({ active = '' }) {
     </header>
 
     <style jsx>{`
-      .public-header-macos {
-        --public-nav-x:0px;
-        --public-nav-w:72px;
-        --header-light-x:72%;
-        position:relative;
-        z-index:40;
-        display:grid;
-        grid-template-columns:minmax(170px,1fr) minmax(360px,auto) minmax(180px,1fr);
-        gap:12px;
-        align-items:center;
-        min-height:62px;
-        overflow:hidden;
-        border:1px solid rgba(255,255,255,.7);
-        border-radius:20px;
-        padding:10px 14px;
-        background:linear-gradient(180deg,rgba(255,255,255,.48),rgba(255,255,255,.22));
-        box-shadow:0 18px 50px rgba(24,63,50,.1),inset 0 1px 0 rgba(255,255,255,.74);
-        backdrop-filter:blur(24px) saturate(1.12);
+      .public-header-glass-v3 {
+        position: sticky;
+        top: 12px;
+        z-index: 80;
+        display: grid;
+        grid-template-columns: minmax(250px,1fr) auto minmax(260px,.72fr) minmax(130px,auto);
+        align-items: center;
+        gap: 10px;
+        min-height: 62px;
+        border: 1px solid rgba(255,255,255,.72);
+        border-radius: 24px;
+        padding: 8px 10px 8px 14px;
+        background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.25));
+        box-shadow: 0 22px 64px rgba(24,63,50,.08), inset 0 1px 0 rgba(255,255,255,.74);
+        backdrop-filter: blur(24px) saturate(1.08);
+        overflow: hidden;
       }
-      .public-header-macos::before {
-        position:absolute;
-        inset:0;
-        content:'';
-        pointer-events:none;
-        background:radial-gradient(240px 90px at var(--header-light-x) 50%,rgba(255,255,255,.24),transparent 70%);
+      .public-header-glass-v3::before {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        content: '';
+        background: radial-gradient(220px 90px at var(--header-light-x, 54%) 10%, rgba(255,255,255,.26), transparent 70%);
       }
-      .public-header-left,
-      .public-header-center,
-      .public-header-actions { position:relative; z-index:1; }
-      .public-header-left { justify-self:start; }
-      .public-header-center {
-        display:grid;
-        grid-template-columns:auto minmax(190px,360px);
-        gap:12px;
-        align-items:center;
-        justify-self:center;
-        min-width:0;
-      }
+      .public-header-glass-v3 > :global(.public-header-signal),
+      .public-nav,
+      .public-header-search,
+      .public-header-actions { position: relative; z-index: 1; }
+      .public-header-glass-v3 > :global(.public-header-signal) { justify-self: start; }
       .public-nav {
-        position:relative;
-        display:flex;
-        align-items:center;
-        gap:4px;
-        width:max-content;
-        padding:4px;
-        overflow:hidden;
-        border:1px solid rgba(255,255,255,.56);
-        border-radius:999px;
-        background:rgba(255,255,255,.16);
-        box-shadow:inset 0 1px 0 rgba(255,255,255,.58);
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(var(--nav-count), minmax(74px, 1fr));
+        gap: 2px;
+        justify-self: center;
+        min-width: 278px;
+        padding: 4px;
+        border: 1px solid rgba(255,255,255,.56);
+        border-radius: 999px;
+        background: rgba(255,255,255,.15);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.58);
+        overflow: hidden;
       }
       .public-nav-indicator {
-        position:absolute;
-        top:4px;
-        left:4px;
-        width:var(--public-nav-w);
-        height:34px;
-        border-radius:999px;
-        background:linear-gradient(135deg,rgba(255,255,255,.56),rgba(255,255,255,.16));
-        box-shadow:0 10px 24px rgba(24,63,50,.06),inset 0 1px 0 rgba(255,255,255,.72);
-        transform:translateX(var(--public-nav-x));
-        opacity:0;
-        transition:transform .44s cubic-bezier(.2,1.32,.28,1),width .44s cubic-bezier(.2,1.32,.28,1),opacity .18s ease;
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        width: calc((100% - 8px) / var(--nav-count));
+        height: calc(100% - 8px);
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at 36% 20%, rgba(255,255,255,.38), transparent 36%),
+          linear-gradient(180deg, rgba(255,255,255,.48), rgba(255,255,255,.2));
+        box-shadow: 0 12px 26px rgba(24,63,50,.08), inset 0 1px 0 rgba(255,255,255,.7);
+        transform: translateX(calc(var(--nav-index) * 100%));
+        transition: transform .34s cubic-bezier(.2,1.18,.24,1), border-radius .22s ease;
       }
-      .public-nav.is-following .public-nav-indicator,
-      .public-nav:has(a[aria-current='page']) .public-nav-indicator { opacity:1; }
       .public-nav a {
-        position:relative;
-        z-index:1;
-        display:inline-flex;
-        align-items:center;
-        justify-content:center;
-        gap:6px;
-        min-width:70px;
-        height:34px;
-        border-radius:999px;
-        padding:0 12px;
-        color:var(--muted);
-        font-size:13px;
-        font-weight:680;
-        transition:color .2s ease;
+        position: relative;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        border-radius: 999px;
+        padding: 0 12px;
+        color: var(--muted);
+        background: transparent !important;
+        font-size: 13px;
+        font-weight: 680;
+        transition: color .18s ease, transform .18s ease;
       }
       .public-nav a:hover,
-      .public-nav a[aria-current='page'] { color:var(--leaf); background:transparent; }
+      .public-nav a[aria-current='page'] {
+        color: var(--ink);
+        transform: scale(.99);
+      }
       .public-header-search {
-        display:flex;
-        align-items:center;
-        gap:8px;
-        min-width:0;
-        height:38px;
-        border:1px solid rgba(255,255,255,.56);
-        border-radius:999px;
-        padding:0 10px 0 12px;
-        color:var(--quiet);
-        background:rgba(255,255,255,.18);
-        box-shadow:inset 0 1px 0 rgba(255,255,255,.58);
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 8px;
+        height: 36px;
+        min-width: 0;
+        border: 1px solid rgba(255,255,255,.58);
+        border-radius: 999px;
+        padding: 0 9px 0 11px;
+        color: var(--quiet);
+        background: rgba(255,255,255,.18);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.56);
       }
       .public-header-search input {
-        min-width:0;
-        width:100%;
-        border:0;
-        padding:0;
-        color:var(--ink);
-        background:transparent;
-        outline:none;
-        font-size:12px;
+        min-width: 0;
+        border: 0;
+        color: var(--ink);
+        background: transparent;
+        outline: none;
+        font-size: 12px;
       }
-      .public-header-search span {
-        border:1px solid rgba(255,255,255,.48);
-        border-radius:999px;
-        padding:2px 7px;
-        color:var(--muted);
-        background:rgba(255,255,255,.22);
-        font-size:11px;
-        white-space:nowrap;
+      .public-header-search input::placeholder { color: rgba(69,89,83,.72); }
+      .public-header-search kbd {
+        border: 1px solid rgba(255,255,255,.54);
+        border-radius: 999px;
+        padding: 2px 7px;
+        color: var(--muted);
+        background: rgba(255,255,255,.2);
+        font: 10px/1.2 ui-sans-serif, system-ui, sans-serif;
       }
       .public-header-actions {
-        display:flex;
-        align-items:center;
-        justify-self:end;
-        gap:7px;
+        display: flex;
+        align-items: center;
+        justify-self: end;
+        gap: 7px;
       }
-      .public-header-actions :global(.admin-content-sync) { margin:0; }
+      .public-header-actions :global(.admin-content-sync) { margin: 0; }
       .public-header-actions :global(.workspace-account-menu),
-      .public-header-actions :global(.workspace-auth-actions) { margin-left:0; }
-      @media (max-width:1040px) {
-        .public-header-macos { grid-template-columns:1fr auto; }
-        .public-header-center { grid-column:1 / -1; grid-row:2; justify-self:stretch; grid-template-columns:auto minmax(170px,1fr); }
-        .public-header-actions { grid-column:2; grid-row:1; }
+      .public-header-actions :global(.workspace-auth-actions) { margin-left: 0; }
+      @media (max-width: 1040px) {
+        .public-header-glass-v3 { grid-template-columns: minmax(0,1fr) auto; }
+        .public-nav { grid-column: 1 / -1; grid-row: 2; justify-self: stretch; }
+        .public-header-search { grid-column: 1 / -1; grid-row: 3; }
+        .public-header-actions { grid-column: 2; grid-row: 1; }
       }
-      @media (max-width:680px) {
-        .public-header-center { grid-template-columns:1fr; }
-        .public-nav { max-width:100%; overflow-x:auto; scrollbar-width:none; }
-        .public-nav::-webkit-scrollbar { display:none; }
+      @media (max-width: 560px) {
+        .public-header-glass-v3 { top: 8px; border-radius: 20px; }
+        .public-header-glass-v3 > :global(.public-header-signal) { max-width: 190px; }
+        .public-nav { min-width: 0; grid-template-columns: repeat(var(--nav-count), minmax(0,1fr)); }
+        .public-nav a { padding: 0 8px; font-size: 12px; }
       }
     `}</style>
   </>

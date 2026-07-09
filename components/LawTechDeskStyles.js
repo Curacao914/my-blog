@@ -7983,6 +7983,135 @@ body::before {
   }
 }
 
+
+
+/* macos-glass-workbench-v3: app-window continuity for the private desk */
+.desk-layout {
+  position: relative;
+  width: min(1480px, calc(100vw - 28px));
+  grid-template-columns: 238px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px 0 42px;
+}
+.desk-layout::before {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  content: '';
+  background:
+    radial-gradient(circle at 14% 8%, rgba(216,164,61,.2), transparent 26rem),
+    radial-gradient(circle at 86% 4%, rgba(141,170,183,.22), transparent 32rem);
+  z-index: -1;
+}
+.desk-sidebar,
+.desk-page,
+.desk-topbar,
+.desk-mobile-drawer {
+  border-color: rgba(255,255,255,.7) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.54), rgba(255,255,255,.28)) !important;
+  box-shadow: 0 24px 70px rgba(24,63,50,.09), inset 0 1px 0 rgba(255,255,255,.74) !important;
+  backdrop-filter: blur(24px) saturate(1.08) !important;
+}
+.desk-sidebar {
+  top: 14px;
+  max-height: calc(100dvh - 28px);
+  border-radius: 30px;
+}
+.desk-home-link,
+.desk-nav a,
+.desk-collapse-button,
+.desk-mobile-menu-button,
+.desk-top-actions :global(a),
+.desk-top-actions :global(button) {
+  border-radius: 999px !important;
+}
+.desk-nav a {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid transparent;
+  padding: 10px 12px;
+}
+.desk-nav a:hover,
+.desk-nav a[aria-current='page'] {
+  transform: translateX(0) scale(.995) !important;
+  border-color: rgba(255,255,255,.64);
+  color: var(--ink);
+  background: rgba(255,255,255,.34) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.64);
+}
+.desk-main { gap: 14px; }
+.desk-topbar {
+  position: sticky;
+  top: 14px;
+  z-index: 20;
+  min-height: 62px;
+  border-radius: 28px;
+  padding: 10px 12px;
+}
+.desk-route { display: flex !important; align-items: center; gap: 10px; }
+.desk-route-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255,255,255,.66);
+  border-radius: 15px;
+  color: var(--green);
+  background: rgba(255,255,255,.28);
+}
+.desk-page {
+  position: relative;
+  width: min(100%, 1040px);
+  border-radius: 34px;
+  padding: 58px 22px 22px;
+  overflow: hidden;
+}
+.desk-page::before {
+  position: absolute;
+  left: 22px;
+  top: 21px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #ff5f57;
+  box-shadow: 18px 0 #ffbd2e, 36px 0 #28c840;
+  content: '';
+}
+.desk-page::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  content: '';
+  background: radial-gradient(circle at 78% 8%, rgba(255,255,255,.34), transparent 28rem);
+}
+.desk-page-content { position: relative; z-index: 1; }
+.desk-card,
+.workflow-card,
+.tool-card,
+.today-card,
+.matrix-lane,
+.upcoming-strip,
+.history-section,
+.reading-empty,
+.lane-empty,
+.command-bar {
+  border-color: rgba(255,255,255,.66) !important;
+  background: rgba(255,255,255,.42) !important;
+  box-shadow: 0 12px 32px rgba(24,63,50,.06), inset 0 1px 0 rgba(255,255,255,.64) !important;
+  backdrop-filter: blur(16px) saturate(1.04);
+}
+.view-tabs button[aria-pressed='true'] {
+  background: linear-gradient(135deg, rgba(12,67,54,.95), rgba(45,89,138,.86)) !important;
+}
+@media (max-width: 980px) {
+  .desk-layout { width: min(100%, calc(100vw - 20px)); grid-template-columns: 1fr; }
+  .desk-sidebar { display: none; }
+  .desk-page { width: 100%; border-radius: 28px; }
+}
+
 `}</style>
   )
 }

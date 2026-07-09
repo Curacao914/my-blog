@@ -1,31 +1,28 @@
 const fs = require('fs')
 const path = require('path')
-
 const root = path.join(__dirname, '../..')
 const directoryPage = fs.readFileSync(path.join(root, 'components/content/PublicDirectoryPage.js'), 'utf8')
 const toolsPage = fs.readFileSync(path.join(root, 'pages/tools/index.js'), 'utf8')
 const aboutPage = fs.readFileSync(path.join(root, 'pages/about/index.js'), 'utf8')
-const contentCard = fs.readFileSync(path.join(root, 'components/content/PublicContentCard.js'), 'utf8')
+const deskStyles = fs.readFileSync(path.join(root, 'components/LawTechDeskStyles.js'), 'utf8')
 
-describe('public macOS glass system', () => {
-  it('uses app-window layout for content directories', () => {
-    expect(directoryPage).toContain('public-directory-app-window-v2')
-    expect(directoryPage).toContain('directory-window-top')
-    expect(directoryPage).toContain('directory-sidebar')
-    expect(directoryPage).toContain('DynamicSignature')
+describe('public and desk macOS glass system v3', () => {
+  it('uses app-window chrome for public directory pages', () => {
+    expect(directoryPage).toContain('public-directory-app-window-v3')
+    expect(directoryPage).toContain('public-window-titlebar')
+    expect(directoryPage).toContain('traffic')
   })
-
   it('rebuilds tools and about pages as matching app windows', () => {
-    expect(toolsPage).toContain('public-tools-app-window-v2')
-    expect(toolsPage).toContain('tools-window-top')
-    expect(aboutPage).toContain('public-about-resume-v2')
-    expect(aboutPage).toContain('Education')
-    expect(aboutPage).toContain('Skills')
+    expect(toolsPage).toContain('public-tools-app-window-v3')
+    expect(toolsPage).toContain('public-tool-card-v3')
+    expect(aboutPage).toContain('public-about-app-window-v3')
+    expect(aboutPage).toContain('aboutProfile')
+    expect(aboutPage).toContain('about-education')
+    expect(aboutPage).toContain('about-skills')
   })
-
-  it('keeps content cards in the lighter window material family', () => {
-    expect(contentCard).toContain('public-content-card-window-v2')
-    expect(contentCard).toContain('min-height:96px')
-    expect(contentCard).not.toContain('min-height:228px')
+  it('visibly carries the app-window language into the private desk', () => {
+    expect(deskStyles).toContain('macos-glass-workbench-v3')
+    expect(deskStyles).toContain('.desk-page::before')
+    expect(deskStyles).toContain('grid-template-columns: 238px minmax(0, 1fr)')
   })
 })

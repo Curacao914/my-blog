@@ -1,9 +1,9 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { PublicHeader } from '@/components/law-tech/PublicHeader'
 import { DynamicSignature } from '@/components/law-tech/DynamicSignature'
+import { PublicHeader } from '@/components/law-tech/PublicHeader'
 import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
 import { LawTechIcon } from '@/components/LawTechIcons'
 import { loadPublicContentIndex } from '@/lib/content/publicIndex'
@@ -16,7 +16,7 @@ import {
 } from '@/lib/content/publicContent'
 
 const categoryOrder = ['遇事不决', '法与算法', '法律之上', '秘密花园']
-const homePanels = ['最近', '路径', '工具', '工作台']
+const panels = ['最近', '路径', '工具', '工作台']
 
 function categorySummary(items = []) {
   return items.reduce((summary, item) => {
@@ -41,213 +41,83 @@ function formatDate(value) {
   return new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit' }).format(date)
 }
 
-function stableKey(item) {
-  return item?.id || `${item?.source || 'content'}:${item?.slug || item?.title || 'untitled'}`
-}
-
-function RecentRow({ item }) {
-  const meta = [publicContentTypeLabel(item?.type), publicContentCategory(item)].filter(Boolean).join(' · ')
-  return <Link className='home-recent-row' href={publicContentHref(item)}>
+function RecentLine({ item }) {
+  const category = publicContentCategory(item)
+  return <Link className='home-recent-line' href={publicContentHref(item)}>
     <time>{formatDate(publicContentDate(item))}</time>
-    <span><strong>{item?.title || '未命名内容'}</strong><small>{meta}</small></span>
+    <span>
+      <strong>{item.title || '未命名内容'}</strong>
+      <small>{[publicContentTypeLabel(item.type), category].filter(Boolean).join(' · ')}</small>
+    </span>
     <b>↗</b>
   </Link>
 }
 
-function RecentRotor({ items }) {
-  return <div className='home-widget-rotor' aria-label='近期笔记轮转'>
-    {items.slice(0, 5).map(item => {
-      const date = formatDate(publicContentDate(item))
-      const meta = [publicContentTypeLabel(item?.type), publicContentCategory(item)].filter(Boolean).join(' · ')
-      return <Link className='home-rotor-card' href={publicContentHref(item)} key={stableKey(item)}>
-        <div className={`home-rotor-cover ${item?.cover ? 'has-cover' : ''}`} style={item?.cover ? { backgroundImage: `url("${item.cover}")` } : undefined}>
-          {!item?.cover ? <span>{publicContentCategory(item)}</span> : null}
-        </div>
-        <div>
-          <small>{date}</small>
-          <strong>{item?.title || '未命名内容'}</strong>
-          <span>{meta}</span>
-        </div>
-      </Link>
-    })}
-  </div>
+function TopicPath({ category, count }) {
+  return <Link className='home-path-card' href={`/category/${encodeURIComponent(category)}`}>
+    <span>栏目</span>
+    <strong>{category}</strong>
+    <small>{count || 0} 条内容</small>
+  </Link>
 }
 
-function PathPlot({ categories }) {
-  return <div className='home-path-plot'>
-    <div className='home-orbit' aria-hidden='true' />
-    {categoryOrder.map((category, index) => <Link
-      className={`home-path-folder folder-${index + 1}`}
-      href={`/category/${encodeURIComponent(category)}`}
-      key={category}
-    >
-      <strong>{category}</strong>
-      <span>{categories[category] || 0} 条</span>
-    </Link>)}
-  </div>
-}
-
-function ToolGrid() {
-  const tools = [
-    { label: 'OCR', meta: '图片与 PDF 识别整理', href: 'https://law-tech.dev/ocr/' },
-    { label: '引注', meta: '脚注与参考文献辅助', href: 'https://law-tech.dev/citation/' },
-    { label: '搜索', meta: '内容、课程与标签入口', href: '/search' },
-    { label: '写作', meta: '草稿、材料与发布流程', href: '/desk/writing' }
-  ]
-  return <div className='home-tool-grid'>
-    {tools.map(tool => <Link className='home-tool-tile' href={tool.href} key={tool.label} rel={tool.href.startsWith('http') ? 'noreferrer' : undefined}>
-      <strong>{tool.label}</strong>
-      <span>{tool.meta}</span>
-    </Link>)}
-  </div>
-}
-
-function DeskGrid() {
-  const items = [
-    { label: 'Today', meta: '今日与待办', href: '/desk/today', icon: 'today' },
-    { label: 'Writing', meta: '草稿与发布', href: '/desk/writing', icon: 'writing' },
-    { label: 'Courses', meta: '课程整理', href: '/desk/courses', icon: 'courses' },
-    { label: 'Agent', meta: '命令入口', href: '/desk/agent', icon: 'spark' }
-  ]
-  return <div className='home-desk-grid'>
-    {items.map(item => <Link className='home-desk-app' href={item.href} key={item.label}>
-      <i><LawTechIcon name={item.icon} size={18} /></i>
-      <strong>{item.label}</strong>
-      <span>{item.meta}</span>
-    </Link>)}
-  </div>
-}
-
-function HomePanelTabs({ recentContent, categories }) {
-  const [active, setActive] = useState(0)
-  const [dragOffset, setDragOffset] = useState(0)
-  const [dragging, setDragging] = useState(false)
-  const tabsRef = useRef(null)
-  const buttonRefs = useRef([])
-  const dragRef = useRef({ startX: 0, deltaX: 0 })
-
-  const moveIndicator = useCallback((index, transient = false) => {
-    const tabs = tabsRef.current
-    const button = buttonRefs.current[index]
-    if (!tabs || !button) return
-    const parent = tabs.getBoundingClientRect()
-    const box = button.getBoundingClientRect()
-    tabs.style.setProperty('--home-tab-x', `${box.left - parent.left}px`)
-    tabs.style.setProperty('--home-tab-w', `${box.width}px`)
-    if (transient) tabs.classList.add('is-following')
-  }, [])
-
+function RecentCarousel({ items = [] }) {
+  const [index, setIndex] = useState(0)
+  const total = Math.max(1, items.length)
   useEffect(() => {
-    moveIndicator(active)
-  }, [active, moveIndicator])
-
-  const finishDrag = useCallback(() => {
-    const deltaX = dragRef.current.deltaX
-    setDragging(false)
-    setDragOffset(0)
-    if (Math.abs(deltaX) > 78) {
-      setActive(value => Math.max(0, Math.min(homePanels.length - 1, value + (deltaX < 0 ? 1 : -1))))
-    } else {
-      moveIndicator(active)
-    }
-    dragRef.current.deltaX = 0
-  }, [active, moveIndicator])
-
-  const trackStyle = {
-    transform: `translateX(calc(${-active * 100}% - ${active * 12}px + ${dragOffset}px))`,
-    transition: dragging ? 'none' : 'transform .62s cubic-bezier(.2,1.32,.28,1)'
-  }
-
-  return <section className='home-app-window' aria-label='law-tech.dev 首页'>
-    <div className='home-window-top'>
-      <div className='home-traffic' aria-hidden='true'><i /><i /><i /></div>
-      <nav className='home-panel-tabs' ref={tabsRef} onMouseLeave={() => { tabsRef.current?.classList.remove('is-following'); moveIndicator(active) }}>
-        <i className='home-panel-indicator' aria-hidden='true' />
-        {homePanels.map((label, index) => <button
-          className={active === index ? 'is-active' : ''}
-          key={label}
-          onClick={() => setActive(index)}
-          onMouseEnter={() => moveIndicator(index, true)}
-          ref={node => { buttonRefs.current[index] = node }}
-          type='button'
-        >{label}</button>)}
-      </nav>
-      <span className='home-window-hint'>滑动切换</span>
-    </div>
-
-    <div
-      className='home-panel-viewport'
-      onPointerDown={event => {
-        setDragging(true)
-        dragRef.current.startX = event.clientX
-        dragRef.current.deltaX = 0
-        event.currentTarget.setPointerCapture?.(event.pointerId)
-      }}
-      onPointerMove={event => {
-        if (!dragging) return
-        const delta = event.clientX - dragRef.current.startX
-        dragRef.current.deltaX = delta
-        const resisted = Math.sign(delta) * Math.pow(Math.abs(delta), 0.92)
-        setDragOffset(resisted)
-        const tabs = tabsRef.current
-        const currentButton = buttonRefs.current[active]
-        if (tabs && currentButton) {
-          const parent = tabs.getBoundingClientRect()
-          const box = currentButton.getBoundingClientRect()
-          const wiggle = Math.max(-34, Math.min(34, delta * 0.16))
-          tabs.style.setProperty('--home-tab-x', `${box.left - parent.left + wiggle}px`)
-          tabs.style.setProperty('--home-tab-w', `${box.width * (1 + Math.min(Math.abs(delta) / 640, .14))}px`)
-        }
-      }}
-      onPointerUp={finishDrag}
-      onPointerCancel={finishDrag}
-    >
-      <div className='home-panel-track' style={trackStyle}>
-        <article className='home-panel-screen'>
-          <div className='home-screen-grid'>
-            <section className='home-screen-card home-screen-intro'>
-              <span>Recent</span>
-              <h1>最近</h1>
-              <div className='home-action-row'>
-                <Link href='/content'>内容库</Link>
-                <Link href='/archive'>归档</Link>
-                <Link href='/search'>搜索一句话</Link>
-              </div>
-            </section>
-            <section className='home-screen-card'><div className='home-recent-list'>{recentContent.slice(0, 5).map(item => <RecentRow item={item} key={stableKey(item)} />)}</div></section>
+    if (items.length <= 1) return undefined
+    const timer = window.setInterval(() => setIndex(value => (value + 1) % items.length), 5200)
+    return () => window.clearInterval(timer)
+  }, [items.length])
+  const go = offset => setIndex(value => (value + offset + total) % total)
+  if (!items.length) return <div className='home-carousel-empty'>暂无公开内容</div>
+  return <div className='home-recent-carousel'>
+    <div className='home-carousel-viewport'>
+      <div className='home-carousel-track' style={{ transform: `translateY(-${index * 100}%)` }}>
+        {items.map(item => <Link className={`home-carousel-card ${item.cover ? 'has-cover' : ''}`} href={publicContentHref(item)} key={item.id || `${item.source}:${item.slug}`}>
+          <div className='home-carousel-cover' style={item.cover ? { backgroundImage: `url("${item.cover}")` } : undefined}>
+            {!item.cover ? <span>{publicContentCategory(item)}</span> : null}
           </div>
-        </article>
-
-        <article className='home-panel-screen'>
-          <div className='home-screen-grid'>
-            <section className='home-screen-card home-screen-intro'><span>Paths</span><h1>路径</h1><div className='home-action-row'><Link href='/category'>栏目</Link><Link href='/tag'>标签</Link><Link href='/archive'>时间</Link></div></section>
-            <section className='home-screen-card'><PathPlot categories={categories} /></section>
+          <div className='home-carousel-copy'>
+            <time>{formatDate(publicContentDate(item))}</time>
+            <strong>{item.title || '未命名内容'}</strong>
+            <small>{[publicContentTypeLabel(item.type), publicContentCategory(item)].filter(Boolean).join(' · ')}</small>
           </div>
-        </article>
-
-        <article className='home-panel-screen'>
-          <div className='home-screen-grid'>
-            <section className='home-screen-card home-screen-intro'><span>Tools</span><h1>工具</h1><div className='home-action-row'><Link href='/tools'>工具页</Link><Link href='https://law-tech.dev/ocr/' rel='noreferrer'>OCR</Link><Link href='https://law-tech.dev/citation/' rel='noreferrer'>引注</Link></div></section>
-            <section className='home-screen-card'><ToolGrid /></section>
-          </div>
-        </article>
-
-        <article className='home-panel-screen'>
-          <div className='home-screen-grid'>
-            <section className='home-screen-card home-screen-intro'><span>Desk</span><h1>工作台</h1><div className='home-action-row'><Link href='/desk'>进入工作台</Link><Link href='/desk/today'>Today</Link><Link href='/desk/writing'>Writing</Link></div></section>
-            <section className='home-screen-card'><DeskGrid /></section>
-          </div>
-        </article>
+        </Link>)}
       </div>
     </div>
-  </section>
+    <div className='home-carousel-controls'>
+      <button type='button' aria-label='上一条' onClick={() => go(-1)}>↑</button>
+      <div>{items.map((item, itemIndex) => <button className={itemIndex === index ? 'active' : ''} type='button' key={item.id || itemIndex} aria-label={`第 ${itemIndex + 1} 条`} onClick={() => setIndex(itemIndex)} />)}</div>
+      <button type='button' aria-label='下一条' onClick={() => go(1)}>↓</button>
+    </div>
+  </div>
 }
 
-export default function HomePage({ recentContent = [], contentCount = 0, categories = {}, types = {} }) {
-  const updates = recentContent.slice(0, 7)
-  const randomHref = useMemo(() => updates[0] ? publicContentHref(updates[Math.floor(updates.length / 2) || 0]) : '/content', [updates])
+export default function HomePage({ recentContent = [], randomContent = [], contentCount = 0, categories = {}, types = {} }) {
+  const updates = recentContent.slice(0, 6)
+  const [panel, setPanel] = useState(0)
+  const startX = useRef(0)
   const articleCount = types.article || 0
   const courseCount = types['course-note'] || 0
+  const randomPool = randomContent.length ? randomContent : updates
+
+  function openRandom(event) {
+    event.preventDefault()
+    if (!randomPool.length) return
+    const item = randomPool[Math.floor(Math.random() * randomPool.length)]
+    window.location.href = publicContentHref(item)
+  }
+
+  function onPointerDown(event) {
+    startX.current = event.clientX
+  }
+
+  function onPointerUp(event) {
+    const delta = event.clientX - startX.current
+    if (Math.abs(delta) < 70) return
+    setPanel(value => Math.max(0, Math.min(panels.length - 1, value + (delta < 0 ? 1 : -1))))
+  }
 
   return <>
     <Head>
@@ -256,292 +126,203 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
       <meta name='theme-color' content='#f5f3eb' />
     </Head>
 
-    <main className='lawtech-public-page public-macos-home home-macos-unified-v2'>
+    <main className='lawtech-public-page public-home home-os-v3'>
       <div className='public-aurora public-aurora-one' aria-hidden='true' />
       <div className='public-aurora public-aurora-two' aria-hidden='true' />
       <div className='public-shell home-shell'>
         <PublicHeader active='content' />
 
-        <section className='home-desktop-grid'>
-          <HomePanelTabs recentContent={updates} categories={categories} />
+        <section className='home-workspace'>
+          <section className='home-window' onPointerDown={onPointerDown} onPointerUp={onPointerUp}>
+            <header className='home-window-bar'>
+              <div className='traffic' aria-hidden='true'><i /><i /><i /></div>
+              <nav className='home-tabs' aria-label='首页面板' style={{ '--panel-index': panel }}>
+                <i aria-hidden='true' />
+                {panels.map((item, index) => <button type='button' className={index === panel ? 'active' : ''} key={item} onClick={() => setPanel(index)}>{item}</button>)}
+              </nav>
+            </header>
+            <div className='home-panel-viewport'>
+              <div className='home-panel-track' style={{ transform: `translateX(-${panel * 100}%)` }}>
+                <article className='home-panel home-panel-recent'>
+                  <div className='home-summary-card'>
+                    <span className='eyebrow'>law-tech.dev</span>
+                    <h1>法学笔记、写作与工具实验。</h1>
+                    <dl>
+                      <div><dt>{contentCount}</dt><dd>内容</dd></div>
+                      <div><dt>{articleCount}</dt><dd>文章</dd></div>
+                      <div><dt>{courseCount}</dt><dd>课程笔记</dd></div>
+                    </dl>
+                    <div className='home-actions'>
+                      <Link href='/content'>内容库</Link>
+                      <Link href='/archive'>归档</Link>
+                      <button type='button' onClick={openRandom}>随机一页</button>
+                    </div>
+                  </div>
+                  <div className='home-list-card'>
+                    <header><span>最近更新</span><Link href='/archive'>全部 ↗</Link></header>
+                    <div>{updates.map(item => <RecentLine item={item} key={item.id || `${item.source}:${item.slug}`} />)}</div>
+                  </div>
+                </article>
 
-          <aside className='home-widget-column' aria-label='首页侧栏'>
-            <section className='home-widget home-widget-counts'>
+                <article className='home-panel home-panel-paths'>
+                  <div className='home-path-grid'>
+                    {categoryOrder.map(category => <TopicPath category={category} count={categories[category] || 0} key={category} />)}
+                  </div>
+                </article>
+
+                <article className='home-panel home-panel-tools'>
+                  <div className='home-tool-grid'>
+                    <Link href='https://law-tech.dev/ocr/' rel='noreferrer'><span>OCR</span><strong>图片与 PDF</strong></Link>
+                    <Link href='https://law-tech.dev/citation/' rel='noreferrer'><span>引注</span><strong>论文与脚注</strong></Link>
+                    <Link href='/tools'><span>工具</span><strong>全部入口</strong></Link>
+                    <Link href='/search'><span>搜索</span><strong>全文与标签</strong></Link>
+                  </div>
+                </article>
+
+                <article className='home-panel home-panel-desk'>
+                  <div className='home-desk-grid'>
+                    <Link href='/desk'><span>Desk</span><strong>工作台</strong><small>进入私人工作区</small></Link>
+                    <Link href='/desk/today'><span>Today</span><strong>今日</strong><small>日程与待办</small></Link>
+                    <Link href='/desk/writing'><span>Writing</span><strong>写作</strong><small>草稿与发布</small></Link>
+                    <Link href='/desk/courses'><span>Courses</span><strong>课程</strong><small>材料与整理</small></Link>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          <aside className='home-widgets'>
+            <section className='home-widget home-widget-library'>
               <span>Library</span>
-              <div><strong>{contentCount}</strong><small>公开内容</small></div>
-              <p>{articleCount} 篇文章 · {courseCount} 份课程笔记</p>
+              <strong>{contentCount}</strong>
+              <small>{Object.keys(categories).length} 个栏目 · {articleCount} 篇文章</small>
             </section>
-
             <section className='home-widget home-widget-recent'>
               <span>Recent</span>
-              <RecentRotor items={updates} />
+              <RecentCarousel items={updates} />
             </section>
-
             <section className='home-widget home-widget-desk'>
               <span>Desk</span>
-              <h2>工作台</h2>
-              <div className='home-widget-actions'>
-                <Link href='/desk'>进入</Link>
-                <Link href='/desk/today'>Today</Link>
-              </div>
+              <strong>工作台</strong>
+              <div><Link href='/desk'>进入</Link><Link href='/desk/today'>Today</Link></div>
             </section>
-
-            <footer className='home-signature'><DynamicSignature compact /></footer>
+            <div className='home-signature-corner' aria-hidden='true'><DynamicSignature compact /></div>
           </aside>
         </section>
 
-        <nav className='home-thin-dock' aria-label='常用入口'>
-          <Link href='/content' data-label='内容库'><LawTechIcon name='content' size={16} /><i /></Link>
-          <Link href='/archive' data-label='归档'><LawTechIcon name='reading' size={16} /><i /></Link>
-          <Link href='/tools' data-label='工具'><LawTechIcon name='spark' size={16} /><i /></Link>
-          <Link href='/desk' data-label='工作台'><LawTechIcon name='today' size={16} /><i /></Link>
-          <Link className='home-random-link' href={randomHref} data-label='随机一页'><LawTechIcon name='expand' size={16} /><i /></Link>
+        <nav className='home-dock' aria-label='常用入口'>
+          <Link href='/content'><span>内</span><small>内容</small></Link>
+          <Link href='/archive'><span>时</span><small>归档</small></Link>
+          <button type='button' onClick={openRandom}><span>↯</span><small>随机</small></button>
+          <Link href='/tools'><span>工</span><small>工具</small></Link>
+          <Link href='/desk'><span>桌</span><small>工作台</small></Link>
         </nav>
       </div>
-
-      <style jsx global>{`
-        .home-macos-unified-v2 {
-          min-height:100vh;
-          overflow:hidden;
-          padding:0;
-        }
-        .home-macos-unified-v2 .home-shell {
-          position:relative;
-          display:grid;
-          grid-template-rows:auto minmax(0,1fr) auto;
-          gap:14px;
-          width:min(1500px,calc(100vw - 32px));
-          height:100vh;
-          padding:14px 0 12px;
-        }
-        .home-desktop-grid {
-          display:grid;
-          grid-template-columns:minmax(0,1fr) minmax(248px,300px);
-          gap:14px;
-          min-height:0;
-        }
-        .home-app-window,
-        .home-widget,
-        .home-thin-dock {
-          border:1px solid rgba(255,255,255,.7);
-          background:linear-gradient(180deg,rgba(255,255,255,.42),rgba(255,255,255,.2));
-          box-shadow:0 22px 70px rgba(24,63,50,.1),inset 0 1px 0 rgba(255,255,255,.74);
-          backdrop-filter:blur(24px) saturate(1.12);
-        }
-        .home-app-window {
-          min-width:0;
-          min-height:0;
-          overflow:hidden;
-          border-radius:30px;
-          padding:12px;
-        }
-        .home-window-top {
-          display:grid;
-          grid-template-columns:auto minmax(0,1fr) auto;
-          gap:12px;
-          align-items:center;
-          padding:4px 6px 12px;
-        }
-        .home-traffic { display:flex; gap:8px; }
-        .home-traffic i { width:11px; height:11px; border-radius:50%; box-shadow:inset 0 1px 0 rgba(255,255,255,.34); }
-        .home-traffic i:nth-child(1) { background:#ff6057; }
-        .home-traffic i:nth-child(2) { background:#ffbd2f; }
-        .home-traffic i:nth-child(3) { background:#28c840; }
-        .home-panel-tabs {
-          --home-tab-x: 0px;
-          --home-tab-w: 86px;
-          position:relative;
-          display:flex;
-          justify-self:center;
-          gap:4px;
-          width:max-content;
-          max-width:100%;
-          padding:5px;
-          overflow:hidden;
-          border:1px solid rgba(255,255,255,.58);
-          border-radius:999px;
-          background:rgba(255,255,255,.18);
-          box-shadow:inset 0 1px 0 rgba(255,255,255,.6);
-        }
-        .home-panel-indicator {
-          position:absolute;
-          top:5px;
-          left:5px;
-          width:var(--home-tab-w);
-          height:36px;
-          border-radius:999px;
-          background:radial-gradient(circle at 38% 24%,rgba(255,255,255,.32),transparent 34%),linear-gradient(135deg,rgba(15,60,49,.95),rgba(45,89,138,.88));
-          box-shadow:0 12px 28px rgba(17,61,49,.2),inset 0 1px 0 rgba(255,255,255,.28);
-          transform:translateX(var(--home-tab-x));
-          transition:transform .48s cubic-bezier(.2,1.32,.28,1),width .48s cubic-bezier(.2,1.32,.28,1),border-radius .48s cubic-bezier(.2,1.32,.28,1);
-        }
-        .home-panel-tabs button {
-          position:relative;
-          z-index:2;
-          min-width:86px;
-          height:36px;
-          border:0;
-          border-radius:999px;
-          padding:0 14px;
-          color:var(--muted);
-          background:transparent;
-          cursor:pointer;
-          font-size:12px;
-          font-weight:720;
-        }
-        .home-panel-tabs button.is-active { color:#fffcef; }
-        .home-window-hint {
-          border:1px solid rgba(255,255,255,.52);
-          border-radius:999px;
-          padding:7px 10px;
-          color:var(--muted);
-          background:rgba(255,255,255,.16);
-          font-size:11px;
-        }
-        .home-panel-viewport {
-          height:calc(100% - 60px);
-          overflow:hidden;
-          border-radius:24px;
-          cursor:grab;
-        }
-        .home-panel-viewport:active { cursor:grabbing; }
-        .home-panel-track { display:flex; height:100%; will-change:transform; }
-        .home-panel-screen {
-          flex:0 0 100%;
-          min-width:0;
-          padding:14px;
-          border:1px solid rgba(255,255,255,.54);
-          border-radius:24px;
-          background:linear-gradient(135deg,rgba(255,255,255,.34),rgba(255,255,255,.14)),radial-gradient(circle at 88% 10%,rgba(227,239,244,.4),transparent 34%);
-          box-shadow:inset 0 1px 0 rgba(255,255,255,.62);
-        }
-        .home-panel-screen + .home-panel-screen { margin-left:12px; }
-        .home-screen-grid {
-          display:grid;
-          grid-template-columns:minmax(250px,.86fr) minmax(0,1.14fr);
-          gap:14px;
-          height:100%;
-          min-height:0;
-        }
-        .home-screen-card {
-          min-height:0;
-          overflow:auto;
-          border:1px solid rgba(255,255,255,.56);
-          border-radius:22px;
-          padding:18px;
-          background:rgba(255,252,244,.28);
-          box-shadow:inset 0 1px 0 rgba(255,255,255,.58);
-        }
-        .home-screen-intro span,
-        .home-widget > span {
-          color:var(--leaf);
-          font-size:10px;
-          font-weight:850;
-          letter-spacing:.18em;
-          text-transform:uppercase;
-        }
-        .home-screen-card h1 {
-          margin:12px 0 0;
-          font-family:var(--display-serif);
-          font-size:clamp(46px,6vw,76px);
-          font-weight:620;
-          letter-spacing:-.075em;
-          line-height:.98;
-        }
-        .home-action-row,
-        .home-widget-actions {
-          display:flex;
-          flex-wrap:wrap;
-          gap:8px;
-          margin-top:22px;
-        }
-        .home-action-row a,
-        .home-widget-actions a {
-          border:1px solid rgba(255,255,255,.62);
-          border-radius:999px;
-          padding:8px 12px;
-          color:var(--green);
-          background:rgba(255,255,255,.24);
-          box-shadow:0 10px 24px rgba(24,63,50,.05),inset 0 1px 0 rgba(255,255,255,.58);
-          font-size:12px;
-        }
-        .home-recent-list { display:grid; gap:10px; align-content:start; }
-        .home-recent-row {
-          display:grid;
-          grid-template-columns:auto minmax(0,1fr) auto;
-          gap:12px;
-          align-items:center;
-          border:1px solid rgba(255,255,255,.56);
-          border-radius:18px;
-          padding:13px 14px;
-          background:rgba(255,255,255,.24);
-          box-shadow:inset 0 1px 0 rgba(255,255,255,.54);
-          transition:transform .24s var(--ease), border-radius .24s var(--ease);
-        }
-        .home-recent-row:hover { transform:translateY(-2px); border-radius:15px; }
-        .home-recent-row time,
-        .home-recent-row small { color:var(--quiet); font-size:11px; white-space:nowrap; }
-        .home-recent-row strong { display:block; overflow:hidden; font-family:var(--display-serif); font-size:19px; font-weight:610; text-overflow:ellipsis; white-space:nowrap; }
-        .home-recent-row b { color:var(--green); }
-        .home-path-plot { position:relative; height:100%; min-height:320px; }
-        .home-orbit { position:absolute; inset:10% 8% 8%; border:1px dashed rgba(21,26,23,.12); border-radius:47% 53% 52% 48%; transform:rotate(-8deg); }
-        .home-path-folder { position:absolute; border:1px solid rgba(255,255,255,.62); border-radius:20px; padding:13px 16px; color:var(--leaf); background:rgba(255,255,255,.26); box-shadow:0 14px 30px rgba(24,63,50,.06),inset 0 1px 0 rgba(255,255,255,.58); backdrop-filter:blur(14px); transition:transform .32s cubic-bezier(.2,1.32,.28,1),border-radius .32s cubic-bezier(.2,1.32,.28,1); }
-        .home-path-folder:hover { transform:translateY(-6px) scale(1.03,.98); border-radius:16px; }
-        .home-path-folder strong { display:block; font-family:var(--display-serif); font-size:24px; font-weight:610; }
-        .home-path-folder span { display:block; margin-top:5px; color:var(--muted); font-size:11px; }
-        .folder-1 { left:4%; top:10%; }
-        .folder-2 { right:8%; top:18%; }
-        .folder-3 { left:18%; bottom:18%; }
-        .folder-4 { right:16%; bottom:6%; }
-        .home-tool-grid,
-        .home-desk-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-        .home-tool-tile,
-        .home-desk-app { border:1px solid rgba(255,255,255,.56); border-radius:20px; padding:14px; background:rgba(255,255,255,.24); box-shadow:inset 0 1px 0 rgba(255,255,255,.56); }
-        .home-tool-tile strong,
-        .home-desk-app strong { display:block; font-family:var(--display-serif); font-size:22px; font-weight:610; }
-        .home-tool-tile span,
-        .home-desk-app span { display:block; margin-top:8px; color:var(--muted); font-size:12px; line-height:1.6; }
-        .home-desk-app i { display:grid; place-items:center; width:40px; height:40px; border:1px solid rgba(255,255,255,.66); border-radius:14px; margin-bottom:12px; color:var(--leaf); background:rgba(255,255,255,.26); }
-        .home-widget-column { display:grid; grid-template-rows:auto minmax(0,1fr) auto auto; gap:14px; min-height:0; }
-        .home-widget { overflow:hidden; border-radius:28px; padding:16px; }
-        .home-widget-counts strong { display:block; margin-top:10px; font-family:var(--display-serif); color:var(--leaf); font-size:60px; line-height:.88; letter-spacing:-.08em; }
-        .home-widget-counts small { color:var(--muted); }
-        .home-widget-counts p { margin:10px 0 0; color:var(--muted); font-size:12px; line-height:1.7; }
-        .home-widget-recent { min-height:0; }
-        .home-widget-rotor { display:grid; gap:10px; max-height:100%; margin-top:12px; overflow-y:auto; scroll-snap-type:y proximity; padding-right:2px; }
-        .home-rotor-card { display:grid; grid-template-columns:74px minmax(0,1fr); gap:10px; align-items:center; scroll-snap-align:start; border:1px solid rgba(255,255,255,.56); border-radius:18px; padding:9px; background:rgba(255,255,255,.24); box-shadow:inset 0 1px 0 rgba(255,255,255,.56); }
-        .home-rotor-cover { display:grid; place-items:end start; width:74px; height:58px; border-radius:14px; padding:8px; color:#fffaf0; background:linear-gradient(145deg,#245044,#315a8c); background-size:cover; background-position:center; }
-        .home-rotor-cover span { font-size:9px; }
-        .home-rotor-card small,
-        .home-rotor-card span { display:block; color:var(--muted); font-size:10px; }
-        .home-rotor-card strong { display:block; overflow:hidden; margin:4px 0; font-family:var(--display-serif); font-size:17px; font-weight:610; text-overflow:ellipsis; white-space:nowrap; }
-        .home-widget-desk h2 { margin:12px 0 0; font-family:var(--display-serif); font-size:32px; font-weight:620; letter-spacing:-.05em; }
-        .home-signature { display:flex; justify-content:flex-end; min-height:78px; padding:0 8px; color:rgba(25,59,49,.72); }
-        .home-signature :global(svg) { width:min(220px,100%); }
-        .home-thin-dock { justify-self:center; display:flex; align-items:flex-end; gap:8px; width:max-content; max-width:100%; border-radius:22px; padding:8px 10px 10px; }
-        .home-thin-dock a { position:relative; display:grid; place-items:center; width:42px; height:42px; border:1px solid rgba(255,255,255,.68); border-radius:14px; color:var(--leaf); background:linear-gradient(135deg,rgba(255,255,255,.42),rgba(255,255,255,.14)); box-shadow:0 10px 22px rgba(24,63,50,.08),inset 0 1px 0 rgba(255,255,255,.7); transition:transform .14s ease,border-radius .14s ease; }
-        .home-thin-dock a:hover { transform:translateY(-5px) scale(1.16); border-radius:17px; }
-        .home-thin-dock a::after { content:attr(data-label); position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); opacity:0; pointer-events:none; white-space:nowrap; border:1px solid rgba(255,255,255,.68); border-radius:999px; padding:5px 8px; color:var(--ink); background:rgba(255,255,255,.38); box-shadow:0 8px 20px rgba(24,63,50,.06); backdrop-filter:blur(14px); font-size:11px; transition:opacity .14s ease,transform .14s ease; }
-        .home-thin-dock a:hover::after { opacity:1; transform:translateX(-50%) translateY(-2px); }
-        .home-thin-dock i { position:absolute; bottom:-8px; width:4px; height:4px; border-radius:50%; background:var(--leaf); opacity:.25; }
-        @media (max-width:1120px) {
-          .home-macos-unified-v2 { overflow:auto; }
-          .home-macos-unified-v2 .home-shell { height:auto; min-height:100vh; }
-          .home-desktop-grid { grid-template-columns:1fr; }
-          .home-widget-column { grid-template-columns:repeat(3,minmax(0,1fr)); grid-template-rows:auto; }
-          .home-signature { grid-column:1 / -1; }
-        }
-        @media (max-width:760px) {
-          .home-screen-grid,
-          .home-tool-grid,
-          .home-desk-grid,
-          .home-widget-column { grid-template-columns:1fr; }
-          .home-window-top { grid-template-columns:auto 1fr; }
-          .home-window-hint { display:none; }
-          .home-panel-tabs { justify-self:end; overflow-x:auto; }
-        }
-      `}</style>
     </main>
+
+    <style jsx global>{`
+      .home-os-v3 { height:100dvh; padding:0; overflow:hidden; }
+      .home-os-v3 .home-shell { width:min(1500px,calc(100vw - 28px)); height:100dvh; padding:14px 0; display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:12px; }
+      .home-workspace { min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:14px; align-items:stretch; }
+      .home-window,
+      .home-widget,
+      .home-dock {
+        border:1px solid rgba(255,255,255,.72);
+        background:linear-gradient(180deg,rgba(255,255,255,.46),rgba(255,255,255,.22));
+        box-shadow:0 24px 70px rgba(24,63,50,.09),inset 0 1px 0 rgba(255,255,255,.74);
+        backdrop-filter:blur(24px) saturate(1.08);
+      }
+      .home-window { min-width:0; border-radius:32px; overflow:hidden; }
+      .home-window-bar { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:14px; padding:14px 18px 10px; }
+      .traffic { display:flex; gap:8px; }
+      .traffic i { width:11px; height:11px; border-radius:50%; background:#ff5f57; }
+      .traffic i:nth-child(2) { background:#ffbd2e; }
+      .traffic i:nth-child(3) { background:#28c840; }
+      .home-tabs { position:relative; justify-self:center; display:grid; grid-template-columns:repeat(4,minmax(86px,1fr)); gap:3px; min-width:430px; padding:5px; border:1px solid rgba(255,255,255,.58); border-radius:999px; background:rgba(255,255,255,.14); overflow:hidden; }
+      .home-tabs > i { position:absolute; top:5px; left:5px; width:calc((100% - 10px) / 4); height:calc(100% - 10px); border-radius:999px; background:linear-gradient(135deg,rgba(12,67,54,.96),rgba(45,89,138,.86)); box-shadow:0 12px 28px rgba(24,63,50,.18),inset 0 1px 0 rgba(255,255,255,.28); transform:translateX(calc(var(--panel-index) * 100%)); transition:transform .42s cubic-bezier(.2,1.18,.24,1); }
+      .home-tabs button { position:relative; z-index:1; border:0; border-radius:999px; min-height:34px; color:var(--muted); background:transparent; cursor:pointer; font-weight:680; }
+      .home-tabs button.active { color:#fffaf0; }
+      .home-panel-viewport { height:calc(100% - 64px); overflow:hidden; padding:0 16px 16px; }
+      .home-panel-track { display:flex; height:100%; transition:transform .52s cubic-bezier(.2,1.18,.24,1); }
+      .home-panel { flex:0 0 100%; min-width:0; height:100%; border:1px solid rgba(255,255,255,.56); border-radius:26px; background:rgba(255,255,255,.22); box-shadow:inset 0 1px 0 rgba(255,255,255,.58); padding:16px; }
+      .home-panel-recent { display:grid; grid-template-columns:minmax(300px,.64fr) minmax(0,1fr); gap:14px; }
+      .home-summary-card,
+      .home-list-card,
+      .home-path-card,
+      .home-tool-grid a,
+      .home-desk-grid a { border:1px solid rgba(255,255,255,.58); border-radius:24px; background:rgba(255,255,255,.26); box-shadow:inset 0 1px 0 rgba(255,255,255,.6); }
+      .home-summary-card { display:grid; align-content:center; padding:24px; }
+      .home-summary-card h1 { margin:10px 0 0; max-width:520px; font-family:var(--display-serif); font-size:clamp(38px,4.8vw,66px); font-weight:620; line-height:1.02; letter-spacing:-.065em; }
+      .home-summary-card dl { display:flex; gap:20px; margin:24px 0 0; }
+      .home-summary-card div { display:grid; }
+      .home-summary-card dt { font-family:var(--display-serif); color:var(--green); font-size:30px; line-height:1; }
+      .home-summary-card dd { margin:3px 0 0; color:var(--quiet); font-size:10px; }
+      .home-actions { display:flex!important; flex-wrap:wrap; gap:8px; margin-top:24px; }
+      .home-actions a,
+      .home-actions button,
+      .home-widget-desk a { border:1px solid rgba(255,255,255,.62); border-radius:999px; padding:8px 12px; color:var(--green); background:rgba(255,255,255,.26); cursor:pointer; font-size:12px; }
+      .home-list-card { min-width:0; padding:18px; overflow:hidden; }
+      .home-list-card header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; color:var(--quiet); font-size:11px; text-transform:uppercase; letter-spacing:.12em; }
+      .home-list-card header a { color:var(--green); letter-spacing:0; text-transform:none; }
+      .home-list-card > div { display:grid; gap:9px; }
+      .home-recent-line { display:grid; grid-template-columns:54px minmax(0,1fr) auto; align-items:center; gap:12px; border:1px solid rgba(255,255,255,.52); border-radius:18px; padding:12px 14px; background:rgba(255,255,255,.26); }
+      .home-recent-line time { color:var(--quiet); font-size:11px; }
+      .home-recent-line strong { display:block; overflow:hidden; font-family:var(--display-serif); font-size:21px; text-overflow:ellipsis; white-space:nowrap; }
+      .home-recent-line small { display:block; margin-top:2px; color:var(--muted); font-size:10px; }
+      .home-recent-line b { color:var(--green); }
+      .home-panel-paths,
+      .home-panel-tools,
+      .home-panel-desk { display:grid; align-content:center; }
+      .home-path-grid,
+      .home-tool-grid,
+      .home-desk-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+      .home-path-card,
+      .home-tool-grid a,
+      .home-desk-grid a { min-height:138px; padding:20px; transition:transform .2s var(--ease),border-radius .2s var(--ease); }
+      .home-path-card:hover,
+      .home-tool-grid a:hover,
+      .home-desk-grid a:hover { transform:translateY(-3px); border-radius:20px; }
+      .home-path-card span,
+      .home-tool-grid span,
+      .home-desk-grid span,
+      .home-widget > span { display:block; color:var(--green); font-size:11px; font-weight:800; letter-spacing:.18em; text-transform:uppercase; }
+      .home-path-card strong,
+      .home-tool-grid strong,
+      .home-desk-grid strong { display:block; margin-top:12px; font-family:var(--display-serif); font-size:30px; font-weight:610; }
+      .home-path-card small,
+      .home-desk-grid small { display:block; margin-top:8px; color:var(--muted); }
+      .home-widgets { min-height:0; display:grid; grid-template-rows:auto minmax(0,1fr) auto 72px; gap:12px; }
+      .home-widget { border-radius:28px; padding:18px; min-width:0; overflow:hidden; }
+      .home-widget-library strong { display:block; margin-top:10px; font-family:var(--display-serif); font-size:62px; line-height:.88; color:var(--green); }
+      .home-widget-library small { color:var(--muted); }
+      .home-widget-recent { display:grid; grid-template-rows:auto minmax(0,1fr); gap:14px; }
+      .home-recent-carousel { min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 28px; gap:10px; }
+      .home-carousel-viewport { min-height:0; overflow:hidden; border-radius:22px; }
+      .home-carousel-track { height:100%; transition:transform .6s cubic-bezier(.2,1.18,.24,1); }
+      .home-carousel-card { display:grid; grid-template-columns:86px minmax(0,1fr); gap:14px; align-items:center; height:100%; min-height:150px; border:1px solid rgba(255,255,255,.56); border-radius:22px; padding:14px; background:rgba(255,255,255,.24); }
+      .home-carousel-cover { height:86px; border-radius:18px; background:linear-gradient(135deg,#0f4a42,#174272); background-size:cover; background-position:center; display:grid; align-content:end; padding:10px; color:rgba(255,255,255,.72); font-size:10px; }
+      .home-carousel-copy time { color:var(--quiet); font-size:11px; }
+      .home-carousel-copy strong { display:block; overflow:hidden; margin-top:7px; font-family:var(--display-serif); font-size:23px; text-overflow:ellipsis; white-space:nowrap; }
+      .home-carousel-copy small { display:block; margin-top:6px; color:var(--muted); font-size:11px; line-height:1.5; }
+      .home-carousel-controls { display:grid; grid-template-rows:auto 1fr auto; gap:8px; align-items:center; }
+      .home-carousel-controls button { border:1px solid rgba(255,255,255,.58); border-radius:999px; color:var(--green); background:rgba(255,255,255,.22); cursor:pointer; }
+      .home-carousel-controls > button { width:26px; height:26px; }
+      .home-carousel-controls div { display:grid; gap:6px; justify-items:center; }
+      .home-carousel-controls div button { width:7px; height:7px; padding:0; opacity:.38; }
+      .home-carousel-controls div button.active { opacity:1; background:var(--green); }
+      .home-widget-desk strong { display:block; margin:12px 0; font-family:var(--display-serif); font-size:30px; }
+      .home-widget-desk div { display:flex; gap:8px; }
+      .home-signature-corner { align-self:end; justify-self:end; width:min(240px,100%); color:rgba(25,59,49,.72); padding:0 8px 2px; }
+      .home-dock { justify-self:center; display:flex; align-items:end; gap:8px; border-radius:24px; padding:8px 10px 9px; }
+      .home-dock a,
+      .home-dock button { display:grid; place-items:center; gap:2px; width:44px; min-height:44px; border:1px solid rgba(255,255,255,.62); border-radius:16px; color:var(--green); background:rgba(255,255,255,.24); cursor:pointer; transition:transform .16s ease,border-radius .16s ease; }
+      .home-dock a:hover,
+      .home-dock button:hover { transform:translateY(-4px) scale(1.05); border-radius:18px; }
+      .home-dock span { font-family:var(--display-serif); font-size:18px; line-height:1; }
+      .home-dock small { color:var(--muted); font-size:9px; }
+      @media (max-width:1100px) { .home-os-v3 { height:auto; min-height:100dvh; overflow:auto; } .home-os-v3 .home-shell { height:auto; min-height:100dvh; } .home-workspace { grid-template-columns:1fr; } .home-widgets { grid-template-rows:auto; grid-template-columns:repeat(2,minmax(0,1fr)); } }
+      @media (max-width:760px) { .home-panel-recent,.home-path-grid,.home-tool-grid,.home-desk-grid { grid-template-columns:1fr; } .home-tabs { min-width:0; grid-template-columns:repeat(4,minmax(0,1fr)); } .home-widgets { grid-template-columns:1fr; } }
+    `}</style>
     <LawTechDeskStyles />
   </>
 }
@@ -553,7 +334,8 @@ export async function getStaticProps() {
 
   return {
     props: {
-      recentContent: selectRecentPublicContent(items, 7),
+      recentContent: selectRecentPublicContent(items, 8),
+      randomContent: items.filter(item => item?.access?.mode !== 'private').slice(0, 80),
       contentCount: items.length,
       categories: categorySummary(items),
       types: typeSummary(items)

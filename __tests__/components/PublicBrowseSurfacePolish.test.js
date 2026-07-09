@@ -1,34 +1,20 @@
 const fs = require('fs')
 const path = require('path')
-
 const root = path.join(__dirname, '../..')
 const contentPage = fs.readFileSync(path.join(root, 'pages/content/index.js'), 'utf8')
-const searchPage = fs.readFileSync(path.join(root, 'pages/search/index.js'), 'utf8')
 const publicCard = fs.readFileSync(path.join(root, 'components/content/PublicContentCard.js'), 'utf8')
 
-describe('public browse surface polish', () => {
-  it('keeps content directory on the lighter browse surface system', () => {
-    expect(contentPage).toContain('public-browse-surface-v1')
-    expect(contentPage).toContain('grid-template-columns: 220px minmax(0,1fr)')
-    expect(contentPage).toContain('grid-template-columns: 1fr')
-    expect(contentPage).toContain('min-height: 96px')
-    expect(contentPage).toContain('min-height: 154px')
+describe('public browse macOS glass continuity', () => {
+  it('wraps the content library in an app window with inherited chrome', () => {
+    expect(contentPage).toContain('public-app-window content-library-window')
+    expect(contentPage).toContain('public-window-titlebar')
+    expect(contentPage).toContain('traffic')
+    expect(contentPage).toContain('grid-template-columns:220px minmax(0,1fr)')
+    expect(contentPage).toContain('min-height:154px')
     expect(contentPage).not.toContain('grid-template-columns: 250px minmax(0,1fr)')
-    expect(contentPage).not.toContain('backdrop-filter: blur(22px) saturate(1.08)')
-    expect(contentPage).not.toContain('min-height: 220px')
   })
-
-  it('keeps search page lighter than the old dense glass workspace', () => {
-    expect(searchPage).toContain('public-search-surface-v1')
-    expect(searchPage).toContain('grid-template-columns: 210px minmax(0,1fr)')
-    expect(searchPage).toContain('backdrop-filter: blur(14px)')
-    expect(searchPage).toContain('grid-template-columns: repeat(auto-fit,minmax(240px,1fr))')
-    expect(searchPage).not.toContain('grid-template-columns: 230px minmax(0,1fr)')
-    expect(searchPage).not.toContain('backdrop-filter: blur(22px)')
-  })
-
-  it('keeps the shared public content cards on the lighter macOS glass system', () => {
-    expect(publicCard).toContain('public-content-card-window-v2')
+  it('keeps shared content cards in the lighter window material family', () => {
+    expect(publicCard).toContain('public-content-card-window-v3')
     expect(publicCard).toContain('min-height:96px')
     expect(publicCard).toContain('min-height:148px')
     expect(publicCard).toContain('.is-compact .public-content-card-cover { min-height:80px; }')

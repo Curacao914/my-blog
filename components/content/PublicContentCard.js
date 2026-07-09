@@ -25,7 +25,7 @@ export function PublicContentCard({ item, compact = false, featured = false }) {
   const coverStyle = item?.cover ? { backgroundImage: `url("${item.cover}")` } : { '--content-cover-hue': String(hue) }
 
   return <>
-    <Link className={`public-content-card public-content-card-window-v2 ${compact ? 'is-compact' : ''} ${featured ? 'is-featured' : ''} ${item?.cover ? 'has-cover' : 'generated-cover'}`} href={publicContentHref(item)}>
+    <Link className={`public-content-card public-content-card-window-v3 ${compact ? 'is-compact' : ''} ${featured ? 'is-featured' : ''} ${item?.cover ? 'has-cover' : 'generated-cover'}`} href={publicContentHref(item)}>
       <div className={`public-content-card-cover ${item?.cover ? 'has-image' : 'is-generated'}`} style={coverStyle} aria-hidden='true'>
         {!item?.cover ? <><span>{category}</span><strong>{collection}</strong></> : null}
       </div>
@@ -39,8 +39,8 @@ export function PublicContentCard({ item, compact = false, featured = false }) {
     </Link>
 
     <style jsx>{`
-      .public-content-card-window-v2 { display:grid; min-width:0; overflow:hidden; border:1px solid rgba(255,255,255,.72); border-radius:18px; color:var(--ink); background:rgba(255,255,255,.34); box-shadow:0 10px 28px rgba(24,63,50,.045),inset 0 1px 0 rgba(255,255,255,.7); transition:transform .2s var(--ease),border-radius .2s var(--ease),box-shadow .2s var(--ease); }
-      .public-content-card-window-v2:hover { transform:translateY(-3px); border-radius:15px; box-shadow:0 16px 36px rgba(24,63,50,.075),inset 0 1px 0 rgba(255,255,255,.76); }
+      .public-content-card-window-v3 { display:grid; min-width:0; overflow:hidden; border:1px solid rgba(255,255,255,.72); border-radius:18px; color:var(--ink); background:rgba(255,255,255,.34); box-shadow:0 10px 28px rgba(24,63,50,.045),inset 0 1px 0 rgba(255,255,255,.7); transition:transform .2s var(--ease),border-radius .2s var(--ease),box-shadow .2s var(--ease); }
+      .public-content-card-window-v3:hover { transform:translateY(-3px); border-radius:15px; box-shadow:0 16px 36px rgba(24,63,50,.075),inset 0 1px 0 rgba(255,255,255,.76); }
       .public-content-card-cover { display:grid; align-content:end; gap:5px; min-height:96px; padding:14px; background-position:center; background-size:cover; }
       .public-content-card-cover.is-generated { color:rgba(255,255,255,.95); background:radial-gradient(circle at 80% 8%,hsla(var(--content-cover-hue),52%,76%,.34),transparent 38%),linear-gradient(145deg,hsl(var(--content-cover-hue),25%,34%),hsl(calc(var(--content-cover-hue) + 18),28%,46%)); }
       .public-content-card-cover span { font-size:9px; letter-spacing:.13em; text-transform:uppercase; opacity:.76; }

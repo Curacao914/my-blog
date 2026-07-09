@@ -1,29 +1,28 @@
 const fs = require('fs')
 const path = require('path')
-
 const root = path.join(__dirname, '../..')
 const home = fs.readFileSync(path.join(root, 'pages/index.js'), 'utf8')
 const header = fs.readFileSync(path.join(root, 'components/law-tech/PublicHeader.js'), 'utf8')
 
-
-describe('homepage macOS glass system', () => {
-  it('uses a single-screen macOS workspace instead of billboard copy', () => {
-    expect(home).toContain('home-macos-unified-v2')
-    expect(home).toContain('HomePanelTabs')
-    expect(home).toContain('RecentRotor')
-    expect(home).toContain('DynamicSignature')
-    expect(home).toContain('home-random-link')
-    expect(home).not.toContain('把麻烦事收进抽屉')
+describe('homepage macOS glass system v3', () => {
+  it('keeps the homepage as a single-screen app window without billboard copy', () => {
+    expect(home).toContain('home-os-v3')
+    expect(home).toContain('height:100dvh')
+    expect(home).toContain('home-window')
+    expect(home).toContain('RecentCarousel')
     expect(home).not.toContain('最近翻开的纸页')
-    expect(home).not.toContain('左右拖动切换')
-    expect(home).not.toContain('先把文件名改对')
+    expect(home).not.toContain('把麻烦事收进抽屉')
+    expect(home).not.toContain('滑动切换')
   })
-
-  it('keeps search in the public menu bar and restores hover-follow navigation', () => {
-    expect(header).toContain('public-header-macos')
-    expect(header).toContain('public-nav-indicator')
+  it('moves search into the menu bar and removes the duplicate search nav item', () => {
     expect(header).toContain('public-header-search')
-    expect(header).toContain('--header-light-x')
-    expect(header).not.toContain('border-radius:10px')
+    expect(header).toContain("item.key !== 'search'")
+    expect(header).toContain('public-nav-indicator')
+    expect(header).not.toContain('background:rgba(220,233,223,.58)')
+  })
+  it('adds a real random article action instead of a fixed link', () => {
+    expect(home).toContain('function openRandom')
+    expect(home).toContain('Math.floor(Math.random() * randomPool.length)')
+    expect(home).toContain('随机一页')
   })
 })
