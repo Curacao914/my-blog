@@ -9,6 +9,7 @@ import { MemberManagement } from '@/components/MemberManagement'
 import { OpenClawAgentStudio } from '@/components/OpenClawAgentStudio'
 import { WechatSettings } from '@/components/WechatSettings'
 import { AdminContentSync } from '@/components/law-tech/AdminContentSync'
+import { AboutProfileSettings } from '@/components/AboutProfileSettings'
 import { useWorkspaceSession } from '@/hooks/useWorkspaceSession'
 
 function StatePill({ ok, children }) {
@@ -148,6 +149,7 @@ export function SystemDesk() {
       label: '站点',
       items: isOwnerView ? [
         { key: 'agent-studio', label: 'Agent Studio' },
+        { key: 'profile', label: '个人档案' },
         { key: 'content', label: '内容与同步' },
         { key: 'site', label: '站点与连接' },
         { key: 'members', label: '成员与权限' }
@@ -216,8 +218,7 @@ export function SystemDesk() {
           <span>Settings</span>
           <h2>设置</h2>
           <p>
-            通用模型、课程自动化、微信发送、内容同步与站点连接各自归位，
-            不再让一个 API 同时出现在三块页面里。
+            账号、模型、内容同步与个人档案在这里管理。
           </p>
         </div>
       </header>
@@ -249,6 +250,9 @@ export function SystemDesk() {
           {section === 'courses' ? <CourseAutomationSettings /> : null}
           {section === 'agent-studio' && isOwnerView ? (
             <OpenClawAgentStudio />
+          ) : null}
+          {section === 'profile' && isOwnerView ? (
+            <AboutProfileSettings />
           ) : null}
           {section === 'content' && isOwnerView ? (
             <ContentMaintenance health={health} onReload={loadHealth} state={healthState} />
