@@ -7825,6 +7825,164 @@ body::before {
   box-shadow: inset 0 1px 0 rgba(255,255,255,.58);
 }
 /* /macos-glass-unified-v1 */
+
+
+/* macos-glass-desk-system-v2: unify private workspace with public macOS glass language */
+.desk-layout {
+  background:
+    radial-gradient(circle at 10% 8%, rgba(242, 208, 129, 0.18), transparent 27rem),
+    radial-gradient(circle at 88% 2%, rgba(152, 198, 210, 0.22), transparent 32rem),
+    radial-gradient(circle at 70% 92%, rgba(194, 221, 198, 0.18), transparent 30rem),
+    linear-gradient(140deg, #f7f0de, #edf3ef 56%, #dceaf0);
+}
+
+.desk-layout::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.72;
+  background-image:
+    linear-gradient(rgba(21, 26, 23, 0.014) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(21, 26, 23, 0.012) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+.desk-sidebar,
+.desk-topbar,
+.desk-page,
+.desk-mobile-drawer,
+.desk-page-content > section,
+.desk-page-content > article,
+.desk-page-content .panel,
+.desk-page-content .card,
+.desk-page-content .workspace-panel,
+.desk-page-content .course-panel,
+.desk-page-content .writing-panel,
+.desk-page-content .reading-box,
+.desk-page-content .history-section,
+.desk-page-content .lane-empty,
+.desk-page-content .reading-empty,
+.desk-page-content .reminder-editor,
+.desk-page-content .item-editor {
+  border-color: rgba(255, 255, 255, 0.66) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0.2)) !important;
+  box-shadow: 0 18px 52px rgba(27, 39, 31, 0.09), inset 0 1px 0 rgba(255,255,255,0.72) !important;
+  backdrop-filter: blur(22px) saturate(1.1);
+}
+
+.desk-sidebar {
+  overflow: hidden;
+  margin: 16px 0 16px 16px;
+  border-radius: 28px;
+}
+
+.desk-main {
+  position: relative;
+  z-index: 1;
+  padding: 16px 18px 24px;
+}
+
+.desk-topbar {
+  border-radius: 22px;
+  padding: 11px 13px;
+}
+
+.desk-route-icon,
+.desk-home-link,
+.desk-collapse-button,
+.desk-mobile-menu-button,
+.desk-top-actions :global(.workspace-account-menu),
+.desk-top-actions :global(.workspace-auth-actions),
+.desk-sidebar-foot,
+.desk-nav a {
+  border-color: rgba(255,255,255,0.58) !important;
+  background: rgba(255,255,255,0.22) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.58) !important;
+}
+
+.desk-nav a {
+  position: relative;
+  overflow: hidden;
+  transition: color 0.22s ease, transform 0.22s cubic-bezier(.2,1.32,.28,1), background 0.22s ease;
+}
+
+.desk-nav a:hover,
+.desk-nav a[aria-current='page'] {
+  color: var(--leaf);
+  transform: translateY(-1px);
+  background: rgba(255,255,255,0.34) !important;
+}
+
+.desk-nav a[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  z-index: -1;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.55), rgba(255,255,255,0.18));
+  box-shadow: 0 10px 24px rgba(27,39,31,0.06), inset 0 1px 0 rgba(255,255,255,0.72);
+}
+
+.desk-page {
+  margin-top: 14px;
+  border-radius: 30px;
+  padding: 16px;
+}
+
+.desk-page-content {
+  position: relative;
+  z-index: 1;
+}
+
+.desk-page-content input,
+.desk-page-content select,
+.desk-page-content textarea,
+.desk-page-content button:not(.card-title-button) {
+  border-color: rgba(255,255,255,0.56) !important;
+  background: rgba(255,255,255,0.34) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.58);
+}
+
+.desk-page-content .today-card,
+.desk-page-content .focus-card,
+.desk-page-content .reading-item,
+.desk-page-content .history-card,
+.desk-page-content .course-card,
+.desk-page-content .writing-card,
+.desk-page-content .material-card {
+  border-color: rgba(255,255,255,0.62) !important;
+  background: rgba(255,255,255,0.28) !important;
+  box-shadow: 0 12px 32px rgba(27,39,31,0.06), inset 0 1px 0 rgba(255,255,255,0.62) !important;
+  backdrop-filter: blur(18px) saturate(1.06);
+}
+
+.desk-page-content .today-card:hover,
+.desk-page-content .focus-card:hover,
+.desk-page-content .reading-item:hover,
+.desk-page-content .history-card:hover,
+.desk-page-content .course-card:hover,
+.desk-page-content .writing-card:hover,
+.desk-page-content .material-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 40px rgba(27,39,31,0.1), inset 0 1px 0 rgba(255,255,255,0.68) !important;
+}
+
+@media (max-width: 900px) {
+  .desk-sidebar {
+    margin: 0;
+    border-radius: 0;
+  }
+  .desk-main {
+    padding: 12px;
+  }
+  .desk-page {
+    border-radius: 24px;
+    padding: 12px;
+  }
+}
+
 `}</style>
   )
 }

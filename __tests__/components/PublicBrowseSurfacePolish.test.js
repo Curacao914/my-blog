@@ -27,12 +27,11 @@ describe('public browse surface polish', () => {
     expect(searchPage).not.toContain('backdrop-filter: blur(22px)')
   })
 
-  it('reduces the shared public content card weight', () => {
-    expect(publicCard).toContain('public-content-card-surface-v1')
-    expect(publicCard).toContain('min-height: 104px')
-    expect(publicCard).toContain('min-height: 154px')
-    expect(publicCard).toContain('.is-compact .public-content-card-cover { min-height: 86px; }')
-    expect(publicCard).not.toContain('backdrop-filter: blur(20px)')
-    expect(publicCard).not.toContain('min-height: 228px')
+  it('keeps the shared public content cards on the lighter macOS glass system', () => {
+    expect(publicCard).toContain('public-content-card-window-v2')
+    expect(publicCard).toContain('min-height:96px')
+    expect(publicCard).toContain('min-height:148px')
+    expect(publicCard).toContain('.is-compact .public-content-card-cover { min-height:80px; }')
+    expect(publicCard).toContain('.is-featured .public-content-card-cover { min-height:150px; padding:20px; }')
   })
 })
