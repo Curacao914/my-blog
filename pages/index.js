@@ -1,6 +1,9 @@
+
 import Head from 'next/head'
 import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react'
 
+import { DynamicSignature } from '@/components/law-tech/DynamicSignature'
 import { PublicHeader } from '@/components/law-tech/PublicHeader'
 import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
 import { LawTechIcon } from '@/components/LawTechIcons'
@@ -12,9 +15,27 @@ import {
   publicContentTypeLabel,
   selectRecentPublicContent
 } from '@/lib/content/publicContent'
-import { publicHomeQuickLinks } from '@/lib/domain/publicHome'
 
-const categoryOrder = ['遇事不决', '法与算法', '法律之上', '秘密花园']
+const viewTabs = [
+  { key: 'recent', label: '最近' },
+  { key: 'paths', label: '路径' },
+  { key: 'tools', label: '工具' },
+  { key: 'desk', label: '工作台' }
+]
+
+const pathNodes = [
+  { label: '遇事不决', href: '/category/遇事不决', note: '案例、判断与临时问题' },
+  { label: '法与算法', href: '/category/法与算法', note: '技术、工具与法律信息' },
+  { label: '法律之上', href: '/category/法律之上', note: '论文、课程与规范分析' },
+  { label: '秘密花园', href: '/category/秘密花园', note: '私人化写作与碎片' }
+]
+
+const toolNodes = [
+  { label: 'OCR', href: 'https://law-tech.dev/ocr/', icon: 'materials', note: '图片与扫描件' },
+  { label: '引注', href: 'https://law-tech.dev/citation/', icon: 'writing', note: '论文与脚注' },
+  { label: '搜索', href: '/search', icon: 'search', note: '站内内容索引' },
+  { label: '全部工具', href: '/tools', icon: 'tools', note: '工具启动器' }
+]
 
 function categorySummary(items = []) {
   return items.reduce((summary, item) => {
@@ -36,44 +57,121 @@ function formatDate(value) {
   if (!value) return ''
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
-  return new Intl.DateTimeFormat('zh-CN', {
-    month: '2-digit',
-    day: '2-digit'
-  }).format(date)
+  return new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit' }).format(date)
 }
 
-function HomeEntry({ href, icon, label, meta }) {
-  return <Link className='home-entry' href={href}>
-    <LawTechIcon name={icon} size={17} />
-    <span><strong>{label}</strong><small>{meta}</small></span>
-    <b>↗</b>
-  </Link>
+function itemKey(item, fallback) {
+  return item?.id || `${item?.source || 'content'}:${item?.slug || fallback}`
 }
 
-function RecentLine({ item }) {
-  const category = publicContentCategory(item)
-  return <Link className='home-recent-line' href={publicContentHref(item)}>
-    <time>{formatDate(publicContentDate(item))}</time>
-    <span>
-      <strong>{item.title || '未命名内容'}</strong>
-      <small>{[publicContentTypeLabel(item.type), category].filter(Boolean).join(' · ')}</small>
-    </span>
-    <b>↗</b>
-  </Link>
+function LatestCanvas({ items }) {
+  const [first, second, third, fourth, fifth] = items
+  const notes = [second, third, fourth].filter(Boolean)
+
+  return <section className='desktop-canvas-view latest-canvas' aria-label='最近更新'>
+    <div className='canvas-thread' aria-hidden='true' />
+
+    {first ? <Link className='canvas-primary-paper' href={publicContentHref(first)}>
+      <span>{formatDate(publicContentDate(first))}</span>
+      <strong>{first.title || '未命名内容'}</strong>
+      <small>{publicContentTypeLabel(first.type)} · {publicContentCategory(first)}</small>
+    </Link> : <div className='canvas-primary-paper is-empty'>还没有公开内容。</div>}
+
+    <div className='floating-note-group'>
+      {notes.map((item, index) => <Link className={`floating-note note-${index + 1}`} href={publicContentHref(item)} key={itemKey(item, index)}>
+        <time>{formatDate(publicContentDate(item))}</time>
+        <strong>{item.title || '未命名内容'}</strong>
+        <small>{publicContentCategory(item)}</small>
+      </Link>)}
+    </div>
+
+    <div className='canvas-mini-strip'>
+      <Link href='/content'>内容库</Link>
+      <Link href='/archive'>时间归档</Link>
+      {fifth ? <Link href={publicContentHref(fifth)}>再看一篇</Link> : null}
+    </div>
+  </section>
 }
 
-function TopicPath({ category, count }) {
-  return <Link className='home-topic-path' href={`/category/${encodeURIComponent(category)}`}>
-    <strong>{category}</strong>
-    <span>{count} 条内容</span>
-  </Link>
+function PathsCanvas({ categories }) {
+  return <section className='desktop-canvas-view paths-canvas' aria-label='内容路径'>
+    <div className='path-orbit' aria-hidden='true' />
+    {pathNodes.map((node, index) => <Link className={`path-card path-${index + 1}`} href={node.href} key={node.label}>
+      <span>0{index + 1}</span>
+      <strong>{node.label}</strong>
+      <small>{categories[node.label] || 0} 条 · {node.note}</small>
+    </Link>)}
+  </section>
+}
+
+function ToolsCanvas() {
+  return <section className='desktop-canvas-view tools-canvas' aria-label='工具入口'>
+    <div className='tool-compass' aria-hidden='true' />
+    {toolNodes.map((tool, index) => <Link className={`tool-launch tool-${index + 1}`} href={tool.href} key={tool.label} rel={tool.href.startsWith('http') ? 'noreferrer' : undefined}>
+      <LawTechIcon name={tool.icon} size={20} />
+      <span><strong>{tool.label}</strong><small>{tool.note}</small></span>
+    </Link>)}
+  </section>
+}
+
+function DeskCanvas() {
+  return <section className='desktop-canvas-view desk-canvas' aria-label='工作台入口'>
+    <Link className='desk-window-preview' href='/desk/today'>
+      <span>Workspace</span>
+      <strong>工作台</strong>
+      <small>今日、写作、课程与资料入口。</small>
+    </Link>
+    <div className='desk-shortcuts'>
+      <Link href='/desk/today'>Today</Link>
+      <Link href='/desk/writing'>Writing</Link>
+      <Link href='/desk/courses'>Courses</Link>
+      <Link href='/desk/system'>System</Link>
+    </div>
+  </section>
+}
+
+function SingleColumnUpdates({ items }) {
+  const [index, setIndex] = useState(0)
+  const slides = items.slice(0, 6)
+
+  useEffect(() => {
+    if (slides.length < 2) return undefined
+    const timer = window.setInterval(() => {
+      setIndex(current => (current + 1) % slides.length)
+    }, 5200)
+    return () => window.clearInterval(timer)
+  }, [slides.length])
+
+  if (!slides.length) return <div className='single-column-updates empty'>暂无公开内容</div>
+
+  function move(delta) {
+    setIndex(current => (current + delta + slides.length) % slides.length)
+  }
+
+  return <div className='single-column-updates'>
+    <div className='update-carousel-window'>
+      <div className='update-carousel-track' style={{ transform: `translateY(${-index * 100}%)` }}>
+        {slides.map((item, slideIndex) => <Link className='update-slide-card' href={publicContentHref(item)} key={itemKey(item, slideIndex)}>
+          <span>{formatDate(publicContentDate(item))}</span>
+          <strong>{item.title || '未命名内容'}</strong>
+          <small>{publicContentTypeLabel(item.type)} · {publicContentCategory(item)}</small>
+        </Link>)}
+      </div>
+    </div>
+    <div className='update-carousel-controls'>
+      <button type='button' onClick={() => move(-1)} aria-label='上一条'>↑</button>
+      <div aria-hidden='true'>
+        {slides.map((item, dot) => <i className={dot === index ? 'active' : ''} key={itemKey(item, dot)} />)}
+      </div>
+      <button type='button' onClick={() => move(1)} aria-label='下一条'>↓</button>
+    </div>
+  </div>
 }
 
 export default function HomePage({ recentContent = [], contentCount = 0, categories = {}, types = {} }) {
-  const updates = recentContent.slice(0, 6)
-  const articleCount = types.article || 0
-  const courseCount = types['course-note'] || 0
-  const quickLinks = publicHomeQuickLinks.slice(0, 6)
+  const [activeView, setActiveView] = useState('recent')
+  const updates = recentContent.slice(0, 8)
+  const randomItems = useMemo(() => updates.map(item => publicContentHref(item)), [updates])
 
   return <>
     <Head>
@@ -82,430 +180,574 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
       <meta name='theme-color' content='#f5f3eb' />
     </Head>
 
-    <main className='lawtech-public-page public-home home-editorial-v3'>
+    <main className='lawtech-public-page home-desktop-round3'>
       <div className='public-aurora public-aurora-one' aria-hidden='true' />
       <div className='public-aurora public-aurora-two' aria-hidden='true' />
-      <div className='public-shell'>
-        <PublicHeader />
+      <PublicHeader active='content' randomItems={randomItems} />
 
-        <section className='home-editorial-hero' aria-label='law-tech.dev'>
-          <div className='home-hero-copy'>
-            <div className='home-hero-kicker'>
-              <span>law-tech.dev</span>
-              <small>私人法学工作台</small>
-            </div>
-            <h1>法学笔记、写作与工具实验。</h1>
-            <p>课程、文章、读书记录、OCR 与引注工具在这里汇合；公开内容留给阅读，工作台留给继续整理。</p>
-          </div>
+      <div className='desktop-grid-shell'>
+        <section className='desktop-main-window' aria-label='首页桌面窗口'>
+          <header className='desktop-window-bar'>
+            <div className='traffic-lights' aria-hidden='true'><i /><i /><i /></div>
+            <nav className='desktop-view-switcher' aria-label='首页视图'>
+              {viewTabs.map(tab => <button type='button' className={activeView === tab.key ? 'active' : ''} onClick={() => setActiveView(tab.key)} key={tab.key}>{tab.label}</button>)}
+            </nav>
+          </header>
 
-          <form className='home-search' action='/search' method='get'>
-            <LawTechIcon name='search' size={18} />
-            <input name='q' type='search' placeholder='搜索文章、课程、栏目或标签' aria-label='搜索公开内容' />
-            <button type='submit'>搜索</button>
-          </form>
-
-          <div className='home-stat-row' aria-label='站点统计'>
-            <div><strong>{contentCount}</strong><span>公开内容</span></div>
-            <div><strong>{articleCount}</strong><span>文章</span></div>
-            <div><strong>{courseCount}</strong><span>课程笔记</span></div>
-            <div><strong>{Object.keys(categories).length}</strong><span>栏目</span></div>
-          </div>
-
-          <nav className='home-entry-grid' aria-label='核心入口'>
-            <HomeEntry href='/content' icon='content' label='内容库' meta='文章、课程与项目' />
-            <HomeEntry href='/search' icon='search' label='搜索' meta='全文与标签' />
-            <HomeEntry href='/tools' icon='spark' label='工具' meta='OCR、引注与工作流' />
-            <HomeEntry href='/desk' icon='calendar' label='工作台' meta='日程、课程与写作' />
-          </nav>
-        </section>
-
-        <section className='home-editorial-board' aria-label='内容路径与最近更新'>
-          <div className='home-paths'>
-            <header><span>Paths</span><h2>路径</h2></header>
-            <div>
-              {categoryOrder.map(category => <TopicPath category={category} count={categories[category] || 0} key={category} />)}
-            </div>
-          </div>
-
-          <div className='home-latest'>
-            <header>
-              <div><span>Latest</span><h2>最近更新</h2></div>
-              <Link href='/archive'>时间归档 ↗</Link>
-            </header>
-            <div className='home-recent-list'>
-              {updates.map(item => <RecentLine item={item} key={item.id || `${item.source}:${item.slug}`} />)}
-              {!updates.length ? <p className='home-empty'>还没有公开内容。</p> : null}
-            </div>
+          <div className='desktop-canvas-stage'>
+            {activeView === 'recent' ? <LatestCanvas items={updates} /> : null}
+            {activeView === 'paths' ? <PathsCanvas categories={categories} /> : null}
+            {activeView === 'tools' ? <ToolsCanvas /> : null}
+            {activeView === 'desk' ? <DeskCanvas /> : null}
           </div>
         </section>
 
-        <section className='home-dock' aria-label='常用入口'>
-          <header><span>Dock</span><h2>常用入口</h2></header>
-          <div>
-            {quickLinks.map(item => <Link className='home-dock-item' href={item.href} key={item.label} rel={item.href.startsWith('http') ? 'noreferrer' : undefined}>
-              <LawTechIcon name={item.icon} size={16} />
-              <span><strong>{item.label}</strong><small>{item.meta}</small></span>
-            </Link>)}
-          </div>
-        </section>
+        <aside className='desktop-widget-rail' aria-label='首页小组件'>
+          <section className='desktop-widget desktop-stat-widget'>
+            <span>Library</span>
+            <strong>{contentCount}</strong>
+            <small>{Object.keys(categories).length} 个栏目 · {types.article || 0} 篇文章</small>
+          </section>
+
+          <section className='desktop-widget desktop-update-widget'>
+            <header><span>Recent</span><Link href='/content'>全部</Link></header>
+            <SingleColumnUpdates items={updates} />
+          </section>
+
+          <section className='desktop-widget desktop-desk-widget'>
+            <span>Desk</span>
+            <strong>工作台</strong>
+            <div><Link href='/desk/today'>进入</Link><Link href='/desk/system'>系统</Link></div>
+          </section>
+
+          <div className='desktop-signature-widget'><DynamicSignature compact /></div>
+        </aside>
       </div>
-
-      <style jsx global>{`
-        .home-editorial-v3 { padding-bottom:82px; }
-        .home-editorial-hero,
-        .home-editorial-board,
-        .home-dock {
-          border:1px solid rgba(255,255,255,.7);
-          background:rgba(255,255,255,.48);
-          box-shadow:0 18px 48px rgba(24,63,50,.055),inset 0 1px 0 rgba(255,255,255,.84);
-          backdrop-filter:blur(14px) saturate(1.04);
-        }
-        .home-editorial-hero {
-          position:relative;
-          display:grid;
-          grid-template-columns:minmax(0,1fr);
-          gap:20px;
-          overflow:hidden;
-          margin-top:28px;
-          border-radius:30px;
-          padding:clamp(28px,4.6vw,50px);
-        }
-        .home-editorial-hero::after {
-          position:absolute;
-          right:-120px;
-          bottom:-190px;
-          width:420px;
-          height:420px;
-          border:1px solid rgba(141,170,183,.2);
-          border-radius:50%;
-          content:'';
-          pointer-events:none;
-        }
-        .home-hero-copy {
-          position:relative;
-          z-index:1;
-          display:grid;
-          gap:16px;
-          max-width:820px;
-        }
-        .home-hero-kicker {
-          display:flex;
-          flex-wrap:wrap;
-          gap:10px 14px;
-          align-items:baseline;
-        }
-        .home-hero-kicker span {
-          color:var(--leaf);
-          font-size:12px;
-          font-weight:760;
-          letter-spacing:.24em;
-          text-transform:uppercase;
-        }
-        .home-hero-kicker small {
-          color:var(--quiet);
-          font-size:11px;
-        }
-        .home-hero-copy h1 {
-          margin:0;
-          max-width:760px;
-          font-family:var(--display-serif);
-          font-size:clamp(42px,5.6vw,70px);
-          font-weight:620;
-          line-height:1.02;
-          letter-spacing:-.065em;
-        }
-        .home-hero-copy p {
-          margin:0;
-          max-width:680px;
-          color:var(--muted);
-          font-size:15px;
-          line-height:1.9;
-        }
-        .home-search {
-          position:relative;
-          z-index:1;
-          display:grid;
-          grid-template-columns:auto minmax(0,1fr) auto;
-          align-items:center;
-          gap:10px;
-          max-width:760px;
-          border:1px solid rgba(17,63,49,.08);
-          border-radius:18px;
-          padding:8px 8px 8px 14px;
-          background:rgba(255,255,255,.64);
-          box-shadow:0 10px 30px rgba(24,63,50,.045),inset 0 1px 0 rgba(255,255,255,.9);
-        }
-        .home-search input {
-          min-width:0;
-          border:0;
-          padding:10px 0;
-          color:var(--ink);
-          background:transparent;
-          outline:none;
-          font-size:13px;
-        }
-        .home-search button {
-          border:0;
-          border-radius:12px;
-          padding:10px 15px;
-          color:#fffaf0;
-          background:var(--leaf);
-          cursor:pointer;
-          font-weight:680;
-        }
-        .home-stat-row {
-          position:relative;
-          z-index:1;
-          display:grid;
-          grid-template-columns:repeat(4,minmax(0,1fr));
-          gap:8px;
-          max-width:760px;
-        }
-        .home-stat-row div {
-          border:1px solid rgba(17,63,49,.06);
-          border-radius:15px;
-          padding:11px 12px;
-          background:rgba(255,255,255,.36);
-        }
-        .home-stat-row strong {
-          display:block;
-          color:var(--leaf);
-          font-family:var(--display-serif);
-          font-size:27px;
-          font-weight:520;
-          line-height:1;
-        }
-        .home-stat-row span {
-          display:block;
-          margin-top:4px;
-          color:var(--quiet);
-          font-size:9px;
-        }
-        .home-entry-grid {
-          position:relative;
-          z-index:1;
-          display:grid;
-          grid-template-columns:repeat(4,minmax(0,1fr));
-          gap:9px;
-          margin-top:2px;
-        }
-        .home-entry,
-        .home-topic-path,
-        .home-recent-line,
-        .home-dock-item {
-          border:1px solid rgba(17,63,49,.06);
-          background:rgba(255,255,255,.42);
-          transition:transform .18s ease,border-color .18s ease,background .18s ease;
-        }
-        .home-entry:hover,
-        .home-topic-path:hover,
-        .home-recent-line:hover,
-        .home-dock-item:hover {
-          transform:translateY(-2px);
-          border-color:rgba(49,90,140,.16);
-          background:rgba(255,255,255,.7);
-        }
-        .home-entry {
-          display:grid;
-          grid-template-columns:auto minmax(0,1fr) auto;
-          align-items:center;
-          gap:9px;
-          min-width:0;
-          border-radius:16px;
-          padding:12px;
-          color:var(--muted);
-        }
-        .home-entry span,
-        .home-dock-item span {
-          display:grid;
-          min-width:0;
-          gap:2px;
-        }
-        .home-entry strong,
-        .home-dock-item strong {
-          font-size:12px;
-        }
-        .home-entry small,
-        .home-dock-item small {
-          overflow:hidden;
-          color:var(--quiet);
-          font-size:9px;
-          text-overflow:ellipsis;
-          white-space:nowrap;
-        }
-        .home-entry b {
-          color:var(--leaf);
-          font-weight:500;
-        }
-        .home-editorial-board {
-          display:grid;
-          grid-template-columns:minmax(260px,.48fr) minmax(0,1fr);
-          gap:18px;
-          margin-top:18px;
-          border-radius:30px;
-          padding:18px;
-        }
-        .home-paths,
-        .home-latest {
-          min-width:0;
-        }
-        .home-paths header,
-        .home-latest header,
-        .home-dock header {
-          display:flex;
-          align-items:end;
-          justify-content:space-between;
-          gap:16px;
-          margin-bottom:13px;
-        }
-        .home-paths header span,
-        .home-latest header span,
-        .home-dock header span {
-          color:var(--quiet);
-          font-size:9px;
-          letter-spacing:.12em;
-          text-transform:uppercase;
-        }
-        .home-paths h2,
-        .home-latest h2,
-        .home-dock h2 {
-          margin:4px 0 0;
-          font-family:var(--display-serif);
-          font-size:27px;
-          font-weight:600;
-        }
-        .home-latest header a {
-          color:var(--leaf);
-          font-size:10px;
-        }
-        .home-paths > div,
-        .home-recent-list {
-          display:grid;
-          gap:8px;
-        }
-        .home-topic-path {
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-          gap:12px;
-          border-radius:16px;
-          padding:13px 14px;
-        }
-        .home-topic-path strong {
-          font-family:var(--display-serif);
-          font-size:20px;
-          font-weight:580;
-        }
-        .home-topic-path span {
-          color:var(--quiet);
-          font-size:10px;
-        }
-        .home-recent-line {
-          display:grid;
-          grid-template-columns:52px minmax(0,1fr) auto;
-          align-items:center;
-          gap:12px;
-          border-radius:16px;
-          padding:12px;
-        }
-        .home-recent-line time {
-          color:var(--blue);
-          font-size:10px;
-        }
-        .home-recent-line span {
-          display:grid;
-          min-width:0;
-          gap:3px;
-        }
-        .home-recent-line strong {
-          overflow:hidden;
-          font-family:var(--display-serif);
-          font-size:18px;
-          line-height:1.25;
-          text-overflow:ellipsis;
-          white-space:nowrap;
-        }
-        .home-recent-line small {
-          color:var(--quiet);
-          font-size:9px;
-        }
-        .home-recent-line b {
-          color:var(--leaf);
-          font-weight:500;
-        }
-        .home-dock {
-          margin-top:18px;
-          border-radius:28px;
-          padding:16px 18px 18px;
-        }
-        .home-dock > div {
-          display:grid;
-          grid-template-columns:repeat(6,minmax(0,1fr));
-          gap:8px;
-        }
-        .home-dock-item {
-          display:grid;
-          grid-template-columns:auto minmax(0,1fr);
-          align-items:center;
-          gap:8px;
-          min-width:0;
-          border-radius:15px;
-          padding:11px;
-          color:var(--muted);
-        }
-        .home-empty {
-          margin:0;
-          color:var(--quiet);
-          font-size:12px;
-        }
-        @media (max-width:1080px) {
-          .home-entry-grid,
-          .home-dock > div {
-            grid-template-columns:repeat(2,minmax(0,1fr));
-          }
-          .home-editorial-board {
-            grid-template-columns:1fr;
-          }
-        }
-        @media (max-width:720px) {
-          .home-editorial-hero {
-            margin-top:20px;
-            padding:24px;
-          }
-          .home-search {
-            grid-template-columns:1fr;
-          }
-          .home-search svg {
-            display:none;
-          }
-          .home-search button {
-            min-height:42px;
-          }
-          .home-stat-row,
-          .home-entry-grid,
-          .home-dock > div {
-            grid-template-columns:1fr;
-          }
-        }
-        @media (max-width:560px) {
-          .home-editorial-hero,
-          .home-editorial-board,
-          .home-dock {
-            border-radius:22px;
-          }
-          .home-hero-copy h1 {
-            font-size:clamp(36px,11vw,52px);
-          }
-          .home-topic-path,
-          .home-recent-line {
-            grid-template-columns:1fr;
-          }
-          .home-recent-line b {
-            display:none;
-          }
-        }
-      `}</style>
     </main>
+
+    <style jsx>{`
+      .home-desktop-round3 {
+        height: 100dvh;
+        overflow: hidden;
+        padding-top: 78px;
+        padding-bottom: 82px;
+      }
+      .desktop-grid-shell {
+        width: min(1460px, calc(100vw - 42px));
+        height: calc(100dvh - 160px);
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 330px;
+        gap: 18px;
+        align-items: stretch;
+      }
+      .desktop-main-window,
+      .desktop-widget {
+        border: 1px solid rgba(255,255,255,.66);
+        background:
+          radial-gradient(circle at 12% 0%, rgba(244,228,184,.24), transparent 32%),
+          radial-gradient(circle at 92% 0%, rgba(226,237,241,.48), transparent 36%),
+          linear-gradient(145deg, rgba(255,255,255,.52), rgba(255,255,255,.18));
+        box-shadow: 0 24px 80px rgba(24,63,50,.09), inset 0 1px 0 rgba(255,255,255,.76);
+        backdrop-filter: blur(22px) saturate(1.08);
+      }
+      .desktop-main-window {
+        min-width: 0;
+        height: 100%;
+        overflow: hidden;
+        border-radius: 32px;
+      }
+      .desktop-window-bar {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        min-height: 58px;
+        padding: 12px 18px 6px;
+      }
+      .traffic-lights {
+        display: flex;
+        gap: 8px;
+      }
+      .traffic-lights i {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.32);
+      }
+      .traffic-lights i:nth-child(1) { background: #ff5f57; }
+      .traffic-lights i:nth-child(2) { background: #ffbd2e; }
+      .traffic-lights i:nth-child(3) { background: #28c840; }
+      .desktop-view-switcher {
+        justify-self: center;
+        display: flex;
+        gap: 4px;
+        border: 1px solid rgba(255,255,255,.58);
+        border-radius: 999px;
+        padding: 4px;
+        background: rgba(255,255,255,.16);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.62);
+      }
+      .desktop-view-switcher button {
+        min-width: 92px;
+        border: 0;
+        border-radius: 999px;
+        padding: 9px 15px;
+        color: var(--muted);
+        background: transparent;
+        font-size: 12px;
+        font-weight: 760;
+        cursor: pointer;
+        transition: background .18s ease, color .18s ease, transform .18s cubic-bezier(.2,1.18,.28,1);
+      }
+      .desktop-view-switcher button:hover {
+        color: var(--ink);
+        background: rgba(255,255,255,.24);
+      }
+      .desktop-view-switcher button.active {
+        color: #fffaf0;
+        background: linear-gradient(135deg, #0f4a3d, #285987);
+        box-shadow: 0 12px 26px rgba(24,63,50,.16), inset 0 1px 0 rgba(255,255,255,.26);
+      }
+      .desktop-canvas-stage {
+        position: relative;
+        height: calc(100% - 58px);
+        margin: 0 16px 16px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,.54);
+        border-radius: 28px;
+        background:
+          radial-gradient(circle at 18% 18%, rgba(255,255,255,.42), transparent 28%),
+          linear-gradient(145deg, rgba(255,255,255,.25), rgba(255,255,255,.08));
+      }
+      .desktop-canvas-view {
+        position: relative;
+        height: 100%;
+        overflow: hidden;
+        padding: 32px;
+      }
+      .canvas-thread,
+      .path-orbit,
+      .tool-compass {
+        position: absolute;
+        pointer-events: none;
+        border: 1px dashed rgba(23,35,29,.11);
+      }
+      .canvas-thread {
+        inset: 46px 58px 56px;
+        border-radius: 44% 56% 52% 48%;
+        transform: rotate(-4deg);
+      }
+      .canvas-primary-paper {
+        position: absolute;
+        left: 7%;
+        top: 17%;
+        width: min(430px, 39%);
+        min-height: 292px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        border: 1px solid rgba(255,255,255,.68);
+        border-radius: 30px;
+        padding: 28px;
+        background:
+          linear-gradient(180deg, rgba(255,255,255,.58), rgba(255,255,255,.2)),
+          radial-gradient(circle at 78% 8%, rgba(244,228,184,.28), transparent 42%);
+        box-shadow: 0 22px 54px rgba(24,63,50,.08), inset 0 1px 0 rgba(255,255,255,.72);
+        transition: transform .22s cubic-bezier(.2,1.18,.28,1), border-radius .22s ease;
+      }
+      .canvas-primary-paper:hover {
+        transform: translateY(-5px) rotate(-.4deg);
+        border-radius: 26px;
+      }
+      .canvas-primary-paper span,
+      .floating-note time,
+      .floating-note small,
+      .update-slide-card span,
+      .update-slide-card small {
+        color: var(--quiet);
+        font-size: 11px;
+      }
+      .canvas-primary-paper strong {
+        margin-top: 10px;
+        font-family: var(--display-serif);
+        font-size: clamp(30px, 3.2vw, 46px);
+        line-height: 1.08;
+        font-weight: 620;
+        letter-spacing: -.045em;
+      }
+      .canvas-primary-paper small {
+        margin-top: 12px;
+      }
+      .floating-note-group {
+        position: absolute;
+        right: 7%;
+        top: 14%;
+        width: min(570px, 48%);
+        height: 72%;
+      }
+      .floating-note {
+        position: absolute;
+        display: grid;
+        gap: 6px;
+        width: 68%;
+        min-height: 118px;
+        border: 1px solid rgba(255,255,255,.62);
+        border-radius: 24px;
+        padding: 18px;
+        background: rgba(255,255,255,.34);
+        box-shadow: 0 18px 42px rgba(24,63,50,.055), inset 0 1px 0 rgba(255,255,255,.66);
+        transition: transform .22s cubic-bezier(.2,1.18,.28,1), border-radius .22s ease;
+      }
+      .floating-note:hover {
+        transform: translateY(-6px) rotate(0deg) !important;
+        border-radius: 19px;
+      }
+      .floating-note strong {
+        font-family: var(--display-serif);
+        font-size: 24px;
+        font-weight: 610;
+        line-height: 1.18;
+      }
+      .note-1 { left: 0; top: 0; transform: rotate(-2deg); }
+      .note-2 { right: 0; top: 30%; transform: rotate(2.4deg); }
+      .note-3 { left: 8%; bottom: 2%; transform: rotate(1.2deg); }
+      .canvas-mini-strip,
+      .desk-shortcuts {
+        position: absolute;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .canvas-mini-strip {
+        left: 7%;
+        bottom: 8%;
+      }
+      .canvas-mini-strip a,
+      .desk-shortcuts a,
+      .desktop-desk-widget a {
+        border: 1px solid rgba(255,255,255,.58);
+        border-radius: 999px;
+        padding: 9px 13px;
+        background: rgba(255,255,255,.24);
+        color: var(--leaf);
+        font-size: 12px;
+      }
+      .path-orbit {
+        inset: 14% 12%;
+        border-radius: 50%;
+        transform: rotate(-8deg);
+      }
+      .path-card {
+        position: absolute;
+        display: grid;
+        min-width: 210px;
+        max-width: 260px;
+        gap: 6px;
+        border: 1px solid rgba(255,255,255,.64);
+        border-radius: 26px;
+        padding: 18px;
+        background: rgba(255,255,255,.28);
+        box-shadow: 0 18px 42px rgba(24,63,50,.06), inset 0 1px 0 rgba(255,255,255,.66);
+      }
+      .path-card span {
+        color: var(--blue);
+        font-family: var(--display-serif);
+        font-size: 24px;
+      }
+      .path-card strong {
+        font-family: var(--display-serif);
+        font-size: 29px;
+        font-weight: 610;
+      }
+      .path-card small {
+        color: var(--quiet);
+        line-height: 1.5;
+      }
+      .path-1 { left: 9%; top: 14%; }
+      .path-2 { right: 13%; top: 20%; }
+      .path-3 { left: 20%; bottom: 13%; }
+      .path-4 { right: 10%; bottom: 8%; }
+      .tool-compass {
+        left: 50%;
+        top: 50%;
+        width: 360px;
+        height: 360px;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+      }
+      .tool-launch {
+        position: absolute;
+        display: grid;
+        grid-template-columns: 40px minmax(0,1fr);
+        align-items: center;
+        gap: 12px;
+        min-width: 220px;
+        border: 1px solid rgba(255,255,255,.62);
+        border-radius: 22px;
+        padding: 14px;
+        background: rgba(255,255,255,.28);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.64);
+      }
+      .tool-launch strong {
+        display: block;
+        font-family: var(--display-serif);
+        font-size: 25px;
+        font-weight: 610;
+      }
+      .tool-launch small {
+        color: var(--muted);
+      }
+      .tool-1 { left: 13%; top: 18%; }
+      .tool-2 { right: 14%; top: 18%; }
+      .tool-3 { left: 18%; bottom: 18%; }
+      .tool-4 { right: 18%; bottom: 18%; }
+      .desk-window-preview {
+        position: absolute;
+        inset: 16% 9% 28%;
+        display: grid;
+        align-content: center;
+        border: 1px solid rgba(255,255,255,.62);
+        border-radius: 32px;
+        padding: 34px;
+        background: rgba(255,255,255,.25);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.64);
+      }
+      .desk-window-preview span,
+      .desktop-widget > span,
+      .desktop-update-widget header span {
+        color: var(--leaf);
+        font-size: 11px;
+        font-weight: 850;
+        letter-spacing: .28em;
+        text-transform: uppercase;
+      }
+      .desk-window-preview strong {
+        margin-top: 14px;
+        font-family: var(--display-serif);
+        font-size: clamp(40px, 5vw, 76px);
+        line-height: .95;
+        font-weight: 610;
+        letter-spacing: -.055em;
+      }
+      .desk-window-preview small {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 15px;
+      }
+      .desk-shortcuts {
+        left: 9%;
+        right: 9%;
+        bottom: 12%;
+      }
+      .desktop-widget-rail {
+        min-width: 0;
+        height: 100%;
+        display: grid;
+        grid-template-rows: 136px minmax(250px, 1fr) 154px auto;
+        gap: 14px;
+      }
+      .desktop-widget {
+        border-radius: 30px;
+        padding: 18px;
+      }
+      .desktop-stat-widget strong {
+        display: block;
+        margin-top: 12px;
+        font-family: var(--display-serif);
+        font-size: 62px;
+        line-height: .85;
+        font-weight: 520;
+      }
+      .desktop-stat-widget small {
+        display: block;
+        margin-top: 13px;
+        color: var(--muted);
+      }
+      .desktop-update-widget {
+        min-height: 0;
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+      }
+      .desktop-update-widget header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .desktop-update-widget header a {
+        color: var(--green);
+        font-size: 11px;
+      }
+      .single-column-updates {
+        position: relative;
+        min-height: 0;
+        height: 100%;
+        margin-top: 14px;
+      }
+      .update-carousel-window {
+        height: 100%;
+        min-height: 230px;
+        overflow: hidden;
+        border-radius: 24px;
+      }
+      .update-carousel-track {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        transition: transform .52s cubic-bezier(.2,1.18,.28,1);
+      }
+      .update-slide-card {
+        flex: 0 0 100%;
+        display: flex;
+        min-height: 100%;
+        flex-direction: column;
+        justify-content: flex-end;
+        border: 1px solid rgba(255,255,255,.62);
+        border-radius: 24px;
+        padding: 18px;
+        background:
+          radial-gradient(circle at 80% 10%, rgba(226,237,241,.6), transparent 44%),
+          linear-gradient(145deg, rgba(255,255,255,.34), rgba(255,255,255,.16));
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.64);
+      }
+      .update-slide-card strong {
+        display: block;
+        margin: 8px 0 9px;
+        font-family: var(--display-serif);
+        font-size: 26px;
+        line-height: 1.12;
+        font-weight: 610;
+      }
+      .update-carousel-controls {
+        position: absolute;
+        right: 12px;
+        top: 14px;
+        display: grid;
+        gap: 8px;
+        justify-items: center;
+      }
+      .update-carousel-controls button {
+        width: 30px;
+        height: 30px;
+        border: 1px solid rgba(255,255,255,.62);
+        border-radius: 50%;
+        background: rgba(255,255,255,.32);
+        color: var(--leaf);
+        cursor: pointer;
+      }
+      .update-carousel-controls div {
+        display: grid;
+        gap: 6px;
+      }
+      .update-carousel-controls i {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: rgba(255,255,255,.58);
+      }
+      .update-carousel-controls i.active {
+        background: var(--leaf);
+      }
+      .desktop-desk-widget strong {
+        display: block;
+        margin-top: 12px;
+        font-family: var(--display-serif);
+        font-size: 34px;
+        font-weight: 600;
+      }
+      .desktop-desk-widget div {
+        display: flex;
+        gap: 8px;
+        margin-top: 18px;
+      }
+      .desktop-signature-widget {
+        min-height: 104px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transform: translateY(12px);
+        color: rgba(25,59,49,.88);
+      }
+      .desktop-signature-widget :global(svg) {
+        width: min(260px, 80%);
+      }
+      @media (max-width: 1120px) {
+        .home-desktop-round3 {
+          height: auto;
+          overflow: visible;
+        }
+        .desktop-grid-shell {
+          height: auto;
+          grid-template-columns: 1fr;
+        }
+        .desktop-main-window {
+          min-height: 640px;
+        }
+        .desktop-widget-rail {
+          grid-template-rows: none;
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 720px) {
+        .desktop-grid-shell {
+          width: min(100% - 24px, 720px);
+        }
+        .desktop-view-switcher {
+          max-width: 100%;
+          overflow-x: auto;
+          justify-self: end;
+        }
+        .desktop-view-switcher button {
+          min-width: 78px;
+        }
+        .desktop-main-window {
+          min-height: 760px;
+        }
+        .canvas-primary-paper,
+        .floating-note-group,
+        .path-card,
+        .tool-launch,
+        .desk-window-preview {
+          position: relative;
+          inset: auto;
+          left: auto;
+          right: auto;
+          top: auto;
+          bottom: auto;
+          width: 100%;
+          max-width: none;
+          transform: none;
+        }
+        .desktop-canvas-view {
+          display: grid;
+          gap: 12px;
+          align-content: start;
+          overflow: auto;
+        }
+        .floating-note-group {
+          display: grid;
+          height: auto;
+          gap: 10px;
+        }
+        .floating-note {
+          position: relative;
+          width: 100%;
+          transform: none;
+        }
+        .canvas-mini-strip,
+        .desk-shortcuts {
+          position: relative;
+          left: auto;
+          right: auto;
+          bottom: auto;
+        }
+        .desktop-widget-rail {
+          grid-template-columns: 1fr;
+        }
+      }
+    `}</style>
+
     <LawTechDeskStyles />
   </>
 }
@@ -513,11 +755,11 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
 HomePage.layout = 'bare'
 
 export async function getStaticProps() {
-  const { items } = await loadPublicContentIndex({ from: 'law-tech-home' })
+  const { items } = await loadPublicContentIndex({ from: 'law-tech-home-round3' })
 
   return {
     props: {
-      recentContent: selectRecentPublicContent(items, 7),
+      recentContent: selectRecentPublicContent(items, 8),
       contentCount: items.length,
       categories: categorySummary(items),
       types: typeSummary(items)
