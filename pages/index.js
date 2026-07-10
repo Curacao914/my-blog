@@ -54,9 +54,9 @@ function typeSummary(items = []) {
 }
 
 function formatDate(value) {
-  if (!value) return ''
+  if (!value) return '未标注'
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
+  if (Number.isNaN(date.getTime())) return '未标注'
   return new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit' }).format(date)
 }
 
@@ -64,23 +64,26 @@ function itemKey(item, fallback) {
   return item?.id || `${item?.source || 'content'}:${item?.slug || fallback}`
 }
 
+function shortTitle(item) {
+  return item?.title || '未命名内容'
+}
+
 function LatestCanvas({ items }) {
-  const [first, second, third, fourth, fifth] = items
-  const notes = [second, third, fourth].filter(Boolean)
+  const [first, ...rest] = items
+  const notes = rest.slice(0, 4)
 
   return <section className='desktop-canvas-view latest-canvas' aria-label='最近更新'>
-    <div className='canvas-thread' aria-hidden='true' />
-
+    <div className='canvas-map-line' aria-hidden='true' />
     {first ? <Link className='canvas-primary-paper' href={publicContentHref(first)}>
       <span>{formatDate(publicContentDate(first))}</span>
-      <strong>{first.title || '未命名内容'}</strong>
+      <strong>{shortTitle(first)}</strong>
       <small>{publicContentTypeLabel(first.type)} · {publicContentCategory(first)}</small>
     </Link> : <div className='canvas-primary-paper is-empty'>还没有公开内容。</div>}
 
-    <div className='floating-note-group'>
-      {notes.map((item, index) => <Link className={`floating-note note-${index + 1}`} href={publicContentHref(item)} key={itemKey(item, index)}>
+    <div className='canvas-note-stack'>
+      {notes.map((item, index) => <Link className={`canvas-note note-${index + 1}`} href={publicContentHref(item)} key={itemKey(item, index)}>
         <time>{formatDate(publicContentDate(item))}</time>
-        <strong>{item.title || '未命名内容'}</strong>
+        <strong>{shortTitle(item)}</strong>
         <small>{publicContentCategory(item)}</small>
       </Link>)}
     </div>
@@ -88,7 +91,7 @@ function LatestCanvas({ items }) {
     <div className='canvas-mini-strip'>
       <Link href='/content'>内容库</Link>
       <Link href='/archive'>时间归档</Link>
-      {fifth ? <Link href={publicContentHref(fifth)}>再看一篇</Link> : null}
+      <Link href='/search'>检索</Link>
     </div>
   </section>
 }
@@ -108,7 +111,7 @@ function ToolsCanvas() {
   return <section className='desktop-canvas-view tools-canvas' aria-label='工具入口'>
     <div className='tool-compass' aria-hidden='true' />
     {toolNodes.map((tool, index) => <Link className={`tool-launch tool-${index + 1}`} href={tool.href} key={tool.label} rel={tool.href.startsWith('http') ? 'noreferrer' : undefined}>
-      <LawTechIcon name={tool.icon} size={20} />
+      <LawTechIcon name={tool.icon} size={19} />
       <span><strong>{tool.label}</strong><small>{tool.note}</small></span>
     </Link>)}
   </section>
@@ -131,14 +134,12 @@ function DeskCanvas() {
 }
 
 function SingleColumnUpdates({ items }) {
-  const [index, setIndex] = useState(0)
   const slides = items.slice(0, 6)
+  const [index, setIndex] = useState(0)
 
   useEffect(() => {
     if (slides.length < 2) return undefined
-    const timer = window.setInterval(() => {
-      setIndex(current => (current + 1) % slides.length)
-    }, 5200)
+    const timer = window.setInterval(() => setIndex(current => (current + 1) % slides.length), 5200)
     return () => window.clearInterval(timer)
   }, [slides.length])
 
@@ -153,16 +154,14 @@ function SingleColumnUpdates({ items }) {
       <div className='update-carousel-track' style={{ transform: `translateY(${-index * 100}%)` }}>
         {slides.map((item, slideIndex) => <Link className='update-slide-card' href={publicContentHref(item)} key={itemKey(item, slideIndex)}>
           <span>{formatDate(publicContentDate(item))}</span>
-          <strong>{item.title || '未命名内容'}</strong>
+          <strong>{shortTitle(item)}</strong>
           <small>{publicContentTypeLabel(item.type)} · {publicContentCategory(item)}</small>
         </Link>)}
       </div>
     </div>
     <div className='update-carousel-controls'>
       <button type='button' onClick={() => move(-1)} aria-label='上一条'>↑</button>
-      <div aria-hidden='true'>
-        {slides.map((item, dot) => <i className={dot === index ? 'active' : ''} key={itemKey(item, dot)} />)}
-      </div>
+      <div aria-hidden='true'>{slides.map((item, dot) => <i className={dot === index ? 'active' : ''} key={itemKey(item, dot)} />)}</div>
       <button type='button' onClick={() => move(1)} aria-label='下一条'>↓</button>
     </div>
   </div>
@@ -181,8 +180,8 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
     </Head>
 
     <main className='lawtech-public-page home-desktop-round3'>
-      <div className='public-aurora public-aurora-one' aria-hidden='true' />
-      <div className='public-aurora public-aurora-two' aria-hidden='true' />
+      <div className='home-stage-glow glow-a' aria-hidden='true' />
+      <div className='home-stage-glow glow-b' aria-hidden='true' />
       <PublicHeader active='content' randomItems={randomItems} />
 
       <div className='desktop-grid-shell'>
@@ -193,7 +192,6 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
               {viewTabs.map(tab => <button type='button' className={activeView === tab.key ? 'active' : ''} onClick={() => setActiveView(tab.key)} key={tab.key}>{tab.label}</button>)}
             </nav>
           </header>
-
           <div className='desktop-canvas-stage'>
             {activeView === 'recent' ? <LatestCanvas items={updates} /> : null}
             {activeView === 'paths' ? <PathsCanvas categories={categories} /> : null}
@@ -225,206 +223,241 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
       </div>
     </main>
 
-    <style jsx>{`
+    <style jsx global>{`
       .home-desktop-round3 {
+        position: relative;
         height: 100dvh;
+        min-height: 760px;
         overflow: hidden;
-        padding-top: 78px;
-        padding-bottom: 82px;
+        padding: 78px 22px 82px;
+        background:
+          radial-gradient(circle at 10% 14%, rgba(246,229,188,.52), transparent 28%),
+          radial-gradient(circle at 88% 12%, rgba(210,231,235,.66), transparent 32%),
+          linear-gradient(135deg, #f4efe2 0%, #edf4ef 48%, #d8e8e8 100%);
       }
-      .desktop-grid-shell {
-        width: min(1460px, calc(100vw - 42px));
-        height: calc(100dvh - 160px);
+      .home-desktop-round3 .system-menu-bar {
+        max-width: calc(100vw - 32px);
+      }
+      .home-stage-glow {
+        position: fixed;
+        pointer-events: none;
+        border-radius: 999px;
+        filter: blur(2px);
+        opacity: .72;
+      }
+      .home-stage-glow.glow-a {
+        left: -120px;
+        top: 12%;
+        width: 360px;
+        height: 360px;
+        background: radial-gradient(circle, rgba(250,232,188,.58), transparent 66%);
+      }
+      .home-stage-glow.glow-b {
+        right: -120px;
+        bottom: 8%;
+        width: 420px;
+        height: 420px;
+        background: radial-gradient(circle, rgba(184,215,223,.58), transparent 68%);
+      }
+      .home-desktop-round3 .desktop-grid-shell {
+        position: relative;
+        z-index: 2;
+        width: min(1360px, 100%);
+        height: 100%;
         margin: 0 auto;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 330px;
+        grid-template-columns: minmax(0, 1fr) clamp(280px, 23vw, 340px);
         gap: 18px;
         align-items: stretch;
       }
-      .desktop-main-window,
-      .desktop-widget {
-        border: 1px solid rgba(255,255,255,.66);
+      .home-desktop-round3 .desktop-main-window,
+      .home-desktop-round3 .desktop-widget {
+        border: 1px solid rgba(255,255,255,.68);
         background:
-          radial-gradient(circle at 12% 0%, rgba(244,228,184,.24), transparent 32%),
-          radial-gradient(circle at 92% 0%, rgba(226,237,241,.48), transparent 36%),
-          linear-gradient(145deg, rgba(255,255,255,.52), rgba(255,255,255,.18));
-        box-shadow: 0 24px 80px rgba(24,63,50,.09), inset 0 1px 0 rgba(255,255,255,.76);
+          radial-gradient(circle at 12% 0%, rgba(244,228,184,.22), transparent 30%),
+          radial-gradient(circle at 94% 0%, rgba(226,237,241,.46), transparent 34%),
+          linear-gradient(145deg, rgba(255,255,255,.56), rgba(255,255,255,.22));
+        box-shadow: 0 24px 76px rgba(24,63,50,.09), inset 0 1px 0 rgba(255,255,255,.76);
         backdrop-filter: blur(22px) saturate(1.08);
       }
-      .desktop-main-window {
+      .home-desktop-round3 .desktop-main-window {
         min-width: 0;
         height: 100%;
         overflow: hidden;
-        border-radius: 32px;
+        border-radius: 31px;
+        display: grid;
+        grid-template-rows: 58px minmax(0, 1fr);
       }
-      .desktop-window-bar {
+      .home-desktop-round3 .desktop-window-bar {
         display: grid;
         grid-template-columns: auto minmax(0, 1fr);
         align-items: center;
-        min-height: 58px;
+        gap: 12px;
         padding: 12px 18px 6px;
       }
-      .traffic-lights {
+      .home-desktop-round3 .traffic-lights {
         display: flex;
         gap: 8px;
       }
-      .traffic-lights i {
+      .home-desktop-round3 .traffic-lights i {
         width: 12px;
         height: 12px;
         border-radius: 50%;
         box-shadow: inset 0 1px 0 rgba(255,255,255,.32);
       }
-      .traffic-lights i:nth-child(1) { background: #ff5f57; }
-      .traffic-lights i:nth-child(2) { background: #ffbd2e; }
-      .traffic-lights i:nth-child(3) { background: #28c840; }
-      .desktop-view-switcher {
+      .home-desktop-round3 .traffic-lights i:nth-child(1) { background: #ff5f57; }
+      .home-desktop-round3 .traffic-lights i:nth-child(2) { background: #ffbd2e; }
+      .home-desktop-round3 .traffic-lights i:nth-child(3) { background: #28c840; }
+      .home-desktop-round3 .desktop-view-switcher {
         justify-self: center;
         display: flex;
+        max-width: 100%;
         gap: 4px;
         border: 1px solid rgba(255,255,255,.58);
         border-radius: 999px;
         padding: 4px;
-        background: rgba(255,255,255,.16);
+        background: rgba(255,255,255,.18);
         box-shadow: inset 0 1px 0 rgba(255,255,255,.62);
       }
-      .desktop-view-switcher button {
-        min-width: 92px;
+      .home-desktop-round3 .desktop-view-switcher button {
+        min-width: 88px;
         border: 0;
         border-radius: 999px;
-        padding: 9px 15px;
+        padding: 9px 14px;
         color: var(--muted);
         background: transparent;
         font-size: 12px;
         font-weight: 760;
         cursor: pointer;
-        transition: background .18s ease, color .18s ease, transform .18s cubic-bezier(.2,1.18,.28,1);
       }
-      .desktop-view-switcher button:hover {
+      .home-desktop-round3 .desktop-view-switcher button:hover {
         color: var(--ink);
         background: rgba(255,255,255,.24);
       }
-      .desktop-view-switcher button.active {
+      .home-desktop-round3 .desktop-view-switcher button.active {
         color: #fffaf0;
         background: linear-gradient(135deg, #0f4a3d, #285987);
         box-shadow: 0 12px 26px rgba(24,63,50,.16), inset 0 1px 0 rgba(255,255,255,.26);
       }
-      .desktop-canvas-stage {
-        position: relative;
-        height: calc(100% - 58px);
+      .home-desktop-round3 .desktop-canvas-stage {
+        min-height: 0;
         margin: 0 16px 16px;
         overflow: hidden;
-        border: 1px solid rgba(255,255,255,.54);
+        border: 1px solid rgba(255,255,255,.55);
         border-radius: 28px;
         background:
-          radial-gradient(circle at 18% 18%, rgba(255,255,255,.42), transparent 28%),
-          linear-gradient(145deg, rgba(255,255,255,.25), rgba(255,255,255,.08));
+          radial-gradient(circle at 18% 18%, rgba(255,255,255,.44), transparent 28%),
+          linear-gradient(145deg, rgba(255,255,255,.28), rgba(255,255,255,.10));
       }
-      .desktop-canvas-view {
+      .home-desktop-round3 .desktop-canvas-view {
         position: relative;
         height: 100%;
+        min-height: 0;
         overflow: hidden;
-        padding: 32px;
+        padding: clamp(18px, 2vw, 30px);
       }
-      .canvas-thread,
-      .path-orbit,
-      .tool-compass {
+      .home-desktop-round3 .latest-canvas {
+        display: grid;
+        grid-template-columns: minmax(260px, .9fr) minmax(300px, 1.1fr);
+        grid-template-rows: minmax(0, 1fr) auto;
+        gap: 16px;
+      }
+      .home-desktop-round3 .canvas-map-line {
         position: absolute;
+        inset: 38px 52px 48px;
         pointer-events: none;
         border: 1px dashed rgba(23,35,29,.11);
-      }
-      .canvas-thread {
-        inset: 46px 58px 56px;
         border-radius: 44% 56% 52% 48%;
-        transform: rotate(-4deg);
+        transform: rotate(-3deg);
       }
-      .canvas-primary-paper {
-        position: absolute;
-        left: 7%;
-        top: 17%;
-        width: min(430px, 39%);
-        min-height: 292px;
+      .home-desktop-round3 .canvas-primary-paper,
+      .home-desktop-round3 .canvas-note,
+      .home-desktop-round3 .path-card,
+      .home-desktop-round3 .tool-launch,
+      .home-desktop-round3 .desk-window-preview,
+      .home-desktop-round3 .update-slide-card {
+        border: 1px solid rgba(255,255,255,.66);
+        background:
+          radial-gradient(circle at 82% 8%, rgba(244,228,184,.24), transparent 42%),
+          linear-gradient(180deg, rgba(255,255,255,.56), rgba(255,255,255,.22));
+        box-shadow: 0 20px 50px rgba(24,63,50,.065), inset 0 1px 0 rgba(255,255,255,.72);
+        color: var(--ink);
+      }
+      .home-desktop-round3 .canvas-primary-paper {
+        position: relative;
+        z-index: 1;
+        align-self: stretch;
         display: flex;
+        min-height: 0;
         flex-direction: column;
         justify-content: flex-end;
-        border: 1px solid rgba(255,255,255,.68);
-        border-radius: 30px;
-        padding: 28px;
-        background:
-          linear-gradient(180deg, rgba(255,255,255,.58), rgba(255,255,255,.2)),
-          radial-gradient(circle at 78% 8%, rgba(244,228,184,.28), transparent 42%);
-        box-shadow: 0 22px 54px rgba(24,63,50,.08), inset 0 1px 0 rgba(255,255,255,.72);
-        transition: transform .22s cubic-bezier(.2,1.18,.28,1), border-radius .22s ease;
+        border-radius: 28px;
+        padding: clamp(20px, 2.5vw, 30px);
       }
-      .canvas-primary-paper:hover {
-        transform: translateY(-5px) rotate(-.4deg);
-        border-radius: 26px;
+      .home-desktop-round3 .canvas-primary-paper strong {
+        display: -webkit-box;
+        overflow: hidden;
+        margin-top: 10px;
+        font-family: var(--display-serif);
+        font-size: clamp(24px, 2.4vw, 36px);
+        line-height: 1.12;
+        font-weight: 620;
+        letter-spacing: -.035em;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
       }
-      .canvas-primary-paper span,
-      .floating-note time,
-      .floating-note small,
-      .update-slide-card span,
-      .update-slide-card small {
+      .home-desktop-round3 .canvas-primary-paper span,
+      .home-desktop-round3 .canvas-primary-paper small,
+      .home-desktop-round3 .canvas-note time,
+      .home-desktop-round3 .canvas-note small,
+      .home-desktop-round3 .update-slide-card span,
+      .home-desktop-round3 .update-slide-card small {
         color: var(--quiet);
         font-size: 11px;
       }
-      .canvas-primary-paper strong {
-        margin-top: 10px;
-        font-family: var(--display-serif);
-        font-size: clamp(30px, 3.2vw, 46px);
-        line-height: 1.08;
-        font-weight: 620;
-        letter-spacing: -.045em;
+      .home-desktop-round3 .canvas-note-stack {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-auto-rows: minmax(108px, 1fr);
+        gap: 12px;
+        min-height: 0;
       }
-      .canvas-primary-paper small {
-        margin-top: 12px;
-      }
-      .floating-note-group {
-        position: absolute;
-        right: 7%;
-        top: 14%;
-        width: min(570px, 48%);
-        height: 72%;
-      }
-      .floating-note {
-        position: absolute;
+      .home-desktop-round3 .canvas-note {
         display: grid;
         gap: 6px;
-        width: 68%;
-        min-height: 118px;
-        border: 1px solid rgba(255,255,255,.62);
-        border-radius: 24px;
-        padding: 18px;
-        background: rgba(255,255,255,.34);
-        box-shadow: 0 18px 42px rgba(24,63,50,.055), inset 0 1px 0 rgba(255,255,255,.66);
-        transition: transform .22s cubic-bezier(.2,1.18,.28,1), border-radius .22s ease;
+        align-content: start;
+        overflow: hidden;
+        border-radius: 23px;
+        padding: 16px;
       }
-      .floating-note:hover {
-        transform: translateY(-6px) rotate(0deg) !important;
-        border-radius: 19px;
-      }
-      .floating-note strong {
+      .home-desktop-round3 .canvas-note strong {
+        display: -webkit-box;
+        overflow: hidden;
         font-family: var(--display-serif);
-        font-size: 24px;
-        font-weight: 610;
+        font-size: clamp(18px, 1.5vw, 24px);
         line-height: 1.18;
+        font-weight: 610;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
       }
-      .note-1 { left: 0; top: 0; transform: rotate(-2deg); }
-      .note-2 { right: 0; top: 30%; transform: rotate(2.4deg); }
-      .note-3 { left: 8%; bottom: 2%; transform: rotate(1.2deg); }
-      .canvas-mini-strip,
-      .desk-shortcuts {
-        position: absolute;
+      .home-desktop-round3 .note-1 { transform: rotate(-1.2deg); }
+      .home-desktop-round3 .note-2 { transform: rotate(1deg); }
+      .home-desktop-round3 .note-3 { transform: rotate(.7deg); }
+      .home-desktop-round3 .note-4 { transform: rotate(-.7deg); }
+      .home-desktop-round3 .canvas-mini-strip {
+        position: relative;
+        z-index: 1;
+        grid-column: 1 / -1;
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
+        align-self: end;
       }
-      .canvas-mini-strip {
-        left: 7%;
-        bottom: 8%;
-      }
-      .canvas-mini-strip a,
-      .desk-shortcuts a,
-      .desktop-desk-widget a {
+      .home-desktop-round3 .canvas-mini-strip a,
+      .home-desktop-round3 .desk-shortcuts a,
+      .home-desktop-round3 .desktop-desk-widget a {
         border: 1px solid rgba(255,255,255,.58);
         border-radius: 999px;
         padding: 9px 13px;
@@ -432,194 +465,202 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
         color: var(--leaf);
         font-size: 12px;
       }
-      .path-orbit {
-        inset: 14% 12%;
+      .home-desktop-round3 .paths-canvas {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .home-desktop-round3 .path-orbit,
+      .home-desktop-round3 .tool-compass {
+        position: absolute;
+        pointer-events: none;
+        border: 1px dashed rgba(23,35,29,.11);
+      }
+      .home-desktop-round3 .path-orbit {
+        inset: 16% 14%;
         border-radius: 50%;
         transform: rotate(-8deg);
       }
-      .path-card {
-        position: absolute;
+      .home-desktop-round3 .path-card {
+        position: relative;
+        z-index: 1;
         display: grid;
-        min-width: 210px;
-        max-width: 260px;
+        align-content: start;
         gap: 6px;
-        border: 1px solid rgba(255,255,255,.64);
-        border-radius: 26px;
+        border-radius: 25px;
         padding: 18px;
-        background: rgba(255,255,255,.28);
-        box-shadow: 0 18px 42px rgba(24,63,50,.06), inset 0 1px 0 rgba(255,255,255,.66);
       }
-      .path-card span {
+      .home-desktop-round3 .path-card span {
         color: var(--blue);
         font-family: var(--display-serif);
         font-size: 24px;
       }
-      .path-card strong {
+      .home-desktop-round3 .path-card strong {
         font-family: var(--display-serif);
-        font-size: 29px;
+        font-size: clamp(24px, 2vw, 32px);
         font-weight: 610;
       }
-      .path-card small {
+      .home-desktop-round3 .path-card small {
         color: var(--quiet);
         line-height: 1.5;
       }
-      .path-1 { left: 9%; top: 14%; }
-      .path-2 { right: 13%; top: 20%; }
-      .path-3 { left: 20%; bottom: 13%; }
-      .path-4 { right: 10%; bottom: 8%; }
-      .tool-compass {
+      .home-desktop-round3 .tools-canvas {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 260px));
+        grid-template-rows: repeat(2, minmax(0, 118px));
+        align-content: center;
+        justify-content: center;
+        gap: 20px;
+      }
+      .home-desktop-round3 .tool-compass {
         left: 50%;
         top: 50%;
-        width: 360px;
-        height: 360px;
+        width: min(360px, 70%);
+        aspect-ratio: 1;
         border-radius: 50%;
         transform: translate(-50%, -50%);
       }
-      .tool-launch {
-        position: absolute;
+      .home-desktop-round3 .tool-launch {
+        position: relative;
+        z-index: 1;
         display: grid;
         grid-template-columns: 40px minmax(0,1fr);
         align-items: center;
         gap: 12px;
-        min-width: 220px;
-        border: 1px solid rgba(255,255,255,.62);
         border-radius: 22px;
         padding: 14px;
-        background: rgba(255,255,255,.28);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,.64);
       }
-      .tool-launch strong {
+      .home-desktop-round3 .tool-launch strong {
         display: block;
         font-family: var(--display-serif);
-        font-size: 25px;
+        font-size: 24px;
         font-weight: 610;
       }
-      .tool-launch small {
+      .home-desktop-round3 .tool-launch small {
+        display: block;
+        margin-top: 3px;
         color: var(--muted);
       }
-      .tool-1 { left: 13%; top: 18%; }
-      .tool-2 { right: 14%; top: 18%; }
-      .tool-3 { left: 18%; bottom: 18%; }
-      .tool-4 { right: 18%; bottom: 18%; }
-      .desk-window-preview {
-        position: absolute;
-        inset: 16% 9% 28%;
+      .home-desktop-round3 .desk-canvas {
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) auto;
+        gap: 14px;
+      }
+      .home-desktop-round3 .desk-window-preview {
         display: grid;
         align-content: center;
-        border: 1px solid rgba(255,255,255,.62);
-        border-radius: 32px;
-        padding: 34px;
-        background: rgba(255,255,255,.25);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,.64);
+        border-radius: 30px;
+        padding: clamp(24px, 3vw, 38px);
       }
-      .desk-window-preview span,
-      .desktop-widget > span,
-      .desktop-update-widget header span {
+      .home-desktop-round3 .desk-window-preview span,
+      .home-desktop-round3 .desktop-widget > span,
+      .home-desktop-round3 .desktop-update-widget header span {
         color: var(--leaf);
         font-size: 11px;
         font-weight: 850;
         letter-spacing: .28em;
         text-transform: uppercase;
       }
-      .desk-window-preview strong {
-        margin-top: 14px;
+      .home-desktop-round3 .desk-window-preview strong {
+        margin-top: 12px;
         font-family: var(--display-serif);
-        font-size: clamp(40px, 5vw, 76px);
-        line-height: .95;
+        font-size: clamp(38px, 4.6vw, 70px);
+        line-height: .98;
         font-weight: 610;
-        letter-spacing: -.055em;
+        letter-spacing: -.05em;
       }
-      .desk-window-preview small {
+      .home-desktop-round3 .desk-window-preview small {
         margin-top: 14px;
         color: var(--muted);
         font-size: 15px;
       }
-      .desk-shortcuts {
-        left: 9%;
-        right: 9%;
-        bottom: 12%;
+      .home-desktop-round3 .desk-shortcuts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
       }
-      .desktop-widget-rail {
+      .home-desktop-round3 .desktop-widget-rail {
         min-width: 0;
         height: 100%;
         display: grid;
-        grid-template-rows: 136px minmax(250px, 1fr) 154px auto;
+        grid-template-columns: 1fr;
+        grid-template-rows: 124px minmax(250px, 1fr) 142px 96px;
         gap: 14px;
       }
-      .desktop-widget {
-        border-radius: 30px;
+      .home-desktop-round3 .desktop-widget {
+        min-width: 0;
+        overflow: hidden;
+        border-radius: 28px;
         padding: 18px;
       }
-      .desktop-stat-widget strong {
+      .home-desktop-round3 .desktop-stat-widget strong {
         display: block;
         margin-top: 12px;
         font-family: var(--display-serif);
-        font-size: 62px;
-        line-height: .85;
+        font-size: 58px;
+        line-height: .86;
         font-weight: 520;
       }
-      .desktop-stat-widget small {
+      .home-desktop-round3 .desktop-stat-widget small {
         display: block;
-        margin-top: 13px;
+        margin-top: 12px;
         color: var(--muted);
       }
-      .desktop-update-widget {
+      .home-desktop-round3 .desktop-update-widget {
         min-height: 0;
-        overflow: hidden;
         display: grid;
         grid-template-rows: auto minmax(0, 1fr);
       }
-      .desktop-update-widget header {
+      .home-desktop-round3 .desktop-update-widget header {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 10px;
       }
-      .desktop-update-widget header a {
+      .home-desktop-round3 .desktop-update-widget header a {
         color: var(--green);
-        font-size: 11px;
+        font-size: 12px;
       }
-      .single-column-updates {
+      .home-desktop-round3 .single-column-updates {
         position: relative;
         min-height: 0;
         height: 100%;
         margin-top: 14px;
       }
-      .update-carousel-window {
+      .home-desktop-round3 .update-carousel-window {
         height: 100%;
-        min-height: 230px;
+        min-height: 0;
         overflow: hidden;
-        border-radius: 24px;
+        border-radius: 23px;
       }
-      .update-carousel-track {
+      .home-desktop-round3 .update-carousel-track {
         height: 100%;
         display: flex;
         flex-direction: column;
         transition: transform .52s cubic-bezier(.2,1.18,.28,1);
       }
-      .update-slide-card {
+      .home-desktop-round3 .update-slide-card {
         flex: 0 0 100%;
-        display: flex;
         min-height: 100%;
+        display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        border: 1px solid rgba(255,255,255,.62);
-        border-radius: 24px;
+        border-radius: 23px;
         padding: 18px;
-        background:
-          radial-gradient(circle at 80% 10%, rgba(226,237,241,.6), transparent 44%),
-          linear-gradient(145deg, rgba(255,255,255,.34), rgba(255,255,255,.16));
-        box-shadow: inset 0 1px 0 rgba(255,255,255,.64);
       }
-      .update-slide-card strong {
-        display: block;
+      .home-desktop-round3 .update-slide-card strong {
+        display: -webkit-box;
+        overflow: hidden;
         margin: 8px 0 9px;
         font-family: var(--display-serif);
-        font-size: 26px;
-        line-height: 1.12;
+        font-size: clamp(21px, 1.7vw, 27px);
+        line-height: 1.14;
         font-weight: 610;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
       }
-      .update-carousel-controls {
+      .home-desktop-round3 .update-carousel-controls {
         position: absolute;
         right: 12px;
         top: 14px;
@@ -627,123 +668,103 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
         gap: 8px;
         justify-items: center;
       }
-      .update-carousel-controls button {
+      .home-desktop-round3 .update-carousel-controls button {
         width: 30px;
         height: 30px;
         border: 1px solid rgba(255,255,255,.62);
         border-radius: 50%;
-        background: rgba(255,255,255,.32);
+        background: rgba(255,255,255,.36);
         color: var(--leaf);
         cursor: pointer;
       }
-      .update-carousel-controls div {
+      .home-desktop-round3 .update-carousel-controls div {
         display: grid;
         gap: 6px;
       }
-      .update-carousel-controls i {
+      .home-desktop-round3 .update-carousel-controls i {
         width: 5px;
         height: 5px;
         border-radius: 50%;
         background: rgba(255,255,255,.58);
       }
-      .update-carousel-controls i.active {
+      .home-desktop-round3 .update-carousel-controls i.active {
         background: var(--leaf);
       }
-      .desktop-desk-widget strong {
+      .home-desktop-round3 .desktop-desk-widget strong {
         display: block;
         margin-top: 12px;
         font-family: var(--display-serif);
-        font-size: 34px;
+        font-size: 32px;
         font-weight: 600;
       }
-      .desktop-desk-widget div {
+      .home-desktop-round3 .desktop-desk-widget div {
         display: flex;
         gap: 8px;
-        margin-top: 18px;
+        margin-top: 16px;
       }
-      .desktop-signature-widget {
-        min-height: 104px;
+      .home-desktop-round3 .desktop-signature-widget {
+        min-height: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        transform: translateY(12px);
         color: rgba(25,59,49,.88);
       }
-      .desktop-signature-widget :global(svg) {
-        width: min(260px, 80%);
+      .home-desktop-round3 .desktop-signature-widget svg {
+        max-width: 230px;
+        width: 78%;
       }
       @media (max-width: 1120px) {
         .home-desktop-round3 {
           height: auto;
           overflow: visible;
+          padding-bottom: 100px;
         }
-        .desktop-grid-shell {
+        .home-desktop-round3 .desktop-grid-shell {
           height: auto;
           grid-template-columns: 1fr;
         }
-        .desktop-main-window {
+        .home-desktop-round3 .desktop-main-window {
           min-height: 640px;
         }
-        .desktop-widget-rail {
-          grid-template-rows: none;
+        .home-desktop-round3 .desktop-widget-rail {
           grid-template-columns: 1fr;
+          grid-template-rows: auto minmax(280px, 360px) auto 100px;
         }
       }
       @media (max-width: 720px) {
-        .desktop-grid-shell {
-          width: min(100% - 24px, 720px);
+        .home-desktop-round3 {
+          padding-left: 12px;
+          padding-right: 12px;
         }
-        .desktop-view-switcher {
-          max-width: 100%;
+        .home-desktop-round3 .desktop-window-bar {
+          grid-template-columns: 1fr;
+        }
+        .home-desktop-round3 .desktop-view-switcher {
+          justify-self: stretch;
           overflow-x: auto;
-          justify-self: end;
         }
-        .desktop-view-switcher button {
-          min-width: 78px;
+        .home-desktop-round3 .desktop-view-switcher button {
+          min-width: 72px;
         }
-        .desktop-main-window {
+        .home-desktop-round3 .desktop-main-window {
           min-height: 760px;
         }
-        .canvas-primary-paper,
-        .floating-note-group,
-        .path-card,
-        .tool-launch,
-        .desk-window-preview {
-          position: relative;
-          inset: auto;
-          left: auto;
-          right: auto;
-          top: auto;
-          bottom: auto;
-          width: 100%;
-          max-width: none;
-          transform: none;
-        }
-        .desktop-canvas-view {
+        .home-desktop-round3 .latest-canvas,
+        .home-desktop-round3 .paths-canvas,
+        .home-desktop-round3 .tools-canvas {
           display: grid;
+          grid-template-columns: 1fr;
+          grid-template-rows: none;
           gap: 12px;
-          align-content: start;
           overflow: auto;
         }
-        .floating-note-group {
-          display: grid;
-          height: auto;
-          gap: 10px;
-        }
-        .floating-note {
-          position: relative;
-          width: 100%;
-          transform: none;
-        }
-        .canvas-mini-strip,
-        .desk-shortcuts {
-          position: relative;
-          left: auto;
-          right: auto;
-          bottom: auto;
-        }
-        .desktop-widget-rail {
+        .home-desktop-round3 .canvas-note-stack {
           grid-template-columns: 1fr;
+        }
+        .home-desktop-round3 .path-orbit,
+        .home-desktop-round3 .tool-compass,
+        .home-desktop-round3 .canvas-map-line {
+          display: none;
         }
       }
     `}</style>
@@ -755,7 +776,7 @@ export default function HomePage({ recentContent = [], contentCount = 0, categor
 HomePage.layout = 'bare'
 
 export async function getStaticProps() {
-  const { items } = await loadPublicContentIndex({ from: 'law-tech-home-round3' })
+  const { items } = await loadPublicContentIndex({ from: 'law-tech-home-round3-rewrite' })
 
   return {
     props: {
