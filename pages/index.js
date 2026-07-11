@@ -1,9 +1,11 @@
 import Head from 'next/head'
 import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react'
 
-import { PublicHeader } from '@/components/law-tech/PublicHeader'
-import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
 import { LawTechIcon } from '@/components/LawTechIcons'
+import { DynamicSignature } from '@/components/law-tech/DynamicSignature'
+import { PublicHeader } from '@/components/law-tech/PublicHeader'
+import { SystemWindowControls, useSystemWindow } from '@/components/law-tech/SystemWindowManager'
 import { loadPublicContentIndex } from '@/lib/content/publicIndex'
 import {
   publicContentCategory,
@@ -11,268 +13,717 @@ import {
   publicContentDate,
   publicContentHref,
   publicContentStableHue,
-  publicContentTypeLabel,
+  publicContentTags,
   selectRecentPublicContent
 } from '@/lib/content/publicContent'
-import { publicHomeQuickLinks } from '@/lib/domain/publicHome'
+import { DEFAULT_SITE_PROFILE, getPublicSiteProfile, normalizeSiteProfile } from '@/lib/siteProfile'
 
-const categoryOrder = ['遇事不决', '法与算法', '法律之上', '秘密花园']
+const MAX_ITEMS = 18
+const MAX_RANDOM_ITEMS = 80
 
-function categorySummary(items = []) {
-  return items.reduce((summary, item) => {
-    const category = publicContentCategory(item)
-    summary[category] = (summary[category] || 0) + 1
-    return summary
-  }, {})
+const HOME_APPS = [
+  { key: 'library', label: '资料库', icon: 'content' },
+  { key: 'spaces', label: '栏目', icon: 'atlas' },
+  { key: 'chronicle', label: '时间线', icon: 'archive' },
+  { key: 'studio', label: '实验室', icon: 'spark' }
+]
+
+const HOME_TOOLS = [
+  { label: 'OCR', href: 'https://law-tech.dev/ocr/', icon: 'scan', meta: '图片与 PDF' },
+  { label: '引注', href: 'https://law-tech.dev/citation/', icon: 'citation', meta: '脚注与书目' },
+  { label: '课程', href: '/desk/courses', icon: 'courses', meta: '材料与笔记' },
+  { label: '写作', href: '/desk/writing', icon: 'writing', meta: '草稿与项目' }
+]
+
+const LOCAL_QUOTES = [
+  '系统负责记住，你负责改变主意。',
+  '先找到真正的问题，再考虑写得漂亮。',
+  '有些绕路后来会变成地图。',
+  '法学之外还有风，记得开窗。',
+  '答案会过期，值得追的问题通常不会。'
+]
+
+const SPACE_LAYOUT = [
+  { x: 7, y: 9, w: 38, h: 32, cx: 260, cy: 150 },
+  { x: 56, y: 7, w: 36, h: 31, cx: 750, cy: 140 },
+  { x: 12, y: 56, w: 34, h: 31, cx: 290, cy: 390 },
+  { x: 58, y: 54, w: 34, h: 32, cx: 750, cy: 390 }
+]
+
+function safeText(value, fallback = '') {
+  const text = String(value || '').trim()
+  return text || fallback
 }
 
-function formatDate(value) {
-  if (!value) return ''
+function formatDate(value, options = {}) {
+  if (!value) return options.fallback || '—'
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
+  if (Number.isNaN(date.getTime())) return options.fallback || '—'
   return new Intl.DateTimeFormat('zh-CN', {
+    year: options.withYear ? 'numeric' : undefined,
     month: '2-digit',
     day: '2-digit'
   }).format(date)
 }
 
-function coverStyle(item, key) {
-  if (item?.cover) return { backgroundImage: `url("${item.cover}")` }
-  return { '--home-card-hue': String(publicContentStableHue(key)) }
+function itemSummary(item = {}) {
+  return safeText(item?.display?.summary || item?.summary || item?.description || item?.excerpt, '')
 }
 
-function FeaturedContent({ item }) {
-  if (!item) return <div className='home-feature home-empty'>还没有公开内容。</div>
+function toHomeItem(item = {}) {
+  const href = publicContentHref(item)
   const category = publicContentCategory(item)
   const collection = publicContentCollection(item)
-
-  return <Link className={`home-feature ${item.cover ? 'has-cover' : 'generated-cover'}`} href={publicContentHref(item)}>
-    <span className='home-feature-cover' style={coverStyle(item, `${category}:${collection}:${item.title}`)} aria-hidden='true'>
-      {!item.cover ? <><small>{category}</small><strong>{collection || publicContentTypeLabel(item.type)}</strong></> : null}
-    </span>
-    <span className='home-feature-copy'>
-      <small>{[publicContentTypeLabel(item.type), category, formatDate(publicContentDate(item))].filter(Boolean).join(' · ')}</small>
-      <strong>{item.title || '未命名内容'}</strong>
-      {item.summary ? <p>{item.summary}</p> : null}
-      <b>阅读全文 ↗</b>
-    </span>
-  </Link>
+  return {
+    id: safeText(item?.id || item?.slug || href, href),
+    title: safeText(item?.title, '未命名内容'),
+    href,
+    type: safeText(item?.type, 'page'),
+    category,
+    collection,
+    date: publicContentDate(item),
+    summary: itemSummary(item),
+    tags: [...new Set(publicContentTags(item).filter(Boolean))].slice(0, 8),
+    cover: safeText(item?.cover || item?.pageCoverThumbnail || item?.pageCover, ''),
+    hue: publicContentStableHue(`${category}:${collection}:${item?.title || ''}`)
+  }
 }
 
-function ContentRow({ item }) {
-  const category = publicContentCategory(item)
-  const collection = publicContentCollection(item)
-  const generated = !item?.cover
-
-  return <Link className='home-content-row' href={publicContentHref(item)}>
-    <span
-      className={`home-content-thumb ${generated ? 'generated-cover' : 'has-cover'}`}
-      style={coverStyle(item, `${item?.slug}:${category}:${item?.title}`)}
-      aria-hidden='true'
-    >
-      {generated ? <small>{category}</small> : null}
-    </span>
-    <span className='home-content-copy'>
-      <small>{[publicContentTypeLabel(item.type), category, collection].filter(Boolean).join(' · ')}</small>
-      <strong>{item.title || '未命名内容'}</strong>
-      {item.summary ? <p>{item.summary}</p> : null}
-    </span>
-    <time>{formatDate(publicContentDate(item))}</time>
-  </Link>
+function buildCategoryModel(items = []) {
+  const groups = new Map()
+  items.forEach(item => {
+    const category = publicContentCategory(item)
+    if (!groups.has(category)) groups.set(category, [])
+    groups.get(category).push(toHomeItem(item))
+  })
+  return [...groups.entries()]
+    .map(([name, categoryItems]) => ({
+      name,
+      count: categoryItems.length,
+      latest: categoryItems[0] || null,
+      items: categoryItems.slice(0, 6)
+    }))
+    .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name, 'zh-CN'))
 }
 
-function TopicCard({ category, count, index }) {
-  const hue = publicContentStableHue(`${category}:${index}`)
-  return <Link className='home-topic-card' href={`/category/${encodeURIComponent(category)}`} style={{ '--topic-hue': String(hue) }}>
-    <span>{category}</span>
-    <strong>{count}</strong>
-    <small>查看专题 ↗</small>
-  </Link>
+function buildSpaceModel(items = [], categories = []) {
+  const selected = categories.slice(0, 4)
+  const selectedNames = new Set(selected.map(item => item.name))
+  const tagCategories = new Map()
+  const spaces = selected.map((category, index) => {
+    const categoryItems = items
+      .filter(item => publicContentCategory(item) === category.name)
+      .map(toHomeItem)
+    const tagCounts = new Map()
+    categoryItems.forEach(item => {
+      item.tags.forEach(tag => tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1))
+    })
+    const tags = [...tagCounts.entries()]
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], 'zh-CN'))
+      .slice(0, 5)
+      .map(([name, count]) => ({ name, count }))
+    tags.forEach(tag => {
+      if (!tagCategories.has(tag.name)) tagCategories.set(tag.name, new Set())
+      tagCategories.get(tag.name).add(category.name)
+    })
+    return { ...category, items: categoryItems.slice(0, 8), tags, layout: SPACE_LAYOUT[index] || SPACE_LAYOUT[0] }
+  })
+
+  const connectionMap = new Map()
+  items.forEach(item => {
+    const category = publicContentCategory(item)
+    if (!selectedNames.has(category)) return
+    const tags = [...new Set(publicContentTags(item).filter(Boolean))]
+    tags.forEach(tag => {
+      const categoriesForTag = tagCategories.get(tag)
+      if (!categoriesForTag || categoriesForTag.size < 2) return
+      const names = [...categoriesForTag].sort((a, b) => a.localeCompare(b, 'zh-CN'))
+      for (let left = 0; left < names.length; left += 1) {
+        for (let right = left + 1; right < names.length; right += 1) {
+          const key = `${names[left]}::${names[right]}`
+          if (!connectionMap.has(key)) connectionMap.set(key, { from: names[left], to: names[right], tags: new Map(), weight: 0 })
+          const connection = connectionMap.get(key)
+          connection.tags.set(tag, (connection.tags.get(tag) || 0) + 1)
+          connection.weight += 1
+        }
+      }
+    })
+  })
+
+  const byName = new Map(spaces.map(space => [space.name, space]))
+  const connections = [...connectionMap.values()]
+    .map(connection => ({
+      ...connection,
+      fromSpace: byName.get(connection.from),
+      toSpace: byName.get(connection.to),
+      tags: [...connection.tags.entries()]
+        .sort((left, right) => right[1] - left[1])
+        .slice(0, 2)
+        .map(([name]) => name)
+    }))
+    .filter(connection => connection.fromSpace && connection.toSpace)
+    .sort((left, right) => right.weight - left.weight)
+    .slice(0, 6)
+
+  return { spaces, connections }
 }
 
-export default function HomePage({ recentContent = [], contentCount = 0, categories = {} }) {
-  const featured = recentContent[0] || null
-  const updates = recentContent.slice(1, 7)
-
-  return <>
-    <Head>
-      <title>law-tech.dev</title>
-      <meta name='description' content='法学笔记、文章、课程整理与工具。' />
-      <meta name='theme-color' content='#f5f3eb' />
-    </Head>
-
-    <main className='lawtech-public-page public-home'>
-      <div className='public-aurora public-aurora-one' aria-hidden='true' />
-      <div className='public-aurora public-aurora-two' aria-hidden='true' />
-      <div className='public-shell'>
-        <PublicHeader />
-
-        <section className='home-dashboard'>
-          <FeaturedContent item={featured} />
-
-          <aside className='home-command'>
-            <form action='/search' method='get'>
-              <LawTechIcon name='search' size={17} />
-              <input name='q' type='search' placeholder='搜索内容' aria-label='搜索公开内容' />
-              <button type='submit'>搜索</button>
-            </form>
-
-            <div className='home-command-title'>
-              <span>常用入口</span>
-              <Link href='/tools'>全部工具 ↗</Link>
-            </div>
-            <nav className='home-command-links' aria-label='常用入口'>
-              {publicHomeQuickLinks.map(item => <Link href={item.href} key={item.label} rel={item.href.startsWith('http') ? 'noreferrer' : undefined}>
-                <LawTechIcon name={item.icon} size={16} />
-                <span><strong>{item.label}</strong><small>{item.meta}</small></span>
-                <b>↗</b>
-              </Link>)}
-            </nav>
-
-            <div className='home-command-foot'>
-              <strong>{contentCount}</strong>
-              <span>条公开内容</span>
-            </div>
-          </aside>
-        </section>
-
-        <section className='home-topic-strip' aria-label='专题栏目'>
-          <header>
-            <div><span>Topics</span><h2>专题</h2></div>
-            <Link href='/content'>进入内容库 ↗</Link>
-          </header>
-          <div className='home-topic-track'>
-            {categoryOrder.map((category, index) => <TopicCard category={category} count={categories[category] || 0} index={index} key={category} />)}
-          </div>
-        </section>
-
-        <section className='home-section home-updates'>
-          <header>
-            <div><span>Latest</span><h2>最近更新</h2></div>
-            <div><Link href='/archive'>时间归档</Link><Link href='/content'>全部内容 ↗</Link></div>
-          </header>
-          <div className='home-update-list'>
-            {updates.map(item => <ContentRow item={item} key={item.id || `${item.source}:${item.slug}`} />)}
-            {!updates.length ? <p className='home-empty'>还没有更多公开内容。</p> : null}
-          </div>
-        </section>
-
-        <section className='home-utility-strip'>
-          <Link href='/desk/writing'><LawTechIcon name='writing' size={18} /><span><strong>Writing Studio</strong><small>草稿、预览与发布</small></span><b>→</b></Link>
-          <Link href='/tag'><LawTechIcon name='content' size={18} /><span><strong>标签</strong><small>按主题继续浏览</small></span><b>→</b></Link>
-          <Link href='/about'><LawTechIcon name='spark' size={18} /><span><strong>关于</strong><small>学习与项目经历</small></span><b>→</b></Link>
-        </section>
-      </div>
-
-      <style jsx global>{`
-        .public-home { padding-bottom:76px; }
-        .home-dashboard { display:grid; grid-template-columns:minmax(0,1.42fr) minmax(310px,.58fr); gap:20px; padding:32px 0 20px; }
-        .home-feature,.home-command,.home-topic-strip,.home-updates,.home-utility-strip {
-          border:1px solid rgba(255,255,255,.78);
-          background:rgba(255,255,255,.56);
-          box-shadow:0 18px 55px rgba(24,63,50,.07),inset 0 1px 0 rgba(255,255,255,.9);
-          backdrop-filter:blur(22px) saturate(1.06);
-        }
-        .home-feature { display:grid; grid-template-columns:minmax(230px,.82fr) minmax(0,1.18fr); min-height:390px; overflow:hidden; border-radius:30px; transition:transform .2s ease,box-shadow .2s ease; }
-        .home-feature:hover { transform:translateY(-3px); box-shadow:0 26px 70px rgba(24,63,50,.12),inset 0 1px 0 rgba(255,255,255,.94); }
-        .home-feature-cover { display:grid; align-content:end; gap:6px; min-height:100%; padding:30px; color:#fff; background-position:center; background-size:cover; }
-        .home-feature.generated-cover .home-feature-cover,.home-content-thumb.generated-cover { background:radial-gradient(circle at 78% 10%,hsla(var(--home-card-hue),58%,76%,.86),transparent 42%),linear-gradient(145deg,hsl(var(--home-card-hue),34%,25%),hsl(calc(var(--home-card-hue) + 28),38%,44%)); }
-        .home-feature-cover small { font-size:10px; letter-spacing:.12em; opacity:.76; }
-        .home-feature-cover strong { max-width:260px; font-family:var(--display-serif); font-size:clamp(28px,3.2vw,44px); font-weight:560; line-height:1.08; }
-        .home-feature-copy { display:flex; min-width:0; flex-direction:column; justify-content:flex-end; padding:clamp(26px,4vw,46px); }
-        .home-feature-copy > small { color:var(--blue); font-size:10px; }
-        .home-feature-copy > strong { margin-top:14px; font-family:var(--display-serif); font-size:clamp(32px,4.6vw,58px); font-weight:600; line-height:1.08; letter-spacing:-.045em; }
-        .home-feature-copy p { display:-webkit-box; overflow:hidden; margin:16px 0 0; color:var(--muted); font-size:13px; line-height:1.8; -webkit-box-orient:vertical; -webkit-line-clamp:4; }
-        .home-feature-copy b { margin-top:24px; color:var(--leaf); font-size:11px; font-weight:680; }
-        .home-command { display:grid; min-width:0; align-content:start; gap:13px; overflow:hidden; border-radius:30px; padding:18px; }
-        .home-command form { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:9px; border:1px solid rgba(17,63,49,.09); border-radius:16px; padding:7px 7px 7px 12px; background:rgba(255,255,255,.72); }
-        .home-command input { min-width:0; border:0; padding:7px 0; color:var(--ink); background:transparent; outline:none; font-size:12px; }
-        .home-command input::placeholder { color:#8d98a9; }
-        .home-command button { border:0; border-radius:11px; padding:8px 11px; color:#fffaf0; background:var(--leaf); cursor:pointer; }
-        .home-command-title { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:1px 2px 0; }
-        .home-command-title span { color:var(--quiet); font-size:9px; letter-spacing:.11em; text-transform:uppercase; }
-        .home-command-title a { color:var(--leaf); font-size:9px; }
-        .home-command-links { display:flex; gap:7px; overflow-x:auto; padding-bottom:3px; scroll-snap-type:x proximity; scrollbar-width:none; }
-        .home-command-links::-webkit-scrollbar { display:none; }
-        .home-command-links a { display:grid; grid-template-columns:auto minmax(0,1fr) auto; flex:0 0 152px; align-items:center; gap:8px; min-width:0; border:1px solid rgba(17,63,49,.07); border-radius:14px; padding:11px; color:var(--muted); background:rgba(255,255,255,.46); scroll-snap-align:start; }
-        .home-command-links a:hover { color:var(--leaf); background:rgba(220,233,223,.55); }
-        .home-command-links span { display:grid; min-width:0; gap:2px; }
-        .home-command-links strong { font-size:11px; }
-        .home-command-links small { overflow:hidden; color:var(--quiet); font-size:8px; text-overflow:ellipsis; white-space:nowrap; }
-        .home-command-links b { color:var(--leaf); font-weight:500; }
-        .home-command-foot { display:flex; align-items:baseline; gap:6px; border-top:1px solid rgba(17,63,49,.07); padding:13px 3px 0; color:var(--quiet); }
-        .home-command-foot strong { color:var(--leaf); font-family:var(--display-serif); font-size:25px; }
-        .home-command-foot span { font-size:9px; }
-        .home-topic-strip { margin-bottom:20px; overflow:hidden; border-radius:28px; padding:18px; }
-        .home-topic-strip > header,.home-updates > header { display:flex; align-items:end; justify-content:space-between; gap:16px; margin-bottom:15px; }
-        .home-topic-strip header span,.home-updates header span { color:var(--quiet); font-size:9px; letter-spacing:.11em; text-transform:uppercase; }
-        .home-topic-strip h2,.home-updates h2 { margin:4px 0 0; font-family:var(--display-serif); font-size:29px; font-weight:600; }
-        .home-topic-strip header a,.home-updates header a { color:var(--leaf); font-size:10px; }
-        .home-topic-track { display:flex; gap:10px; overflow-x:auto; padding-bottom:3px; scroll-snap-type:x proximity; scrollbar-width:none; }
-        .home-topic-track::-webkit-scrollbar { display:none; }
-        .home-topic-card { position:relative; display:grid; flex:1 0 205px; min-height:116px; overflow:hidden; border-radius:18px; padding:16px; color:#fff; background:radial-gradient(circle at 86% 12%,hsla(var(--topic-hue),62%,77%,.75),transparent 42%),linear-gradient(145deg,hsl(var(--topic-hue),31%,27%),hsl(calc(var(--topic-hue) + 26),36%,43%)); scroll-snap-align:start; }
-        .home-topic-card::after { position:absolute; inset:auto -24px -42px auto; width:105px; height:105px; border:1px solid rgba(255,255,255,.24); border-radius:50%; content:''; }
-        .home-topic-card span { font-family:var(--display-serif); font-size:21px; }
-        .home-topic-card strong { position:absolute; top:13px; right:16px; font-family:var(--display-serif); font-size:31px; font-weight:500; opacity:.9; }
-        .home-topic-card small { align-self:end; font-size:9px; opacity:.74; }
-        .home-section { margin-top:0; }
-        .home-updates { border-radius:30px; padding:20px; }
-        .home-updates header > div:last-child { display:flex; gap:13px; }
-        .home-update-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
-        .home-content-row { display:grid; grid-template-columns:112px minmax(0,1fr) auto; gap:13px; align-items:stretch; min-height:132px; overflow:hidden; border:1px solid rgba(17,63,49,.075); border-radius:17px; padding:9px 13px 9px 9px; background:rgba(255,255,255,.5); transition:transform .18s ease,background .18s ease; }
-        .home-content-row:hover { transform:translateY(-2px); background:rgba(255,255,255,.76); }
-        .home-content-thumb { display:grid; align-content:end; min-height:112px; overflow:hidden; border-radius:12px; padding:10px; color:#fff; background-position:center; background-size:cover; }
-        .home-content-thumb small { overflow:hidden; font-size:9px; opacity:.8; text-overflow:ellipsis; white-space:nowrap; }
-        .home-content-copy { display:grid; min-width:0; align-content:center; gap:5px; }
-        .home-content-copy small { color:var(--blue); font-size:9px; }
-        .home-content-copy strong { font-family:var(--display-serif); font-size:19px; font-weight:600; line-height:1.34; }
-        .home-content-copy p { display:-webkit-box; overflow:hidden; margin:2px 0 0; color:var(--muted); font-size:11px; line-height:1.65; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
-        .home-content-row time { align-self:start; padding-top:4px; color:var(--quiet); font-size:9px; white-space:nowrap; }
-        .home-utility-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:20px; border-radius:24px; padding:10px; }
-        .home-utility-strip a { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:11px; border-radius:15px; padding:12px 13px; background:rgba(255,255,255,.43); }
-        .home-utility-strip a:hover { background:rgba(220,233,223,.5); }
-        .home-utility-strip span { display:grid; gap:2px; }
-        .home-utility-strip strong { font-size:12px; }
-        .home-utility-strip small { color:var(--quiet); font-size:9px; }
-        .home-utility-strip b { color:var(--leaf); }
-        .home-empty { display:grid; place-items:center; min-height:220px; border-radius:30px; color:var(--quiet); }
-        @media (max-width:1040px) {
-          .home-content-row { grid-template-columns:92px minmax(0,1fr) auto; }
-        }
-        @media (max-width:940px) {
-          .home-dashboard { grid-template-columns:1fr; }
-          .home-feature { min-height:340px; }
-          .home-command-links a { flex-basis:170px; }
-        }
-        @media (max-width:700px) {
-          .home-feature { grid-template-columns:1fr; }
-          .home-feature-cover { min-height:190px; }
-          .home-update-list,.home-utility-strip { grid-template-columns:1fr; }
-        }
-        @media (max-width:520px) {
-          .home-dashboard { padding-top:20px; }
-          .home-updates,.home-topic-strip { padding:15px; }
-          .home-content-row { grid-template-columns:78px minmax(0,1fr); min-height:110px; padding-right:10px; }
-          .home-content-thumb { min-height:92px; }
-          .home-content-row time { display:none; }
-        }
-      `}</style>
-    </main>
-    <LawTechDeskStyles />
-  </>
-}
-
-HomePage.layout = 'bare'
-
-export async function getStaticProps() {
-  const { items } = await loadPublicContentIndex({ from: 'law-tech-home' })
+export function buildHomeDesktopModel(publicIndex = {}) {
+  const items = Array.isArray(publicIndex?.items) ? publicIndex.items.filter(Boolean) : []
+  const recent = selectRecentPublicContent(items, MAX_ITEMS).map(toHomeItem)
+  const categories = buildCategoryModel(items)
+  const typeCounts = items.reduce((summary, item) => {
+    const type = safeText(item?.type, 'page')
+    summary[type] = (summary[type] || 0) + 1
+    return summary
+  }, {})
+  const randomItems = [...new Set(items.map(publicContentHref).filter(href => href && href !== '/content'))].slice(0, MAX_RANDOM_ITEMS)
+  const covered = recent.filter(item => item.cover)
+  const spaceModel = buildSpaceModel(items, categories)
 
   return {
-    props: {
-      recentContent: selectRecentPublicContent(items, 7),
-      contentCount: items.length,
-      categories: categorySummary(items)
-    },
-    revalidate: 1800
+    source: safeText(publicIndex?.source, 'empty'),
+    recent,
+    categories: categories.slice(0, 8),
+    spaces: spaceModel.spaces,
+    connections: spaceModel.connections,
+    carousel: (covered.length >= 3 ? covered : recent).slice(0, 7),
+    randomItems,
+    counts: {
+      total: items.length,
+      articles: typeCounts.article || 0,
+      courseNotes: typeCounts['course-note'] || 0,
+      categories: categories.length
+    }
   }
+}
+
+
+function ContentCover({ item, compact = false }) {
+  const style = item.cover ? { backgroundImage: `url("${item.cover}")` } : { '--home-cover-hue': item.hue }
+  return (
+    <span className={`home-cover ${item.cover ? 'has-image' : 'is-generated'} ${compact ? 'is-compact' : ''}`} style={style} aria-hidden='true'>
+      {!item.cover ? <><b>§</b><small>{item.category}</small></> : null}
+    </span>
+  )
+}
+
+function LibraryWindow({ model, home = {} }) {
+  return (
+    <div className='home-library-v7 home-scroll-view'>
+      <section className='home-library-overview'>
+        <header><div><span>Library</span><h1>{home.libraryTitle || '资料库'}</h1></div><p>{model.counts.total} 条内容 · {model.counts.categories} 个栏目</p></header>
+        <div className='home-library-shelves'>
+          {model.categories.slice(0, 4).map((category, index) => (
+            <article className={`tone-${index % 4}`} key={category.name}>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+              <h2>{category.name}</h2>
+              <p>{category.latest?.title || '暂无内容'}</p>
+              <footer><b>{category.count}</b><button type='button' onClick={() => document.dispatchEvent(new CustomEvent('lawtech-home-app', { detail: { app: 'spaces', category: category.name } }))}>展开</button></footer>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className='home-library-recent'>
+        <header><div><span>Recent</span><h2>{home.recentTitle || '最近更新'}</h2></div><Link href='/content'>全部内容 ↗</Link></header>
+        <div>
+          {model.recent.slice(0, 6).map((item, index) => (
+            <Link data-quicklook href={item.href} key={item.id}>
+              <b>{String(index + 1).padStart(2, '0')}</b>
+              <ContentCover item={item} compact />
+              <span><strong>{item.title}</strong><small>{item.category} · {formatDate(item.date)}</small></span>
+              <i>↗</i>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function connectionPath(connection) {
+  const start = connection.fromSpace.layout
+  const end = connection.toSpace.layout
+  const bend = Math.max(70, Math.abs(end.cx - start.cx) * .18)
+  const direction = start.cy <= end.cy ? -1 : 1
+  const controlY = Math.min(start.cy, end.cy) + direction * bend
+  return `M ${start.cx} ${start.cy} Q ${(start.cx + end.cx) / 2} ${controlY} ${end.cx} ${end.cy}`
+}
+
+function SpacesWindow({ model, requestedCategory = '' }) {
+  const [selected, setSelected] = useState(requestedCategory)
+
+  useEffect(() => {
+    if (requestedCategory) setSelected(requestedCategory)
+  }, [requestedCategory])
+
+  const selectedSpace = model.spaces.find(space => space.name === selected)
+  if (selectedSpace) {
+    return (
+      <div className='home-space-detail home-scroll-view'>
+        <header>
+          <button type='button' onClick={() => setSelected('')}><LawTechIcon name='collapse' size={15} />返回栏目</button>
+          <Link href={`/category/${encodeURIComponent(selectedSpace.name)}`}>查看全部 ↗</Link>
+        </header>
+        <section className='home-space-detail-head'>
+          <span>Collection</span><h1>{selectedSpace.name}</h1><p>{selectedSpace.count} 条内容</p>
+          <div>{selectedSpace.tags.map(tag => <span key={tag.name}>{tag.name}<small>{tag.count}</small></span>)}</div>
+        </section>
+        <div className='home-space-detail-list'>
+          {selectedSpace.items.map((item, index) => (
+            <Link data-quicklook href={item.href} key={item.id}>
+              <b>{String(index + 1).padStart(2, '0')}</b><ContentCover item={item} compact />
+              <span><strong>{item.title}</strong><small>{formatDate(item.date)} · {item.tags.slice(0, 3).join(' / ') || item.category}</small></span><i>↗</i>
+            </Link>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className='home-spaces-view'>
+      <header><div><span>Collections</span><h1>栏目</h1></div><p>共享标签只在确有关系时连接。</p></header>
+      <div className='home-space-map'>
+        <svg viewBox='0 0 1000 520' aria-hidden='true'>
+          {model.connections.map(connection => (
+            <g key={`${connection.from}:${connection.to}`}>
+              <path d={connectionPath(connection)} style={{ '--connection-weight': Math.min(4, connection.weight) }} />
+              <text x={(connection.fromSpace.layout.cx + connection.toSpace.layout.cx) / 2} y={(connection.fromSpace.layout.cy + connection.toSpace.layout.cy) / 2 - 8}>{connection.tags.join(' · ')}</text>
+            </g>
+          ))}
+        </svg>
+        {model.spaces.map((space, index) => (
+          <button
+            className={`home-space-island tone-${index % 4}`}
+            key={space.name}
+            onClick={() => setSelected(space.name)}
+            style={{ left: `${space.layout.x}%`, top: `${space.layout.y}%`, width: `${space.layout.w}%`, minHeight: `${space.layout.h}%` }}
+            type='button'
+          >
+            <span>{String(index + 1).padStart(2, '0')}</span><h2>{space.name}</h2><p>{space.latest?.title || '暂无内容'}</p>
+            <div>{space.tags.slice(0, 3).map(tag => <small key={tag.name}>{tag.name}</small>)}</div><b>{space.count} 条</b>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ChronicleWindow({ model }) {
+  return (
+    <div className='home-chronicle-view home-scroll-view'>
+      <header><span>Chronicle</span><h1>时间线</h1></header>
+      <ol>
+        {model.recent.slice(0, 12).map((item, index) => (
+          <li key={item.id}>
+            <time>{formatDate(item.date, { withYear: true })}</time><i aria-hidden='true' />
+            <Link data-quicklook href={item.href}><span>{item.category}</span><strong>{item.title}</strong>{item.summary ? <small>{item.summary}</small> : null}</Link>
+            <b>{String(index + 1).padStart(2, '0')}</b>
+          </li>
+        ))}
+      </ol>
+    </div>
+  )
+}
+
+function StudioWindow() {
+  const planned = [
+    { label: '案例板', icon: 'case', state: '计划' },
+    { label: '文献关联', icon: 'atlas', state: '计划' },
+    { label: '证据表', icon: 'table', state: '计划' },
+    { label: '引注检查', icon: 'citation', state: '计划' }
+  ]
+  return (
+    <div className='home-studio-view home-scroll-view'>
+      <section className='home-studio-tools'>
+        <header><span>Utilities</span><h1>常用工具</h1></header>
+        <div>{HOME_TOOLS.map(tool => <Link href={tool.href} key={tool.label} rel={tool.href.startsWith('http') ? 'noreferrer' : undefined}><i><LawTechIcon name={tool.icon} size={21} /></i><span><strong>{tool.label}</strong><small>{tool.meta}</small></span><b>↗</b></Link>)}</div>
+      </section>
+      <section className='home-studio-roadmap'>
+        <header><span>Next</span><h2>计划</h2></header>
+        <div>{planned.map(item => <article key={item.label}><i><LawTechIcon name={item.icon} size={18} /></i><strong>{item.label}</strong><small>{item.state}</small></article>)}</div>
+      </section>
+    </div>
+  )
+}
+
+function AppWindow({ model, home = {}, windowController }) {
+  const [active, setActive] = useState('library')
+  const [requestedCategory, setRequestedCategory] = useState('')
+  const activeApp = HOME_APPS.find(item => item.key === active) || HOME_APPS[0]
+
+  useEffect(() => {
+    const onSwitch = event => {
+      if (!event?.detail?.app) return
+      setActive(event.detail.app)
+      setRequestedCategory(event.detail.category || '')
+    }
+    document.addEventListener('lawtech-home-app', onSwitch)
+    return () => document.removeEventListener('lawtech-home-app', onSwitch)
+  }, [])
+
+  return (
+    <section className={`home-workspace app-${active} ${windowController.className}`} data-system-window-id='home:main' aria-label={activeApp.label}>
+      <div className='home-app-window home-app-window-v7'>
+        <header className='home-app-titlebar home-app-titlebar-v7' onDoubleClick={windowController.toggleFocus}>
+          <SystemWindowControls controller={windowController} />
+          <nav className='home-window-switcher' aria-label='首页窗口切换'>
+            {HOME_APPS.map(app => (
+              <button aria-current={active === app.key ? 'page' : undefined} key={app.key} onClick={() => { setActive(app.key); setRequestedCategory('') }} type='button'>
+                <LawTechIcon name={app.icon} size={14} /><span>{app.label}</span>
+              </button>
+            ))}
+          </nav>
+          <div className='home-app-actions'><Link href='/search' aria-label='搜索'><LawTechIcon name='search' size={15} /></Link><Link href='/content' aria-label='打开内容库'><LawTechIcon name='expand' size={15} /></Link></div>
+        </header>
+        <div className='home-app-canvas home-app-canvas-v7'>
+          {active === 'library' ? <LibraryWindow model={model} home={home} /> : null}
+          {active === 'spaces' ? <SpacesWindow model={model} requestedCategory={requestedCategory} /> : null}
+          {active === 'chronicle' ? <ChronicleWindow model={model} /> : null}
+          {active === 'studio' ? <StudioWindow /> : null}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+const READING_STACK_CACHE_KEY = 'lawtech-home-reading-stack-v1'
+
+function shuffleReading(values = []) {
+  const copy = [...values]
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const target = Math.floor(Math.random() * (index + 1))
+    const value = copy[index]
+    copy[index] = copy[target]
+    copy[target] = value
+  }
+  return copy
+}
+
+function readingItemKey(item = {}) {
+  return String(item.id || item.href || item.title || '')
+}
+
+function timedReadingSelection(items = [], count = 5, refreshHours = 6) {
+  const pool = items.filter(item => readingItemKey(item))
+  const keys = pool.map(readingItemKey)
+  const now = Date.now()
+  const ttl = Math.max(1, Number(refreshHours) || 6) * 60 * 60 * 1000
+  let previous = null
+  try {
+    previous = JSON.parse(window.localStorage.getItem(READING_STACK_CACHE_KEY) || 'null')
+  } catch {
+    previous = null
+  }
+
+  const validKeys = Array.isArray(previous?.keys)
+    ? previous.keys.filter(key => keys.includes(key))
+    : []
+
+  if (
+    Number(previous?.version || 0) === 2 &&
+    Number(previous?.expiresAt || 0) > now &&
+    validKeys.length >= Math.min(count, keys.length)
+  ) {
+    return { keys: validKeys.slice(0, count), expiresAt: previous.expiresAt }
+  }
+
+  const keepCount = Math.max(0, Math.min(count - 2, validKeys.length))
+  const kept = shuffleReading(validKeys).slice(0, keepCount)
+  const replacements = shuffleReading(keys.filter(key => !kept.includes(key)))
+  const nextKeys = [...kept, ...replacements].slice(0, Math.min(count, keys.length))
+  const record = { version: 2, keys: nextKeys, expiresAt: now + ttl }
+  try {
+    window.localStorage.setItem(READING_STACK_CACHE_KEY, JSON.stringify(record))
+  } catch {}
+  return record
+}
+
+function readingUsableItem(item = {}) {
+  return Boolean(
+    item &&
+    String(item.href || '').trim() &&
+    String(item.title || '').trim()
+  )
+}
+
+function readingInitial(item = {}) {
+  const title = String(item.title || '').trim()
+  return title ? title.slice(0, 1) : '§'
+}
+
+function ArticleStack({ items = [], settings = {} }) {
+  const count = Math.max(3, Math.min(7, Number(settings.count) || 5))
+  const refreshHours = Math.max(1, Math.min(48, Number(settings.refreshHours) || 6))
+  const sourceKey = useMemo(
+    () => items.filter(readingUsableItem).map(readingItemKey).join('|'),
+    [items]
+  )
+  const sourceItems = useMemo(
+    () => items.filter(readingUsableItem),
+    [sourceKey]
+  )
+  const [slideIndex, setSlideIndex] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const [resetting, setResetting] = useState(false)
+  const [visibleItems, setVisibleItems] = useState(() => sourceItems.slice(0, count))
+
+  useEffect(() => {
+    if (settings.enabled === false || typeof window === 'undefined') return undefined
+    let timer = 0
+
+    function refresh() {
+      const record = timedReadingSelection(sourceItems, count, refreshHours)
+      const byKey = new Map(sourceItems.map(item => [readingItemKey(item), item]))
+      const selected = record.keys
+        .map(key => byKey.get(key))
+        .filter(readingUsableItem)
+      const next = selected.length
+        ? selected.slice(0, count)
+        : sourceItems.slice(0, count)
+
+      setResetting(true)
+      setVisibleItems(next)
+      setSlideIndex(0)
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => setResetting(false))
+      })
+
+      timer = window.setTimeout(
+        refresh,
+        Math.max(1000, Number(record.expiresAt || 0) - Date.now() + 50)
+      )
+    }
+
+    refresh()
+    return () => {
+      if (timer) window.clearTimeout(timer)
+    }
+  }, [sourceKey, count, refreshHours, settings.enabled])
+
+  const total = visibleItems.length
+  const safeActive = total ? slideIndex % total : 0
+  const current = total ? visibleItems[safeActive] : null
+  const trackItems = total > 1
+    ? [...visibleItems, visibleItems[0]]
+    : visibleItems
+
+  useEffect(() => {
+    if (paused || total <= 1) return undefined
+    const timer = window.setInterval(
+      () => setSlideIndex(value => value >= total ? 1 : value + 1),
+      5000
+    )
+    return () => window.clearInterval(timer)
+  }, [paused, total])
+
+  function finishSlide(event) {
+    if (event.target !== event.currentTarget || total <= 1 || slideIndex !== total) return
+    setResetting(true)
+    setSlideIndex(0)
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => setResetting(false))
+    })
+  }
+
+  if (settings.enabled === false || !current) return null
+
+  return (
+    <section
+      className='home-smart-stack home-smart-stack-v7'
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={() => setPaused(false)}
+      aria-label='文章轮播'
+    >
+      <header>
+        <span>{settings.title || 'Reading'}</span>
+        <small>{String(safeActive + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}</small>
+      </header>
+      <div className='home-stack-viewport'>
+        <div
+          className={`home-stack-track-v11 ${resetting ? 'is-resetting' : ''}`}
+          onTransitionEnd={finishSlide}
+          style={{ '--home-reading-slide': slideIndex }}
+        >
+          {trackItems.map((item, index) => (
+            <Link
+              data-quicklook
+              data-quicklook-title={item.title}
+              data-quicklook-meta={`${item.category || '内容'} · ${formatDate(item.date)}`}
+              className='home-stack-card-v6 is-current'
+              href={item.href}
+              key={`${readingItemKey(item)}:${index === total ? 'loop' : index}`}
+              aria-hidden={index !== slideIndex}
+              tabIndex={index === slideIndex ? 0 : -1}
+            >
+              {item.cover ? (
+                <ContentCover item={item} />
+              ) : (
+                <span className='home-stack-fallback-v10' aria-hidden='true'>
+                  {readingInitial(item)}
+                </span>
+              )}
+              <span className='home-stack-copy-v10'>
+                <small>{item.category || '内容'} · {formatDate(item.date)}</small>
+                <strong>{item.title}</strong>
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function FocusWidget({ focus }) {
+  if (focus?.enabled === false || !focus?.title) return null
+  const progress = Math.min(100, Math.max(0, Number(focus.progress) || 0))
+  return (
+    <Link className={`home-focus-widget home-status-widget tone-${focus.tone || 'mint'}`} href={focus.href || '/desk/writing'}>
+      <span className='home-status-emoji' aria-hidden='true'>{focus.emoji || '✍️'}</span>
+      <span className='home-status-copy'><small>{focus.eyebrow || '状态'}</small><strong>{focus.title}</strong>{focus.meta ? <em>{focus.meta}</em> : null}</span>
+      {progress ? <span className='home-status-progress'><i><b style={{ width: `${progress}%` }} /></i><span>{progress}%</span></span> : null}
+    </Link>
+  )
+}
+
+function QuoteWidget({ settings = {} }) {
+  const [quote, setQuote] = useState({ text: LOCAL_QUOTES[0], from: '' })
+  const [busy, setBusy] = useState(false)
+  const refreshHours = Math.max(1, Math.min(48, Number(settings.refreshHours) || 6))
+  const ttl = refreshHours * 60 * 60 * 1000
+
+  function readCachedQuote() {
+    if (typeof window === 'undefined') return null
+    try {
+      const cached = JSON.parse(window.localStorage.getItem('lawtech-home-quote-v1') || 'null')
+      if (!cached?.quote?.text) return null
+      if (Date.now() - Number(cached.savedAt || 0) > ttl) return null
+      return cached.quote
+    } catch {
+      return null
+    }
+  }
+
+  function cacheQuote(value) {
+    if (typeof window === 'undefined' || !value?.text) return
+    try {
+      window.localStorage.setItem('lawtech-home-quote-v1', JSON.stringify({ quote: value, savedAt: Date.now() }))
+    } catch {}
+  }
+
+  async function refresh({ force = false } = {}) {
+    if (!force) {
+      const cached = readCachedQuote()
+      if (cached) {
+        setQuote(cached)
+        return
+      }
+    }
+    setBusy(true)
+    try {
+      const response = await fetch('/api/quote', { cache: 'no-store' })
+      const data = await response.json()
+      if (data?.text) {
+        const next = { text: data.text, from: data.from || '' }
+        setQuote(next)
+        cacheQuote(next)
+      }
+    } catch {
+      setQuote(current => {
+        const index = Math.max(0, LOCAL_QUOTES.indexOf(current.text))
+        const next = { text: LOCAL_QUOTES[(index + 1) % LOCAL_QUOTES.length], from: '' }
+        cacheQuote(next)
+        return next
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  useEffect(() => {
+    if (settings.enabled === false) return undefined
+    void refresh()
+    const timer = window.setInterval(() => void refresh({ force: true }), ttl)
+    return () => window.clearInterval(timer)
+  }, [settings.enabled, ttl])
+
+  if (settings.enabled === false) return null
+  return (
+    <section className='home-quote-widget'>
+      <button type='button' onClick={() => refresh({ force: true })} aria-label='换一句' disabled={busy}><LawTechIcon name='spark' size={14} /></button>
+      <blockquote>{quote.text}</blockquote>
+      {quote.from ? <small>— {quote.from}</small> : null}
+    </section>
+  )
+}
+
+function UtilityWidget({ enabled = true }) {
+  if (!enabled) return null
+  return (
+    <section className='home-utility-widget home-utility-widget-v7'>
+      <header><span>Launchpad</span><Link href='/tools'>全部 ↗</Link></header>
+      <div>{HOME_TOOLS.map(tool => <Link href={tool.href} key={tool.label} rel={tool.href.startsWith('http') ? 'noreferrer' : undefined} title={tool.meta}><LawTechIcon name={tool.icon} size={17} /><span>{tool.label}</span></Link>)}</div>
+    </section>
+  )
+}
+
+function SignatureWidget({ enabled = true }) {
+  if (!enabled) return null
+  return <div className='home-signature-widget home-signature-widget-v7' aria-label='Curacao 签名'><DynamicSignature compact loop /></div>
+}
+
+export default function HomeDesktop({ model, profile }) {
+  const safeModel = useMemo(() => model || buildHomeDesktopModel({}), [model])
+  const [liveProfile, setLiveProfile] = useState(profile || {})
+  const homeWindow = useSystemWindow({ id: 'home:main', title: '首页', href: '/', kind: 'home' })
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/site-profile', { credentials: 'same-origin' })
+      .then(response => response.json())
+      .then(data => {
+        if (!cancelled && data?.profile) setLiveProfile(data.profile)
+      })
+      .catch(() => null)
+    return () => { cancelled = true }
+  }, [])
+
+  const safeProfile = useMemo(() => normalizeSiteProfile(liveProfile || {}), [liveProfile])
+  const home = safeProfile.home || DEFAULT_SITE_PROFILE.home
+  const focus = home.status || safeProfile.focus
+
+  return (
+    <>
+      <Head><title>law-tech.dev</title><meta name='description' content='Curacao 的笔记、写作与工具。' /><meta name='theme-color' content='#e8efec' /></Head>
+      <main className='home-desktop-v4 home-desktop-v7'>
+        <div className='home-wallpaper-v4 home-wallpaper-v7' aria-hidden='true'><i /><i /><i /></div>
+        <PublicHeader active='home' randomItems={safeModel.randomItems} />
+        <div className={`home-desktop-grid home-desktop-grid-v7 ${homeWindow.className}`}>
+          <AppWindow model={safeModel} home={home} windowController={homeWindow} />
+          <aside className='home-widget-column home-widget-column-v7'>
+            <ArticleStack items={safeModel.carousel} settings={home.reading} />
+            <FocusWidget focus={focus} />
+            <QuoteWidget settings={home.quote} />
+            <UtilityWidget enabled={home.launchpad?.enabled !== false} />
+            <SignatureWidget enabled={home.signature?.enabled !== false} />
+          </aside>
+        </div>
+      </main>
+    </>
+  )
+}
+
+HomeDesktop.layout = 'bare'
+
+export async function getStaticProps() {
+  const [publicIndex, profile] = await Promise.all([
+    loadPublicContentIndex({ from: 'law-tech-home-round7' }),
+    getPublicSiteProfile()
+  ])
+  return { props: { model: buildHomeDesktopModel(publicIndex), profile }, revalidate: 1800 }
 }

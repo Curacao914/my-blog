@@ -10,7 +10,6 @@ import {
 import { ReadingNavigator } from '@/components/content/ReadingNavigator'
 import { DynamicSignature } from '@/components/law-tech/DynamicSignature'
 import { PublicHeader } from '@/components/law-tech/PublicHeader'
-import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
 import {
   mergeContentPaths
 } from '@/lib/contentHierarchy'
@@ -35,11 +34,13 @@ const typeLabels = {
 
 function formatDate(date) {
   if (!date) return '未标注日期'
+  const value = new Date(date)
+  if (Number.isNaN(value.getTime())) return '未标注日期'
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
-  }).format(new Date(date))
+  }).format(value)
 }
 
 function PasswordGate({ content, onUnlock }) {
@@ -69,7 +70,7 @@ function PasswordGate({ content, onUnlock }) {
   return <section className='content-access-gate' aria-label='密码访问'>
     <span>密码访问</span>
     <h2>输入密码后继续阅读</h2>
-    <p>这篇内容未公开展示正文。</p>
+    <p>这篇内容未公开展示正文。验证通过后，正文会在当前页面展开。</p>
     <form onSubmit={event => void unlock(event)}>
       <input
         aria-label='访问密码'
@@ -95,6 +96,11 @@ const ContentDetailPage = ({ content }) => {
   const headings = useMemo(() => extractMarkdownHeadings(readableBody), [readableBody])
   const folderPath = content.folder?.path || []
   const tags = content.display?.tags || content.tags || []
+  const category = folderPath[0] || content.display?.category || content.category || '未归档'
+  const subPath = folderPath.slice(1).filter(Boolean)
+  const typeLabel = typeLabels[content.type] || content.type || '内容'
+  const dateLabel = formatDate(content.date || content.updatedAt)
+  const accessLabel = content.access?.mode === 'password' ? '密码访问' : '公开阅读'
 
   return <>
     <Head>
@@ -104,177 +110,425 @@ const ContentDetailPage = ({ content }) => {
       <meta name='theme-color' content='#f5f3eb' />
     </Head>
 
-    <main className='lawtech-public-page content-reader-page'>
+    <main className='lawtech-public-page content-reading-page content-reading-v2'>
       <div className='public-aurora public-aurora-one' aria-hidden='true' />
       <div className='public-aurora public-aurora-two' aria-hidden='true' />
-      <div className='public-shell content-reader-shell'>
-        <PublicHeader active='content' />
+      <PublicHeader active='content' />
 
-        <div className={`content-reader-layout ${tocOpen ? 'toc-open' : 'toc-closed'}`}>
-          <aside className='content-reader-meta'>
-            <Link className='content-reader-back' href='/content'>← 内容</Link>
-            <div className='content-reader-meta-block'>
-              <span>归档</span>
-              <strong>{folderPath[0] || content.display?.category || content.category || '未归档'}</strong>
-              {folderPath[1] ? <small>{folderPath[1]}</small> : null}
-            </div>
-            <div className='content-reader-meta-block'>
-              <span>类型</span>
-              <strong>{typeLabels[content.type] || content.type}</strong>
-              <small>{formatDate(content.date || content.updatedAt)}</small>
-            </div>
-            {content.course ? <div className='content-reader-meta-block'>
-              <span>课程</span>
-              <strong>{content.course.name || '课程笔记'}</strong>
-              {content.course.lesson ? <small>{content.course.lesson}</small> : null}
-              {content.course.teacher ? <small>{content.course.teacher}</small> : null}
-            </div> : null}
-            {tags.length ? <div className='content-reader-tags'>{tags.map(tag => <span key={tag}>{tag}</span>)}</div> : null}
-            <div className='content-reader-signature' aria-hidden='true'><DynamicSignature compact /></div>
-          </aside>
+      <div className='public-shell content-reading-shell' data-system-app={content.title}>
 
-          <article className='content-reader-article'>
-            <header className='content-reader-head'>
-              <div className='content-reader-kicker'>
-                <span>{typeLabels[content.type] || content.type}</span>
-                <span>{content.access?.mode === 'password' ? '密码访问' : '公开'}</span>
+        <article className={`content-reading-frame ${tocOpen ? 'toc-open' : 'toc-closed'}`}>
+          <header className='content-reading-hero'>
+            <nav className='content-reading-breadcrumbs' aria-label='内容位置'>
+              <Link href='/content'>内容库</Link>
+              <span>/</span>
+              <Link href={`/category/${encodeURIComponent(category)}`}>{category}</Link>
+              {subPath.map(part => <span key={part}>/ {part}</span>)}
+            </nav>
+
+            <div className='content-reading-title-row'>
+              <div>
+                <div className='content-reading-kicker'>
+                  <span>{typeLabel}</span>
+                  <span>{accessLabel}</span>
+                  <time>{dateLabel}</time>
+                </div>
+                <h1>{content.title}</h1>
               </div>
-              <h1>{content.title}</h1>
-              {content.summary ? <p>{content.summary}</p> : null}
-              <button className='content-reader-toc-toggle' type='button' aria-pressed={tocOpen} onClick={() => setTocOpen(open => !open)}>
+              <button className='content-reading-toc-button' type='button' aria-pressed={tocOpen} onClick={() => setTocOpen(open => !open)}>
                 {tocOpen ? '收起目录' : '打开目录'}
               </button>
-            </header>
-
-            {content.expired ? <section className='content-access-gate'>
-              <span>分享已过期</span>
-              <h2>这条内容的临时访问已经失效</h2>
-            </section> : content.locked && !unlockedBody ? <PasswordGate content={content} onUnlock={setUnlockedBody} /> : <MarkdownDocument
-              articleRef={articleRef}
-              className='content-public-markdown'
-              markdown={readableBody}
-              title={content.title}
-            />}
-          </article>
-
-          {tocOpen ? <aside className='content-reader-toc' aria-label='本文目录'>
-            <div className='content-reader-toc-head'>
-              <span>阅读导航</span>
-              <button type='button' onClick={() => setTocOpen(false)} aria-label='收起目录'>×</button>
             </div>
-            <ReadingNavigator articleRef={articleRef} headings={headings} title='本文目录' />
-          </aside> : <button className='content-reader-edge-toggle' type='button' onClick={() => setTocOpen(true)}>目录</button>}
-        </div>
+
+            {content.summary ? <p>{content.summary}</p> : null}
+
+            <div className='content-reading-meta-row'>
+              <Link href='/archive'>时间归档</Link>
+              <Link href='/search'>搜索内容</Link>
+              {tags.slice(0, 8).map(tag => <Link href={`/tag/${encodeURIComponent(tag)}`} key={tag}>#{tag}</Link>)}
+            </div>
+          </header>
+
+          <div className='content-reading-body'>
+            <section className='content-reading-main' aria-label='正文'>
+              {content.expired ? <section className='content-access-gate'>
+                <span>分享已过期</span>
+                <h2>这条内容的临时访问已经失效</h2>
+                <p>可以返回内容库继续浏览公开内容。</p>
+              </section> : content.locked && !unlockedBody ? <PasswordGate content={content} onUnlock={setUnlockedBody} /> : <MarkdownDocument
+                articleRef={articleRef}
+                className='content-public-markdown'
+                markdown={readableBody}
+                title={content.title}
+              />}
+            </section>
+
+            {tocOpen ? <aside className='content-reading-side' aria-label='本文目录'>
+              <div className='content-reading-side-head'>
+                <span>阅读导航</span>
+                <button type='button' onClick={() => setTocOpen(false)} aria-label='收起目录'>×</button>
+              </div>
+              <ReadingNavigator articleRef={articleRef} className='content-reading-nav' headings={headings} title='本文目录' />
+              <nav className='content-reading-side-links' aria-label='阅读动作'>
+                <Link href='/content'>回到内容库</Link>
+                <Link href='/archive'>时间归档</Link>
+              </nav>
+            </aside> : <button className='content-reading-edge-toggle' type='button' onClick={() => setTocOpen(true)}>目录</button>}
+          </div>
+        </article>
+
+        <footer className='content-reading-foot'>
+          <DynamicSignature compact />
+        </footer>
       </div>
     </main>
 
     <style jsx>{`
-      .content-reader-page { min-height: 100vh; }
-      .content-reader-shell { width: min(1320px,calc(100% - 36px)); }
-      .content-reader-layout {
-        position: relative;
-        display: grid;
-        grid-template-columns: minmax(170px,.48fr) minmax(0,1.65fr) minmax(170px,.48fr);
-        gap: 16px;
-        align-items: start;
-        padding: 38px 0 90px;
-      }
-      .content-reader-layout.toc-closed { grid-template-columns: minmax(170px,.48fr) minmax(0,1.65fr) 0; }
-      .content-reader-meta,
-      .content-reader-toc {
-        position: sticky;
-        top: 18px;
-        max-height: calc(100dvh - 36px);
-        overflow: auto;
-        border: 1px solid rgba(23,35,29,.08);
-        border-radius: 22px;
-        padding: 15px;
+      .content-reading-page { min-height: 100vh; }
+      .content-reading-shell { width: min(1120px, calc(100% - 36px)); }
+      .content-reading-frame {
+        margin-top: 28px;
+        border: 1px solid rgba(255,255,255,.72);
+        border-radius: 30px;
+        overflow: hidden;
         background: rgba(255,255,255,.56);
-        box-shadow: 0 18px 54px rgba(24,63,50,.055), inset 0 1px 0 rgba(255,255,255,.72);
-        backdrop-filter: blur(18px);
+        box-shadow: 0 22px 70px rgba(24,63,50,.07), inset 0 1px 0 rgba(255,255,255,.84);
+        backdrop-filter: blur(14px) saturate(1.04);
       }
-      .content-reader-back { display: inline-flex; color: var(--blue); font-size: 11px; }
-      .content-reader-meta-block { display: grid; gap: 4px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(23,35,29,.07); }
-      .content-reader-meta-block > span,
-      .content-reader-toc-head > span { color: var(--quiet); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }
-      .content-reader-meta-block strong { font-family: var(--display-serif); font-size: 15px; font-weight: 600; }
-      .content-reader-meta-block small { color: var(--quiet); font-size: 10px; line-height: 1.45; }
-      .content-reader-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 16px; }
-      .content-reader-tags span { border-radius: 999px; padding: 3px 6px; color: #41617a; background: rgba(226,237,241,.62); font-size: 9px; }
-      .content-reader-signature { margin-top: 22px; padding-top: 14px; border-top: 1px solid rgba(23,35,29,.07); color: rgba(25,59,49,.72); }
-
-      .content-reader-article {
+      .content-reading-hero {
+        display: grid;
+        gap: 18px;
+        border-bottom: 1px solid rgba(23,35,29,.08);
+        padding: clamp(26px, 5vw, 52px) clamp(24px, 5vw, 58px) 28px;
+        background:
+          radial-gradient(circle at 94% -18%, rgba(141,170,183,.2), transparent 32%),
+          rgba(255,255,255,.36);
+      }
+      .content-reading-breadcrumbs,
+      .content-reading-kicker,
+      .content-reading-meta-row,
+      .content-reading-side-links {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+      .content-reading-breadcrumbs,
+      .content-reading-breadcrumbs a,
+      .content-reading-breadcrumbs span {
+        color: var(--quiet);
+        font-size: 10px;
+      }
+      .content-reading-title-row {
+        display: grid;
+        grid-template-columns: minmax(0,1fr) auto;
+        gap: 18px;
+        align-items: start;
+      }
+      .content-reading-kicker {
+        color: var(--blue);
+        font-size: 10px;
+      }
+      .content-reading-kicker span + span::before,
+      .content-reading-kicker time::before {
+        content: '·';
+        margin-right: 8px;
+        color: var(--quiet);
+      }
+      .content-reading-hero h1 {
+        margin: 12px 0 0;
+        max-width: 820px;
+        font-family: var(--display-serif);
+        font-size: clamp(36px, 5.6vw, 64px);
+        font-weight: 600;
+        line-height: 1.12;
+        letter-spacing: -.055em;
+      }
+      .content-reading-hero > p {
+        max-width: 760px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.85;
+      }
+      .content-reading-toc-button,
+      .content-reading-side-head button,
+      .content-reading-edge-toggle {
+        border: 1px solid rgba(23,35,29,.08);
+        color: var(--muted);
+        background: rgba(255,255,255,.62);
+        cursor: pointer;
+      }
+      .content-reading-toc-button {
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 11px;
+      }
+      .content-reading-meta-row a {
+        border: 1px solid rgba(17,63,49,.07);
+        border-radius: 999px;
+        padding: 5px 9px;
+        color: var(--muted);
+        background: rgba(255,255,255,.46);
+        font-size: 10px;
+      }
+      .content-reading-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(210px, 270px);
+        gap: 22px;
+        align-items: start;
+        padding: clamp(22px, 4vw, 42px);
+      }
+      .toc-closed .content-reading-body { grid-template-columns: minmax(0, 1fr) auto; }
+      .content-reading-main {
         min-width: 0;
-        border: 1px solid rgba(23,35,29,.075);
-        border-radius: 28px;
-        padding: clamp(28px,5vw,64px);
-        background: rgba(255,255,255,.68);
-        box-shadow: 0 24px 76px rgba(24,63,50,.065), inset 0 1px 0 rgba(255,255,255,.82);
+        border: 1px solid rgba(23,35,29,.06);
+        border-radius: 24px;
+        padding: clamp(22px, 4.8vw, 54px);
+        background: rgba(255,255,255,.78);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
       }
-      .content-reader-head { position: relative; padding-bottom: 30px; border-bottom: 1px solid rgba(23,35,29,.08); }
-      .content-reader-kicker { display: flex; flex-wrap: wrap; gap: 9px; color: var(--blue); font-size: 10px; }
-      .content-reader-kicker span + span::before { content: '·'; margin-right: 9px; color: var(--quiet); }
-      .content-reader-head h1 { margin: 13px 0 0; font-family: var(--display-serif); font-size: clamp(34px,5vw,58px); font-weight: 600; line-height: 1.15; letter-spacing: -.05em; }
-      .content-reader-head p { margin: 17px 0 0; max-width: 720px; color: var(--muted); font-size: 15px; line-height: 1.8; }
-      .content-reader-toc-toggle { position: absolute; right: 0; top: 0; border: 1px solid rgba(23,35,29,.08); border-radius: 999px; padding: 6px 10px; color: var(--quiet); background: rgba(255,255,255,.62); font-size: 10px; cursor: pointer; }
-      :global(.content-public-markdown) { padding-top: 26px; color: #26302c; font-size: 16px; line-height: 2; }
+      .content-reading-side {
+        position: sticky;
+        top: 98px;
+        display: grid;
+        gap: 13px;
+        max-height: calc(100dvh - 122px);
+        overflow: auto;
+        border: 1px solid rgba(23,35,29,.07);
+        border-radius: 20px;
+        padding: 13px;
+        background: rgba(255,255,255,.54);
+        box-shadow: 0 14px 42px rgba(24,63,50,.05), inset 0 1px 0 rgba(255,255,255,.72);
+      }
+      .content-reading-side-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .content-reading-side-head span {
+        color: var(--quiet);
+        font-size: 9px;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+      }
+      .content-reading-side-head button {
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+      }
+      .content-reading-side-links {
+        border-top: 1px solid rgba(23,35,29,.07);
+        padding-top: 11px;
+      }
+      .content-reading-side-links a {
+        color: var(--leaf);
+        font-size: 10px;
+      }
+      .content-reading-edge-toggle {
+        position: sticky;
+        top: 120px;
+        width: 31px;
+        min-height: 78px;
+        border-radius: 14px;
+        writing-mode: vertical-rl;
+        letter-spacing: .12em;
+        font-size: 10px;
+      }
+      .content-reading-foot {
+        display: flex;
+        justify-content: flex-end;
+        margin: 28px 0 0;
+        padding: 0 8px;
+        color: rgba(25,59,49,.68);
+      }
+      .content-reading-foot :global(svg) { width: min(220px, 36vw); }
+
+      :global(.content-public-markdown) {
+        color: #26302c;
+        font-family: var(--display-serif);
+        font-size: 17px;
+        line-height: 2.06;
+      }
       :global(.content-public-markdown h1),
       :global(.content-public-markdown h2),
       :global(.content-public-markdown h3),
-      :global(.content-public-markdown h4) { scroll-margin-top: 36px; font-family: var(--display-serif); font-weight: 600; line-height: 1.4; letter-spacing: -.02em; }
+      :global(.content-public-markdown h4) {
+        scroll-margin-top: 110px;
+        font-family: var(--display-serif);
+        font-weight: 600;
+        line-height: 1.4;
+        letter-spacing: -.02em;
+      }
       :global(.content-public-markdown h1) { margin: 0 0 1em; font-size: 32px; }
-      :global(.content-public-markdown h2) { margin: 2.2em 0 .8em; font-size: 26px; }
-      :global(.content-public-markdown h3) { margin: 1.85em 0 .7em; font-size: 21px; }
-      :global(.content-public-markdown h4) { margin: 1.55em 0 .6em; font-size: 18px; }
+      :global(.content-public-markdown h2) { margin: 2.15em 0 .75em; font-size: 26px; }
+      :global(.content-public-markdown h3) { margin: 1.75em 0 .65em; font-size: 21px; }
+      :global(.content-public-markdown h4) { margin: 1.45em 0 .55em; font-size: 18px; }
       :global(.content-public-markdown p),
       :global(.content-public-markdown ul),
       :global(.content-public-markdown ol),
       :global(.content-public-markdown blockquote) { margin: 1em 0; }
       :global(.content-public-markdown ul),
       :global(.content-public-markdown ol) { padding-left: 1.4em; }
-      :global(.content-public-markdown blockquote) { border-left: 3px solid rgba(49,90,140,.26); padding: 2px 0 2px 17px; color: var(--muted); }
-      :global(.content-public-markdown pre) { overflow: auto; border-radius: 15px; padding: 15px; color: #f4f7f5; background: #1f2925; }
-      :global(.content-public-markdown code:not(pre code)) { border-radius: 5px; padding: 2px 5px; background: rgba(49,90,140,.07); }
-      :global(.content-public-markdown a) { color: #315a8c; text-decoration: underline; text-decoration-color: rgba(49,90,140,.25); text-underline-offset: 3px; }
-      :global(.content-public-markdown table) { display: block; max-width: 100%; overflow: auto; border-collapse: collapse; }
-      :global(.content-public-markdown th),
-      :global(.content-public-markdown td) { border: 1px solid rgba(23,35,29,.1); padding: 8px 10px; text-align: left; }
-
-      .content-reader-toc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-      .content-reader-toc-head button { width: 24px; height: 24px; border: 0; border-radius: 50%; color: var(--quiet); background: rgba(220,233,223,.55); cursor: pointer; }
-      .content-reader-edge-toggle { position: sticky; top: 92px; align-self: start; justify-self: end; width: 30px; min-height: 76px; border: 1px solid rgba(23,35,29,.08); border-radius: 13px 0 0 13px; color: var(--green); background: rgba(248,251,249,.9); writing-mode: vertical-rl; letter-spacing: .12em; font-size: 10px; cursor: pointer; }
-      .content-access-gate { margin-top: 28px; border: 1px solid rgba(23,35,29,.08); border-radius: 20px; padding: 24px; background: rgba(247,249,248,.68); }
-      .content-access-gate > span { color: var(--gold); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
-      .content-access-gate h2 { margin: 10px 0 0; font-family: var(--display-serif); font-size: 24px; }
-      .content-access-gate p { color: var(--muted); }
-      .content-access-gate form { display: flex; gap: 8px; margin-top: 18px; }
-      .content-access-gate input { flex: 1; min-width: 0; border: 1px solid rgba(23,35,29,.1); border-radius: 999px; padding: 11px 13px; background: #fff; }
-      .content-access-gate button { border: 0; border-radius: 999px; padding: 0 16px; color: #fff; background: var(--green); cursor: pointer; }
-      .content-access-gate small { display: block; margin-top: 10px; color: #9a643b; }
-
-      @media (max-width: 1080px) {
-        .content-reader-layout,
-        .content-reader-layout.toc-closed { grid-template-columns: minmax(150px,.42fr) minmax(0,1.58fr); }
-        .content-reader-toc { position: fixed; z-index: 44; top: 88px; right: 18px; width: min(290px,calc(100vw - 36px)); background: rgba(250,252,251,.98); box-shadow: 0 24px 70px rgba(17,45,36,.18); }
-        .content-reader-edge-toggle { position: fixed; z-index: 32; right: 0; top: 130px; }
+      :global(.content-public-markdown blockquote) {
+        border-left: 3px solid rgba(49,90,140,.24);
+        padding: 2px 0 2px 17px;
+        color: var(--muted);
       }
-      @media (max-width: 760px) {
-        .content-reader-layout,
-        .content-reader-layout.toc-closed { grid-template-columns: 1fr; padding-top: 20px; }
-        .content-reader-meta { position: static; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; max-height: none; }
-        .content-reader-back,
-        .content-reader-signature { grid-column: 1 / -1; }
-        .content-reader-meta-block { margin: 0; }
-        .content-reader-signature { max-width: 230px; }
-        .content-reader-article { padding: 24px 18px; }
-        .content-reader-head h1 { padding-right: 0; }
-        .content-reader-toc-toggle { position: static; margin-top: 16px; }
-        .content-reader-toc { top: 72px; bottom: 18px; max-height: none; }
+      :global(.content-public-markdown pre) {
+        overflow: auto;
+        border-radius: 15px;
+        padding: 15px;
+        color: #f4f7f5;
+        background: #1f2925;
+      }
+      :global(.content-public-markdown code:not(pre code)) {
+        border-radius: 5px;
+        padding: 2px 5px;
+        background: rgba(49,90,140,.07);
+      }
+      :global(.content-public-markdown a) {
+        color: #315a8c;
+        text-decoration: underline;
+        text-decoration-color: rgba(49,90,140,.25);
+        text-underline-offset: 3px;
+      }
+      :global(.content-public-markdown table) {
+        display: block;
+        max-width: 100%;
+        overflow: auto;
+        border-collapse: collapse;
+      }
+      :global(.content-public-markdown th),
+      :global(.content-public-markdown td) {
+        border: 1px solid rgba(23,35,29,.1);
+        padding: 8px 10px;
+        text-align: left;
+      }
+
+      :global(.content-reading-nav) { display: grid; gap: 10px; }
+      :global(.content-reading-nav .reading-progress-head) {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        color: var(--quiet);
+        font-size: 9px;
+      }
+      :global(.content-reading-nav .reading-progress-head strong) { color: var(--leaf); }
+      :global(.content-reading-nav .reading-progress-track) {
+        overflow: hidden;
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(17,63,49,.08);
+      }
+      :global(.content-reading-nav .reading-progress-track i) {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--leaf);
+        transform-origin: left center;
+      }
+      :global(.content-reading-nav nav) {
+        display: grid;
+        gap: 4px;
+        max-height: min(48vh, 440px);
+        overflow: auto;
+      }
+      :global(.content-reading-nav nav a) {
+        border-radius: 10px;
+        padding: 7px 8px;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      :global(.content-reading-nav nav a.level-3) { padding-left: 16px; }
+      :global(.content-reading-nav nav a.level-4) { padding-left: 24px; }
+      :global(.content-reading-nav nav a:hover),
+      :global(.content-reading-nav nav a.active) {
+        color: var(--leaf);
+        background: rgba(220,233,223,.58);
+      }
+      :global(.content-reading-nav p) {
+        margin: 0;
+        color: var(--quiet);
+        font-size: 11px;
+        line-height: 1.6;
+      }
+
+      .content-access-gate {
+        display: grid;
+        gap: 12px;
+        border: 1px solid rgba(23,35,29,.08);
+        border-radius: 20px;
+        padding: 24px;
+        background: rgba(247,249,248,.68);
+      }
+      .content-access-gate > span {
+        color: var(--honey);
+        font-size: 10px;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+      }
+      .content-access-gate h2 {
+        margin: 0;
+        font-family: var(--display-serif);
+        font-size: 24px;
+      }
+      .content-access-gate p { margin: 0; color: var(--muted); line-height: 1.8; }
+      .content-access-gate form {
+        display: flex;
+        gap: 8px;
+        margin-top: 4px;
+      }
+      .content-access-gate input {
+        flex: 1;
+        min-width: 0;
+        border: 1px solid rgba(23,35,29,.1);
+        border-radius: 999px;
+        padding: 11px 13px;
+        background: #fff;
+      }
+      .content-access-gate button {
+        border: 0;
+        border-radius: 999px;
+        padding: 0 16px;
+        color: #fff;
+        background: var(--leaf);
+        cursor: pointer;
+      }
+      .content-access-gate small { color: #9a643b; }
+
+      @media (max-width: 980px) {
+        .content-reading-shell { width: min(100% - 28px, 860px); }
+        .content-reading-body,
+        .toc-closed .content-reading-body { grid-template-columns: 1fr; }
+        .content-reading-side {
+          position: static;
+          max-height: none;
+        }
+        .content-reading-edge-toggle {
+          position: static;
+          width: fit-content;
+          min-height: 0;
+          padding: 8px 12px;
+          writing-mode: horizontal-tb;
+        }
+      }
+      @media (max-width: 640px) {
+        .content-reading-shell { width: min(100% - 18px, 640px); }
+        .content-reading-frame { margin-top: 18px; border-radius: 22px; }
+        .content-reading-hero { padding: 24px 18px; }
+        .content-reading-title-row { grid-template-columns: 1fr; }
+        .content-reading-hero h1 { font-size: clamp(32px, 10vw, 46px); }
+        .content-reading-body { padding: 14px; }
+        .content-reading-main { padding: 20px 16px; border-radius: 18px; }
+        :global(.content-public-markdown) { font-size: 16px; line-height: 1.96; }
         .content-access-gate form { flex-direction: column; }
-        .content-access-gate button { height: 42px; }
+        .content-access-gate button { min-height: 42px; }
       }
     `}</style>
-    <LawTechDeskStyles />
   </>
 }
 

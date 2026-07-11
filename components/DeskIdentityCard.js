@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useWorkspaceSession } from '@/hooks/useWorkspaceSession'
 
@@ -26,29 +26,10 @@ function writeCachedStatus(profileId, value) {
   } catch {}
 }
 
-function formatClock(now) {
-  if (!now) return { date: '今天', time: '--:--' }
-  const date = new Intl.DateTimeFormat('zh-CN', {
-    month: 'numeric', day: 'numeric', weekday: 'short'
-  }).format(now)
-  return {
-    date: date.replace(/星期/, '周'),
-    time: new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(now)
-  }
-}
-
 export function DeskIdentityCard({ collapsed = false, compact = false }) {
   const { session } = useWorkspaceSession()
   const profile = session?.profile || session?.actor || {}
-  const [now, setNow] = useState(null)
   const [status, setStatus] = useState(null)
-  const clock = useMemo(() => formatClock(now), [now])
-
-  useEffect(() => {
-    setNow(new Date())
-    const timer = window.setInterval(() => setNow(new Date()), 30 * 1000)
-    return () => window.clearInterval(timer)
-  }, [])
 
   useEffect(() => {
     const profileId = profile.id || ''
@@ -73,16 +54,16 @@ export function DeskIdentityCard({ collapsed = false, compact = false }) {
   ]
   const avatar = profile.avatarUrl || '/curacao-avatar.png'
   const avatarAlt = profile.displayName ? `${profile.displayName} 的头像` : '工作台头像'
+  const displayName = profile.displayName || profile.email || 'Curacao'
 
-  return <div className={`desk-identity-card ${collapsed ? 'is-collapsed' : ''} ${compact ? 'is-compact' : ''}`}>
+  return <div className={`desk-identity-card desk-identity-card-v7 ${collapsed ? 'is-collapsed' : ''} ${compact ? 'is-compact' : ''}`}>
     <span className='desk-identity-avatar' aria-hidden='true'>
       <img alt={avatarAlt} src={avatar} onError={event => { event.currentTarget.src = '/curacao-avatar.png' }} />
     </span>
     {!collapsed ? <div className='desk-identity-copy'>
-      <div className='desk-identity-clock'><strong title={clock.date}>{clock.date}</strong><time>{clock.time}</time></div>
-      <p>看到我记得喝口水</p>
+      <div className='desk-identity-name'><strong>{displayName}</strong><small>{profile.role === 'owner' ? '私人工作区' : '工作区'}</small></div>
       {!compact ? <div className='desk-identity-chips' aria-label='工作台状态'>
-        {chips.map(chip => <span key={chip.label}><b>{chip.value}</b>{chip.label}</span>)}
+        {chips.map(chip => <span key={chip.label}><b>{chip.value}</b><small>{chip.label}</small></span>)}
       </div> : null}
     </div> : null}
   </div>

@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { PublicContentCard } from '@/components/content/PublicContentCard'
 import { DynamicSignature } from '@/components/law-tech/DynamicSignature'
 import { PublicHeader } from '@/components/law-tech/PublicHeader'
-import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
 import { loadPublicContentIndex } from '@/lib/content/publicIndex'
 import {
   filterPublicContent,
@@ -122,8 +121,9 @@ export default function PublicSearchPage({ items = [] }) {
     <main className='lawtech-public-page public-search-page'>
       <div className='public-aurora public-aurora-one' aria-hidden='true' />
       <div className='public-aurora public-aurora-two' aria-hidden='true' />
-      <div className='public-shell'>
-        <PublicHeader active='search' />
+      <PublicHeader active='search' />
+
+      <div className='public-shell' data-system-app='搜索'>
 
         <section className='public-search-hero'>
           <div><span className='eyebrow'>Search</span><h1>搜索</h1></div>
@@ -183,32 +183,33 @@ export default function PublicSearchPage({ items = [] }) {
       </div>
 
       <style jsx>{`
-        .public-search-hero { display:grid; grid-template-columns:170px minmax(0,1fr); align-items:end; gap:8px 20px; padding:34px 0 22px; }
-        .public-search-hero h1 { margin:7px 0 0; font-family:var(--display-serif); font-size:clamp(38px,5vw,58px); font-weight:600; letter-spacing:-.05em; }
-        .public-search-hero form { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:9px; border:1px solid rgba(255,255,255,.78); border-radius:18px; padding:7px; background:rgba(255,255,255,.58); box-shadow:0 14px 40px rgba(24,63,50,.07),inset 0 1px 0 rgba(255,255,255,.9); backdrop-filter:blur(22px); }
+        /* public-search-surface-v1: lighter search workspace */
+        .public-search-hero { display:grid; grid-template-columns:minmax(0,1fr); align-items:end; gap:10px; padding:28px 0 18px; }
+        .public-search-hero h1 { margin:6px 0 0; font-family:var(--display-serif); font-size:clamp(36px,4.8vw,52px); font-weight:600; letter-spacing:-.05em; }
+        .public-search-hero form { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; border:1px solid rgba(255,255,255,.72); border-radius:16px; padding:6px; background:rgba(255,255,255,.52); box-shadow:0 10px 28px rgba(24,63,50,.05),inset 0 1px 0 rgba(255,255,255,.86); backdrop-filter:blur(14px); }
         .public-search-hero input { min-width:0; border:0; padding:10px 13px; color:var(--ink); background:transparent; font-size:14px; outline:none; }
         .public-search-hero form button { border:0; border-radius:12px; padding:0 18px; color:#fffaf0; background:var(--leaf); font-weight:650; cursor:pointer; }
-        .public-search-mode { grid-column:2; display:block; min-height:16px; margin:0 4px; color:var(--quiet); font-size:9px; }
+        .public-search-mode { grid-column:1; display:block; min-height:16px; margin:0 4px; color:var(--quiet); font-size:9px; }
         .public-search-mode.is-fulltext { color:var(--green); }
-        .public-search-workspace { display: grid; grid-template-columns: 230px minmax(0,1fr); gap: 22px; align-items: start; padding-bottom: 90px; }
+        .public-search-workspace { display: grid; grid-template-columns: 210px minmax(0,1fr); gap: 18px; align-items: start; padding-bottom: 82px; }
         .public-search-filters,
-        .public-search-results { border: 1px solid rgba(255,255,255,.72); border-radius: 24px; background: linear-gradient(145deg,rgba(255,255,255,.64),rgba(239,245,241,.43)); box-shadow: 0 22px 64px rgba(24,63,50,.065), inset 0 1px 0 rgba(255,255,255,.84); backdrop-filter: blur(22px); }
-        .public-search-filters { position: sticky; top: 96px; max-height: calc(100dvh - 114px); overflow: auto; padding: 15px; }
-        .public-search-filters details { padding: 12px 0; border-bottom: 1px solid rgba(23,35,29,.07); }
+        .public-search-results { border: 1px solid rgba(255,255,255,.66); border-radius: 20px; background: rgba(255,255,255,.5); box-shadow: 0 16px 44px rgba(24,63,50,.045), inset 0 1px 0 rgba(255,255,255,.82); backdrop-filter: blur(14px); }
+        .public-search-filters { position: sticky; top: 88px; max-height: calc(100dvh - 104px); overflow: auto; padding: 13px; }
+        .public-search-filters details { padding: 10px 0; border-bottom: 1px solid rgba(23,35,29,.06); }
         .public-search-filters summary { display: flex; justify-content: space-between; color: var(--quiet); font-size: 10px; cursor: pointer; list-style: none; }
         .public-search-filters summary::-webkit-details-marker { display: none; }
         .public-search-filters details > div { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
-        .public-search-filters button { border: 1px solid rgba(49,90,140,.11); border-radius: 999px; padding: 5px 8px; color: var(--quiet); background: rgba(255,255,255,.45); font-size: 10px; cursor: pointer; }
+        .public-search-filters button { border: 1px solid rgba(49,90,140,.1); border-radius: 999px; padding: 4px 7px; color: var(--quiet); background: rgba(255,255,255,.38); font-size: 10px; cursor: pointer; }
         .public-search-filters button.active { color: #315a8c; border-color: rgba(49,90,140,.25); background: rgba(226,237,241,.75); }
         .public-search-signature { margin-top: 18px; color: rgba(25,59,49,.72); }
-        .public-search-results { min-width: 0; padding: 18px; }
+        .public-search-results { min-width: 0; padding: 15px; }
         .public-search-results > header { display: flex; align-items: end; justify-content: space-between; gap: 16px; padding: 3px 3px 17px; border-bottom: 1px solid rgba(23,35,29,.07); }
         .public-search-results header span { color: var(--quiet); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
         .public-search-results h2 { margin: 4px 0 0; font-family: var(--display-serif); font-size: 25px; font-weight: 600; }
         .public-search-results header button,
         .public-search-empty button { border: 0; border-radius: 999px; padding: 8px 11px; color: var(--green); background: rgba(220,233,223,.65); cursor: pointer; }
-        .public-search-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; padding-top: 18px; }
-        .public-search-empty { padding: 70px 20px; text-align: center; }
+        .public-search-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 10px; padding-top: 15px; }
+        .public-search-empty { padding: 48px 18px; text-align: center; }
         .public-search-empty h3 { margin: 0; font-family: var(--display-serif); font-size: 25px; }
         .public-search-empty p { margin: 9px auto 18px; max-width: 420px; color: var(--muted); line-height: 1.7; }
         @media (max-width: 820px) {
@@ -224,7 +225,6 @@ export default function PublicSearchPage({ items = [] }) {
         }
       `}</style>
     </main>
-    <LawTechDeskStyles />
   </>
 }
 
