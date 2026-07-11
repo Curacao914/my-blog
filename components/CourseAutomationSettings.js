@@ -116,7 +116,7 @@ export function CourseAutomationSettings() {
             />
             <span>
               <strong>启用课程自动化</strong>
-              <small>发现回放、转写、生成简报与完整笔记。</small>
+              <small>发现回放后立即转写；课程笔记在经济时段批量生成。</small>
             </span>
           </label>
 
@@ -134,18 +134,16 @@ export function CourseAutomationSettings() {
           </label>
 
           <div className='settings-form-grid'>
-            <label>
-              <span>每日扫描时间</span>
-              <input
-                type='time'
-                value={form.scanTime}
-                onChange={event => update('scanTime', event.target.value)}
-                disabled={disabled || !form.enabled}
-              />
-              <small>
-                GitHub Action 每 30 分钟轻量检查一次，只在设定时间之后且当天尚未运行时启动完整 Worker。
-              </small>
-            </label>
+            <div className='settings-schedule-card'>
+              <span>教学网扫描</span>
+              <strong>每天 08:00 与 20:00</strong>
+              <small>每十二小时检查一次；发现新回放后立即下载、转录并保存逐字稿。</small>
+            </div>
+            <div className='settings-schedule-card'>
+              <span>课程笔记</span>
+              <strong>每天 00:30 起</strong>
+              <small>逐字稿先进入队列，再由经济模式在低价窗口生成大纲、笔记与简报。</small>
+            </div>
             <label>
               <span>AI 调用策略</span>
               <select

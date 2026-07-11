@@ -5,6 +5,7 @@ import '@/styles/utility-patterns.css'
 // core styles shared by all of react-notion-x (required)
 import 'react-notion-x/src/styles.css' // 原版的 react-notion-x
 import '@/styles/notion.css' // 在原版之后覆盖阅读样式
+import '@/styles/lawtech-system.css'
 
 import useAdjustStyle from '@/hooks/useAdjustStyle'
 import { primeWorkspaceSession } from '@/hooks/useWorkspaceSession'
@@ -25,6 +26,7 @@ import { ClerkProvider } from '@clerk/nextjs'
 // 【核心新增 1】：引入我们刚刚自己写的 React 原生聊天挂件
 import NativeDifyChat from '@/components/NativeDifyChat'
 import { CourseTaskProvider } from '@/components/CourseTaskManager'
+import { SystemWindowProvider } from '@/components/law-tech/SystemWindowManager'
 
 
 /**
@@ -88,7 +90,9 @@ const MyApp = ({ Component, pageProps }) => {
   const routedContent = isAuthRoute ? (
     clerkContent
   ) : (
-    <CourseTaskProvider>{clerkContent}</CourseTaskProvider>
+    <CourseTaskProvider>
+      <SystemWindowProvider>{clerkContent}</SystemWindowProvider>
+    </CourseTaskProvider>
   )
 
   return <>

@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { PublicContentCard } from '@/components/content/PublicContentCard'
 import { DynamicSignature } from '@/components/law-tech/DynamicSignature'
 import { PublicHeader } from '@/components/law-tech/PublicHeader'
-import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
 import { loadPublicContentIndex } from '@/lib/content/publicIndex'
 import {
   filterPublicContent,
@@ -122,8 +121,9 @@ export default function PublicSearchPage({ items = [] }) {
     <main className='lawtech-public-page public-search-page'>
       <div className='public-aurora public-aurora-one' aria-hidden='true' />
       <div className='public-aurora public-aurora-two' aria-hidden='true' />
-      <div className='public-shell'>
-        <PublicHeader active='search' />
+      <PublicHeader active='search' />
+
+      <div className='public-shell' data-system-app='搜索'>
 
         <section className='public-search-hero'>
           <div><span className='eyebrow'>Search</span><h1>搜索</h1></div>
@@ -225,7 +225,6 @@ export default function PublicSearchPage({ items = [] }) {
         }
       `}</style>
     </main>
-    <LawTechDeskStyles />
   </>
 }
 

@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { DynamicSignature } from '@/components/law-tech/DynamicSignature'
 import { PublicHeader } from '@/components/law-tech/PublicHeader'
-import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
 import {
   getContentFacets,
   getContentStats
@@ -182,8 +181,9 @@ const ContentPage = ({ snapshots, facets, stats }) => {
     <main className='lawtech-public-page content-library-page'>
       <div className='public-aurora public-aurora-one' aria-hidden='true' />
       <div className='public-aurora public-aurora-two' aria-hidden='true' />
-      <div className='public-shell'>
-        <PublicHeader active='content' />
+      <PublicHeader active='content' />
+
+      <div className='public-shell' data-system-app='内容库'>
 
         <section className='content-library-intro'>
           <div>
@@ -447,7 +447,6 @@ const ContentPage = ({ snapshots, facets, stats }) => {
         .content-sidebar-signature { max-width: 240px; }
       }
     `}</style>
-    <LawTechDeskStyles />
   </>
 }
 

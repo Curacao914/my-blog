@@ -1,34 +1,41 @@
-
 const fs = require('fs')
 const path = require('path')
 
 const root = path.join(__dirname, '../..')
 const header = fs.readFileSync(path.join(root, 'components/law-tech/PublicHeader.js'), 'utf8')
 const icons = fs.readFileSync(path.join(root, 'components/LawTechIcons.js'), 'utf8')
+const styles = fs.readFileSync(path.join(root, 'styles/lawtech-system.css'), 'utf8')
 
-describe('round 2 system shell', () => {
-  it('keeps the system shell styles global so dock cannot render as plain text', () => {
-    expect(header).toContain('<style jsx global>')
-    expect(header).toContain('.system-dock')
-    expect(header).toContain('.system-dock-item')
-    expect(header).not.toContain('<style jsx>{`')
+describe('shared macOS system shell', () => {
+  it('keeps one shared Menu Bar and Dock component', () => {
+    expect(header).toContain("className='public-header system-menu-bar'")
+    expect(header).toContain("className='system-dock'")
+    expect(header).toContain('SystemDock')
+    expect(header).not.toContain('<style jsx global>')
   })
 
-  it('keeps search as a slim menu-bar field instead of a nav item', () => {
-    expect(header).toContain("['content', 'tools', 'about']")
-    expect(header).toContain('system-menu-search')
-    expect(header).toContain("action='/search'")
+  it('adds Home before Content and keeps the same chrome across apps', () => {
+    expect(header.indexOf("key: 'home'")).toBeLessThan(header.indexOf("key: 'content'"))
+    expect(header).toContain("<DockItem active={active === 'home'}")
+    expect(header).toContain("<DockItem active={active === 'desk'}")
   })
 
-  it('raises account popovers above the system shell', () => {
-    expect(header).toContain('z-index: 8000 !important')
-    expect(header).toContain('[data-radix-popper-content-wrapper]')
+  it('uses Algolia-backed suggestions and the command search shortcut', () => {
+    expect(header).toContain('SystemSearch')
+    expect(header).toContain("event.key.toLowerCase() === 'k'")
+    expect(header).toContain("fetch(`/api/search?q=${encodeURIComponent(keyword)}&hitsPerPage=6`")
+    expect(header).toContain("placeholder='搜索标题、内容或标签'")
   })
 
-  it('provides icon-only dock entries with hover labels', () => {
+  it('provides a longer but quieter icon Dock', () => {
+    expect((header.match(/<DockItem /g) || []).length).toBe(7)
     expect(header).toContain('RandomDockLink')
-    expect(header).toContain("title='随机一页'")
-    expect(icons).toContain('export function LawTechIcon')
-    expect(icons).toContain('random:')
+    expect(styles).toContain('width: 36px')
+    expect(styles).toContain('transform: translateY(-2px) scale(1.035)')
+    expect(styles).toContain('.system-dock-item.is-active')
+    expect(styles).toContain('transform: none')
+    for (const icon of ['home:', 'content:', 'archive:', 'search:', 'random:', 'tools:', 'about:', 'desk:']) {
+      expect(icons).toContain(icon)
+    }
   })
 })

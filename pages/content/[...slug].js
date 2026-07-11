@@ -10,7 +10,6 @@ import {
 import { ReadingNavigator } from '@/components/content/ReadingNavigator'
 import { DynamicSignature } from '@/components/law-tech/DynamicSignature'
 import { PublicHeader } from '@/components/law-tech/PublicHeader'
-import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
 import {
   mergeContentPaths
 } from '@/lib/contentHierarchy'
@@ -114,8 +113,9 @@ const ContentDetailPage = ({ content }) => {
     <main className='lawtech-public-page content-reading-page content-reading-v2'>
       <div className='public-aurora public-aurora-one' aria-hidden='true' />
       <div className='public-aurora public-aurora-two' aria-hidden='true' />
-      <div className='public-shell content-reading-shell'>
-        <PublicHeader active='content' />
+      <PublicHeader active='content' />
+
+      <div className='public-shell content-reading-shell' data-system-app={content.title}>
 
         <article className={`content-reading-frame ${tocOpen ? 'toc-open' : 'toc-closed'}`}>
           <header className='content-reading-hero'>
@@ -529,7 +529,6 @@ const ContentDetailPage = ({ content }) => {
         .content-access-gate button { min-height: 42px; }
       }
     `}</style>
-    <LawTechDeskStyles />
   </>
 }
 

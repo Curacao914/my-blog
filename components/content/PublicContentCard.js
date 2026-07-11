@@ -32,6 +32,9 @@ export function PublicContentCard({ item, compact = false, featured = false }) {
 
   return <>
     <Link
+      data-quicklook
+      data-quicklook-title={item?.title || '未命名内容'}
+      data-quicklook-meta={`${publicContentTypeLabel(item?.type)} · ${category}`}
       className={`public-content-card ${compact ? 'is-compact' : ''} ${featured ? 'is-featured' : ''} ${item?.cover ? 'has-cover' : 'generated-cover'}`}
     href={publicContentHref(item)}
   >

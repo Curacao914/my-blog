@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { PublicContentCard } from '@/components/content/PublicContentCard'
 import { DynamicSignature } from '@/components/law-tech/DynamicSignature'
 import { PublicHeader } from '@/components/law-tech/PublicHeader'
-import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
 
 export function PublicDirectoryPage({
   title,
@@ -27,8 +26,9 @@ export function PublicDirectoryPage({
     <main className='lawtech-public-page public-directory-page'>
       <div className='public-aurora public-aurora-one' aria-hidden='true' />
       <div className='public-aurora public-aurora-two' aria-hidden='true' />
-      <div className='public-shell'>
-        <PublicHeader active='content' />
+      <PublicHeader active={eyebrow === 'Archive' ? 'archive' : 'content'} />
+
+      <div className='public-shell' data-system-app={title}>
         <section className='public-directory-hero'>
           <div>
             <span className='eyebrow'>{eyebrow}</span>
@@ -107,6 +107,5 @@ export function PublicDirectoryPage({
         }
       `}</style>
     </main>
-    <LawTechDeskStyles />
   </>
 }

@@ -1,42 +1,131 @@
 import Head from 'next/head'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 
 import { PublicHeader } from '@/components/law-tech/PublicHeader'
-import { LawTechDeskStyles } from '@/components/LawTechDeskStyles'
+import { LawTechIcon } from '@/components/LawTechIcons'
+import { getWorkspaceSession } from '@/lib/auth/serverAdmin'
+import { DEFAULT_SITE_PROFILE, getPublicSiteProfile, normalizeSiteProfile } from '@/lib/siteProfile'
 
-export default function AboutPage() {
-  return <>
-    <Head><title>关于 · Curacao</title><meta name='description' content='Curacao 的个人简介。' /><meta name='theme-color' content='#f5f3eb' /></Head>
-    <main className='lawtech-public-page public-about'>
-      <div className='public-aurora public-aurora-one' aria-hidden='true' />
-      <div className='public-shell'>
-        <PublicHeader active='about' />
-        <section className='public-page-hero compact'>
-          <span className='eyebrow'>About</span>
-          <h1>Curacao</h1>
-          <p>北京大学法学院法律硕士（非法学）。本科就读于中南财经政法大学侦查学专业。</p>
-        </section>
-        <section className='about-grid'>
-          <article className='about-story-card'><span>01</span><div><h2>法学</h2><p>课程笔记、案例分析与论文。</p><Link href='/content'>查看内容 ↗</Link></div></article>
-          <article className='about-story-card'><span>02</span><div><h2>写作</h2><p>经济法、民法、刑法与国际法。</p><Link href='/archive'>时间归档 ↗</Link></div></article>
-          <article className='about-story-card'><span>03</span><div><h2>技术</h2><p>个人网站、OCR 与学习工具。</p><Link href='/tools'>查看工具 ↗</Link></div></article>
-        </section>
-        <style jsx>{`
-          /* public-about-surface-v1: compact about cards */
-          .public-about :global(.public-page-hero.compact) { max-width:760px; padding:38px 0 24px; }
-          .public-about :global(.public-page-hero.compact h1) { font-size:clamp(42px,6vw,66px); }
-          .public-about :global(.public-page-hero.compact p) { max-width:560px; color:var(--muted); line-height:1.75; }
-          .about-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; padding:0 0 76px; }
-          .about-story-card { display:grid; grid-template-columns:auto minmax(0,1fr); gap:14px; min-height:154px; border:1px solid rgba(255,255,255,.68); border-radius:18px; padding:16px; background:rgba(255,255,255,.52); box-shadow:0 12px 34px rgba(24,63,50,.05),inset 0 1px 0 rgba(255,255,255,.82); }
-          .about-story-card > span { color:var(--blue); font-family:var(--display-serif); font-size:24px; line-height:1; }
-          .about-story-card h2 { margin:0 0 7px; font-family:var(--display-serif); font-size:23px; font-weight:600; }
-          .about-story-card p { margin:0; color:var(--muted); font-size:12px; line-height:1.65; }
-          .about-story-card a { display:inline-flex; margin-top:18px; color:var(--green); font-size:11px; }
-        `}</style>
-      </div>
-    </main>
-    <LawTechDeskStyles />
-  </>
+function ProfileImage({ profile }) {
+  return (
+    <span className='about-profile-image'>
+      {profile.avatarUrl ? <img src={profile.avatarUrl} alt={`${profile.name} 头像`} /> : <b>{profile.name.slice(0, 1)}</b>}
+    </span>
+  )
+}
+
+function SchoolMark({ school }) {
+  return (
+    <span className='about-school-mark'>
+      {school.logoUrl ? <img src={school.logoUrl} alt='' /> : <b>{school.school.slice(0, 1)}</b>}
+    </span>
+  )
+}
+
+export default function AboutPage({ initialProfile = DEFAULT_SITE_PROFILE }) {
+  const [profile, setProfile] = useState(() => normalizeSiteProfile(initialProfile))
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/site-profile', { credentials: 'same-origin' })
+      .then(response => response.json())
+      .then(data => {
+        if (!cancelled && data?.profile) setProfile(normalizeSiteProfile(data.profile))
+      })
+      .catch(() => null)
+    return () => { cancelled = true }
+  }, [])
+
+  return (
+    <>
+      <Head>
+        <title>关于 · {profile.name}</title>
+        <meta name='description' content={profile.intro} />
+        <meta name='robots' content='noindex,nofollow' />
+        <meta name='theme-color' content='#e8efec' />
+      </Head>
+      <main className='lawtech-public-page public-about about-app-v2'>
+        <PublicHeader active='about' ownerNavigation />
+        <div className='public-shell about-window' data-system-app='关于'>
+          <section className='about-profile-head'>
+            <ProfileImage profile={profile} />
+            <div className='about-profile-copy'>
+              <span>{profile.location}</span>
+              <h1>{profile.name}</h1>
+              <p>{profile.subtitle}</p>
+              <nav aria-label='个人链接'>
+                {profile.links.map(link => (
+                  <Link href={link.href} key={`${link.label}:${link.href}`} rel={link.href.startsWith('http') ? 'noreferrer' : undefined}>
+                    {link.label}<span aria-hidden='true'>↗</span>
+                  </Link>
+                ))}
+              </nav>
+            </div>
+            <div className='about-profile-monogram' aria-hidden='true'>C</div>
+          </section>
+
+          <section className='about-section about-section-copy'>
+            <header><span>About</span><h2>关于</h2></header>
+            <div>
+              <p className='about-intro'>{profile.intro}</p>
+              {profile.about.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+            </div>
+          </section>
+
+          <section className='about-section about-section-education'>
+            <header><span>Education</span><h2>教育经历</h2></header>
+            <div className='about-education-list'>
+              {profile.education.map((school, index) => (
+                <Link href={school.href || '#'} key={`${school.school}:${index}`} rel={school.href?.startsWith('http') ? 'noreferrer' : undefined}>
+                  <SchoolMark school={school} />
+                  <span><strong>{school.school}</strong><small>{school.program}</small></span>
+                  <time>{school.period}</time>
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          <section className='about-section about-section-skills'>
+            <header><span>Skills</span><h2>方向与工具</h2></header>
+            <div className='about-skill-grid'>
+              {profile.skills.map(group => (
+                <article key={group.group}><h3>{group.group}</h3><div>{group.items.map(item => <span key={item}>{item}</span>)}</div></article>
+              ))}
+            </div>
+          </section>
+
+          <footer className='about-window-foot'>
+            <Link href='/content'><LawTechIcon name='content' size={15} />内容</Link>
+            <Link href='/tools'><LawTechIcon name='tools' size={15} />工具</Link>
+            <Link href='/desk/system?section=public-profile'><LawTechIcon name='system' size={15} />编辑资料</Link>
+          </footer>
+        </div>
+      </main>
+    </>
+  )
 }
 
 AboutPage.layout = 'bare'
+
+export async function getServerSideProps(ctx) {
+  const session = await getWorkspaceSession(ctx.req)
+  if (session.code === 'handshake' && session.redirectUrl) {
+    return { redirect: { destination: session.redirectUrl, permanent: false } }
+  }
+  if (session.code === 'signed_out') {
+    return { redirect: { destination: `/sign-in?redirect_url=${encodeURIComponent(ctx.resolvedUrl || '/about')}`, permanent: false } }
+  }
+  if (!session.ok || !session.isOwner) return { notFound: true }
+  return {
+    props: {
+      initialProfile: await getPublicSiteProfile(),
+      workspaceSession: {
+        actor: session.publicActor,
+        profile: session.publicProfile,
+        isOwner: session.isOwner,
+        impersonating: session.impersonating
+      }
+    }
+  }
+}
