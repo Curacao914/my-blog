@@ -31,4 +31,22 @@ describe('content and Quick Look stabilization', () => {
   test('pins the local runtime used for final verification', () => {
     expect(read('.nvmrc').trim()).toBe('22')
   })
+
+  test('rejects unsafe Quick Look URL schemes', () => {
+    expect(manager).toContain(
+      'function safeQuickLookHref(value)'
+    )
+    expect(manager).toContain(
+      "parsed.protocol !== 'http:'"
+    )
+    expect(manager).toContain(
+      "parsed.protocol !== 'https:'"
+    )
+    expect(manager).toContain(
+      'const href = safeQuickLookHref('
+    )
+    expect(manager).not.toContain(
+      "href.startsWith('javascript:')"
+    )
+  })
 })

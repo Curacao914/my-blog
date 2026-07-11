@@ -78,14 +78,39 @@ function windowClassName(record = DEFAULT_RECORD) {
   ].filter(Boolean).join(' ')
 }
 
+function safeQuickLookHref(value) {
+  const href = String(value || '').trim()
+  if (!href || href.startsWith('#')) return ''
+
+  try {
+    const base = typeof document === 'undefined'
+      ? 'https://law-tech.invalid/'
+      : document.baseURI
+    const parsed = new URL(href, base)
+
+    if (
+      parsed.protocol !== 'http:' &&
+      parsed.protocol !== 'https:'
+    ) {
+      return ''
+    }
+
+    return href
+  } catch {
+    return ''
+  }
+}
+
 function candidateFromNode(node) {
   if (!node || typeof node.closest !== 'function') return null
   const scope = node.closest('[data-quicklook]:not([data-quicklook="false"])')
   if (!scope) return null
   const link = scope.matches('a[href]') ? scope : scope.querySelector('a[href]')
   if (!link) return null
-  const href = link.getAttribute('href') || ''
-  if (!href || href.startsWith('#') || href.startsWith('javascript:')) return null
+  const href = safeQuickLookHref(
+    link.getAttribute('href')
+  )
+  if (!href) return null
   const titleNode = scope.querySelector('[data-quicklook-title],h1,h2,h3,strong')
   const metaNode = scope.querySelector('[data-quicklook-meta],small,time,.eyebrow')
   const imageNode = scope.querySelector('img')
