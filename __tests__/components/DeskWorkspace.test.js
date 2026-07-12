@@ -3,6 +3,8 @@ import { TodayBoard } from '@/components/TodayBoard'
 import { ReadingBox } from '@/components/ReadingBox'
 import { NotesDesk } from '@/components/NotesDesk'
 import { clearScheduleItemsCache } from '@/lib/client/scheduleItemsCache'
+import { clearReadingItemsCache } from '@/lib/client/readingItemsCache'
+// LAWTECH_READING_V3_INTEGRATION_TESTS
 
 jest.mock('next/router', () => ({
   useRouter: () => ({
@@ -169,8 +171,20 @@ function persistedScheduleItem(item, index) {
   }
 }
 
+function isReadingFixture(item = {}) {
+  return (
+    item.contentType === 'reading' ||
+    item.sectionKey === 'reading' ||
+    item.section === '阅读' ||
+    item.date === 'reading' ||
+    item.aiTrace?.entityType === 'reading-folder'
+  )
+}
+
 function mockScheduleFetch(nextItems = items, { noteId = '' } = {}) {
-  let stored = nextItems.map(persistedScheduleItem)
+  let scheduleStored = nextItems.map(persistedScheduleItem)
+  let readingStored = nextItems.filter(isReadingFixture).map(persistedScheduleItem)
+
   fetch.mockImplementation((url, options = {}) => {
     if (String(url).includes('/api/notes') && options.method === 'POST') {
       return Promise.resolve({
@@ -181,16 +195,38 @@ function mockScheduleFetch(nextItems = items, { noteId = '' } = {}) {
         })
       })
     }
-    if (String(url).includes('/api/schedule/items')) {
-      if (options.method === 'PUT') {
+
+    if (String(url).includes('/api/reading/items')) {
+      if (options.method === 'PATCH') {
         const payload = JSON.parse(options.body || '{}')
-        stored = (payload.items || []).map(persistedScheduleItem)
+        const deleted = new Set(payload.deletedIds || [])
+        const byId = new Map(
+          readingStored
+            .filter(item => item.id && !deleted.has(item.id))
+            .map(item => [item.id, item])
+        )
+        ;(payload.upserts || [])
+          .map(persistedScheduleItem)
+          .forEach(item => byId.set(item.id, item))
+        readingStored = [...byId.values()]
       }
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ items: stored })
+        json: () => Promise.resolve({ items: readingStored })
       })
     }
+
+    if (String(url).includes('/api/schedule/items')) {
+      if (options.method === 'PUT') {
+        const payload = JSON.parse(options.body || '{}')
+        scheduleStored = (payload.items || []).map(persistedScheduleItem)
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ items: scheduleStored })
+      })
+    }
+
     return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
   })
 }
@@ -207,6 +243,7 @@ describe('workspace desk views', () => {
   beforeEach(() => {
     window.localStorage.clear()
     clearScheduleItemsCache()
+    clearReadingItemsCache()
   })
   const RealDate = Date
 

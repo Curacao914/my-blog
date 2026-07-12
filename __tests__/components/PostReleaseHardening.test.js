@@ -22,13 +22,18 @@ describe('post-release hardening regressions', () => {
   it('shows loading before schedule and reading empty states', () => {
     const today = source('components/TodayBoard.js')
     const reading = source('components/ReadingBox.js')
+    const readingCache = source('lib/client/readingItemsCache.js')
+    // LAWTECH_READING_V3_REFRESH_CONTRACT
     const notes = source('components/NotesDesk.js')
 
     expect(today).toContain('sessionLoading || !profileId || !isReady')
     expect(today).toContain("setNotice('正在同步最新数据')")
     expect(reading).toContain("loadState === 'loading'")
-    expect(reading).toContain("setStatus('正在同步最新内容')")
+    expect(reading).toContain('mutationVersionRef')
+    expect(reading).toContain('buildReadingMutation')
+    expect(reading).toContain('/api/reading/items')
     expect(reading).toContain('prepareReadingLibraryItems')
+    expect(readingCache).toContain('const inflight = new Map()')
     expect(notes).toContain("loadState === 'loading'")
   })
 

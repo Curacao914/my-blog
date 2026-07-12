@@ -69,5 +69,37 @@ describe('OpenClaw command protocol v1', () => {
       c: false,
       d: 0
     })
+  })  // BEGIN LAWTECH INTENT REGRESSION 20260712
+  it('keeps bug descriptions containing delete language inside a reminder create command', () => {
+    const text = '明天上午十点提醒我阅读箱移动很慢，删除好像卡很久都不删除，还有设置的侧边栏太大'
+    expect(classifyCommandText(text)).toMatchObject({
+      domain: 'schedule',
+      action: 'create',
+      operation: 'write'
+    })
   })
+
+  it('treats adding bug text to the previous schedule as an update, not a delete', () => {
+    const text = '还有前面识别错误命令的bug。把内容中的删除当做了删除命令。说明意图识别还需要改进，也加进刚刚的日程'
+    expect(classifyCommandText(text)).toMatchObject({
+      domain: 'schedule',
+      action: 'update',
+      operation: 'write',
+      followUp: true
+    })
+  })
+
+  it('still classifies real destructive commands as delete operations', () => {
+    expect(classifyCommandText('删除刚才那个事项')).toMatchObject({
+      action: 'delete',
+      confirmation: 'explicit'
+    })
+    expect(classifyCommandText('把周五会议删除')).toMatchObject({
+      action: 'delete',
+      confirmation: 'explicit'
+    })
+  })
+  // END LAWTECH INTENT REGRESSION 20260712
+
+
 })

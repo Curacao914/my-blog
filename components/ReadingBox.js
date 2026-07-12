@@ -5,12 +5,21 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { MarkdownDocument } from '@/components/content/MarkdownDocument'
 import { ReadingLibraryDialog } from '@/components/ReadingLibraryDialog'
 import { useWorkspaceSession } from '@/hooks/useWorkspaceSession'
+// LAWTECH_READING_BOX_PATCH_20260712
 import {
-  fetchScheduleItems,
-  readScheduleItemsCache,
+  clearScheduleItemsCache,
   writeScheduleItemsCache
 } from '@/lib/client/scheduleItemsCache'
-import { prepareReadingLibraryItems } from '@/lib/reading/prepare'
+import {
+  fetchReadingItems,
+  readReadingItemsCache,
+  writeReadingItemsCache
+} from '@/lib/client/readingItemsCache'
+import {
+  createReadingEntityId,
+  prepareReadingLibraryItems
+} from '@/lib/reading/prepare'
+import { buildReadingMutation } from '@/lib/reading/mutations'
 import {
   READING_ARCHIVE_VIEW,
   buildDefaultFolderDrafts,
@@ -86,11 +95,6 @@ function makeMarkdown(item, note = '') {
   ].filter(Boolean).join('\n')
 }
 
-function browserKey() {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`
-}
-
 function ActionMenu({ open, onToggle, children, label = '更多操作' }) {
   return (
     <div className='reading-action-menu'>
@@ -125,34 +129,43 @@ export function ReadingBox() {
   const [busy, setBusy] = useState(false)
   const [menuKey, setMenuKey] = useState('')
   const [dialog, setDialog] = useState(null)
+  const [selectedIds, setSelectedIds] = useState([])
   const [scheduleDate, setScheduleDate] = useState('today')
   const [scheduleTime, setScheduleTime] = useState('')
   const [loadState, setLoadState] = useState('loading')
   const [loadMessage, setLoadMessage] = useState('')
   const [isRefreshing, setIsRefreshing] = useState(false)
   const rootRef = useRef(null)
+  const mutationVersionRef = useRef(0)
   const { loading: sessionLoading, session } = useWorkspaceSession()
   const profileId = session?.profile?.id || session?.actor?.id || ''
 
-  async function requestSave(nextItems, deletedIds = []) {
-    const response = await fetch('/api/schedule/items', {
-      method: 'PUT',
+  async function requestMutation({ upserts = [], deletedIds = [] } = {}) {
+    const response = await fetch('/api/reading/items', {
+      method: 'PATCH',
+      credentials: 'same-origin',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ items: nextItems, deletedIds })
+      body: JSON.stringify({ upserts, deletedIds })
     })
     const payload = await response.json().catch(() => ({}))
     if (!response.ok) throw new Error(payload.error || '保存失败')
-    const saved = payload.items || nextItems
-    if (profileId) writeScheduleItemsCache(profileId, saved)
+    if (!Array.isArray(payload.items)) throw new Error('阅读资料响应格式异常')
+    const saved = payload.items
+    if (profileId) {
+      writeReadingItemsCache(profileId, saved)
+      clearScheduleItemsCache(profileId)
+    }
     return saved
   }
 
   function adopt(nextItems) {
-    setItems(nextItems)
+    const normalized = Array.isArray(nextItems) ? nextItems : []
+    setItems(normalized)
+    if (profileId) writeReadingItemsCache(profileId, normalized)
     setDrafts(current => ({
       ...current,
       ...Object.fromEntries(
-        nextItems.filter(isReadingItem).map(item => [
+        normalized.filter(isReadingItem).map(item => [
           item.id,
           current[item.id] ?? item.note ?? ''
         ])
@@ -163,7 +176,7 @@ export function ReadingBox() {
   useEffect(() => {
     if (sessionLoading || !profileId) return undefined
     let cancelled = false
-    const cached = readScheduleItemsCache(profileId)
+    const cached = readReadingItemsCache(profileId)
 
     if (cached !== null) {
       const prepared = prepareReadingLibraryItems(cached)
@@ -177,8 +190,9 @@ export function ReadingBox() {
     setIsRefreshing(true)
     async function load() {
       try {
-        const cloudItems = await fetchScheduleItems(profileId, { force: true })
-        if (cancelled) return
+        const loadVersion = mutationVersionRef.current
+        const cloudItems = await fetchReadingItems(profileId, { force: true })
+        if (cancelled || mutationVersionRef.current !== loadVersion) return
 
         const prepared = prepareReadingLibraryItems(cloudItems)
         adopt(prepared.items)
@@ -186,8 +200,9 @@ export function ReadingBox() {
 
         if (prepared.changed) {
           try {
-            const saved = await requestSave(prepared.items)
-            if (!cancelled) adopt(saved)
+            const mutation = buildReadingMutation(cloudItems, prepared.items)
+            const saved = await requestMutation(mutation)
+            if (!cancelled && mutationVersionRef.current === loadVersion) adopt(saved)
           } catch {
             if (!cancelled) setStatus('整理状态将在下次保存时同步')
           }
@@ -265,6 +280,16 @@ export function ReadingBox() {
       })
   }, [readingItems, folders, activeFolderId, archivedMode])
 
+  const selectedItems = useMemo(() => {
+    const selected = new Set(selectedIds)
+    return readingItems.filter(item => selected.has(item.id))
+  }, [readingItems, selectedIds])
+
+  useEffect(() => {
+    const available = new Set(readingItems.map(item => item.id))
+    setSelectedIds(current => current.filter(id => available.has(id)))
+  }, [readingItems])
+
   const folderDestinations = useMemo(() => {
     const targetFolder = dialog?.target && isReadingFolder(dialog.target)
       ? dialog.target
@@ -284,19 +309,25 @@ export function ReadingBox() {
   }, [folders, dialog])
 
   async function persist(nextItems, deletedIds = [], message = '已保存') {
-    if (isRefreshing) {
-      setStatus('正在同步最新内容')
-      return null
-    }
+    const previousItems = items
+    const mutation = buildReadingMutation(previousItems, nextItems, deletedIds)
+    mutationVersionRef.current += 1
     setBusy(true)
     setStatus('')
+    adopt(nextItems)
+
     try {
-      const saved = await requestSave(nextItems, deletedIds)
+      if (!mutation.upserts.length && !mutation.deletedIds.length) {
+        setStatus(message)
+        return nextItems
+      }
+      const saved = await requestMutation(mutation)
       adopt(saved)
       setStatus(message)
       return saved
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : '保存失败')
+      adopt(previousItems)
+      setStatus(error instanceof Error ? error.message : '保存失败，已恢复原状态')
       return null
     } finally {
       setBusy(false)
@@ -313,9 +344,84 @@ export function ReadingBox() {
     )
   }
 
+  function toggleSelected(id) {
+    setSelectedIds(current =>
+      current.includes(id)
+        ? current.filter(itemId => itemId !== id)
+        : [...current, id]
+    )
+  }
+
+  function selectAllVisible() {
+    const ids = visibleItems.map(item => item.id)
+    setSelectedIds(current =>
+      ids.every(id => current.includes(id))
+        ? current.filter(id => !ids.includes(id))
+        : [...new Set([...current, ...ids])]
+    )
+  }
+
+  function clearSelection() {
+    setSelectedIds([])
+  }
+
+  function askMoveSelected() {
+    if (!selectedItems.length) return
+    setDialog({
+      type: 'move-items',
+      title: `移动 ${selectedItems.length} 篇阅读内容`,
+      description: '所选内容会一起移动；完成后仍停留在当前文件夹。',
+      targets: selectedItems,
+      destination: activeFolderId || '__root__'
+    })
+  }
+
+  function askDeleteSelected() {
+    if (!selectedItems.length) return
+    setDialog({
+      type: 'delete-items',
+      title: `删除 ${selectedItems.length} 篇阅读内容`,
+      description: '这会删除所选阅读条目；已经另存为笔记的内容不会被删除。',
+      targets: selectedItems,
+      danger: true
+    })
+  }
+
+  async function markSelectedDone() {
+    if (!selectedItems.length) return
+    const restore = selectedItems.every(item => item.status === 'done')
+    const selected = new Set(selectedItems.map(item => item.id))
+    const saved = await persist(
+      items.map(item =>
+        selected.has(item.id)
+          ? { ...item, status: restore ? 'active' : 'done' }
+          : item
+      ),
+      [],
+      restore ? '所选内容已恢复待读' : '所选内容已标记读完'
+    )
+    if (saved) clearSelection()
+  }
+
+  async function archiveSelected(restore = false) {
+    if (!selectedItems.length) return
+    const selected = new Set(selectedItems.map(item => item.id))
+    const saved = await persist(
+      items.map(item =>
+        selected.has(item.id)
+          ? { ...item, status: restore ? 'active' : 'archived' }
+          : item
+      ),
+      [],
+      restore ? '所选内容已恢复到资料库' : '所选内容已移出日常阅读'
+    )
+    if (saved) clearSelection()
+  }
+
   function openFolder(folderId) {
     setActiveFolderId(folderId)
     setActiveId('')
+    setSelectedIds([])
     setMenuKey('')
     setStatus('')
   }
@@ -383,7 +489,7 @@ export function ReadingBox() {
     if (dialog.type === 'create-folder') {
       const parent = dialog.destination === '__root__' ? '' : dialog.destination
       saved = await persist(
-        [...items, folderDraft(value, parent)],
+        [...items, { ...folderDraft(value, parent), id: createReadingEntityId() }],
         [],
         '文件夹已创建'
       )
@@ -404,7 +510,6 @@ export function ReadingBox() {
         [],
         '文件夹已移动'
       )
-      if (saved) openFolder(parent)
     }
 
     if (dialog.type === 'move-item') {
@@ -414,9 +519,24 @@ export function ReadingBox() {
         [],
         '阅读内容已移动'
       )
+      if (saved) setActiveId('')
+    }
+
+    if (dialog.type === 'move-items') {
+      const folderId = dialog.destination === '__root__' ? '' : dialog.destination
+      const targetIds = new Set((dialog.targets || []).map(item => item.id))
+      saved = await persist(
+        items.map(item =>
+          targetIds.has(item.id)
+            ? patchReadingTrace(item, { folderId })
+            : item
+        ),
+        [],
+        `${targetIds.size} 篇阅读内容已移动`
+      )
       if (saved) {
         setActiveId('')
-        openFolder(folderId)
+        clearSelection()
       }
     }
 
@@ -427,6 +547,19 @@ export function ReadingBox() {
         '阅读内容已删除'
       )
       if (saved) setActiveId('')
+    }
+
+    if (dialog.type === 'delete-items') {
+      const targetIds = new Set((dialog.targets || []).map(item => item.id))
+      saved = await persist(
+        items.filter(item => !targetIds.has(item.id)),
+        [...targetIds],
+        `${targetIds.size} 篇阅读内容已删除`
+      )
+      if (saved) {
+        setActiveId('')
+        clearSelection()
+      }
     }
 
     if (dialog.type === 'delete-folder') {
@@ -442,7 +575,6 @@ export function ReadingBox() {
           return patchReadingTrace(item, { folderId: parentId })
         })
       saved = await persist(next, [...removed], '文件夹已删除，文章已移到上一级')
-      if (saved) openFolder(parentId)
     }
 
     if (saved) setDialog(null)
@@ -451,7 +583,7 @@ export function ReadingBox() {
   async function copyItem(item) {
     const copy = {
       ...item,
-      id: undefined,
+      id: createReadingEntityId(),
       title: `${readingItemTitle(item)}（副本）`,
       source: 'reading-library-copy',
       aiTrace: {
@@ -465,80 +597,59 @@ export function ReadingBox() {
   }
 
   async function copyFolder(folder) {
-    const batchKey = browserKey()
     const descendantIds = descendantFolderIds(folders, folder.id)
     const sourceIds = new Set([folder.id, ...descendantIds])
     const sourceFolders = folders.filter(item => sourceIds.has(item.id))
-    const folderDrafts = sourceFolders.map(source => ({
-      ...folderDraft(
-        source.id === folder.id ? `${folderName(source)}（副本）` : folderName(source),
-        ''
-      ),
-      summary: source.summary || '',
-      aiTrace: {
-        ...readingTrace(source),
-        entityType: 'reading-folder',
-        folderName: source.id === folder.id
-          ? `${folderName(source)}（副本）`
-          : folderName(source),
-        systemKey: '',
-        protected: false,
-        parentFolderId: '',
-        copyBatchKey: batchKey,
-        copiedFromFolderId: source.id,
-        sourceParentFolderId: folderParentId(source)
+    const folderMap = new Map(
+      sourceFolders.map(source => [source.id, createReadingEntityId()])
+    )
+
+    const folderDrafts = sourceFolders.map(source => {
+      const sourceParent = folderParentId(source)
+      const parentFolderId = source.id === folder.id
+        ? folderParentId(folder)
+        : (folderMap.get(sourceParent) || sourceParent)
+      const title = source.id === folder.id
+        ? `${folderName(source)}（副本）`
+        : folderName(source)
+
+      return {
+        ...folderDraft(title, parentFolderId),
+        id: folderMap.get(source.id),
+        summary: source.summary || '',
+        aiTrace: {
+          ...readingTrace(source),
+          entityType: 'reading-folder',
+          folderName: title,
+          parentFolderId,
+          systemKey: '',
+          protected: false,
+          copiedFromFolderId: source.id,
+          copiedAt: new Date().toISOString()
+        }
       }
-    }))
+    })
+
     const itemDrafts = readingItems
       .filter(item => sourceIds.has(effectiveFolderId(item, folders)))
       .map(item => ({
         ...item,
-        id: undefined,
+        id: createReadingEntityId(),
         title: `${readingItemTitle(item)}（副本）`,
         source: 'reading-library-copy',
         aiTrace: {
           ...readingTrace(item),
-          folderId: '',
-          copyBatchKey: batchKey,
+          folderId: folderMap.get(effectiveFolderId(item, folders)) || '',
           copiedFromItemId: item.id,
-          sourceFolderId: effectiveFolderId(item, folders)
+          copiedAt: new Date().toISOString()
         }
       }))
 
-    const first = await persist(
+    await persist(
       [...items, ...folderDrafts, ...itemDrafts],
       [],
-      '正在整理副本'
+      '文件夹副本已创建'
     )
-    if (!first) return
-
-    const createdFolders = first.filter(item =>
-      isReadingFolder(item) &&
-      readingTrace(item).copyBatchKey === batchKey
-    )
-    const folderMap = new Map(createdFolders.map(item => [
-      readingTrace(item).copiedFromFolderId,
-      item.id
-    ]))
-    const second = first.map(item => {
-      const trace = readingTrace(item)
-      if (trace.copyBatchKey !== batchKey) return item
-      if (isReadingFolder(item)) {
-        const parentFolderId = folderMap.get(trace.sourceParentFolderId) ||
-          (trace.copiedFromFolderId === folder.id ? folderParentId(folder) : '')
-        return patchReadingTrace(item, {
-          parentFolderId,
-          copyBatchKey: null,
-          sourceParentFolderId: null
-        })
-      }
-      return patchReadingTrace(item, {
-        folderId: folderMap.get(trace.sourceFolderId) || '',
-        copyBatchKey: null,
-        sourceFolderId: null
-      })
-    })
-    await persist(second, [], '文件夹副本已创建')
     setMenuKey('')
   }
 
@@ -577,7 +688,7 @@ export function ReadingBox() {
       [],
       restore ? '文件夹已恢复' : '文件夹已移出日常阅读'
     )
-    if (saved) openFolder(restore ? folderParentId(folder) : '')
+    if (saved) clearSelection()
   }
 
   async function saveNote(item) {
@@ -631,10 +742,26 @@ export function ReadingBox() {
         source: 'reading-box'
       }
     }
-    const saved = await persist([...items, action], [], '已加入日程')
-    if (saved) {
+    setBusy(true)
+    setStatus('')
+    try {
+      const response = await fetch('/api/schedule/items', {
+        method: 'PUT',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ items: [action], deletedIds: [] })
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.error || '加入日程失败')
+      if (!Array.isArray(payload.items)) throw new Error('日程响应格式异常')
+      if (profileId) writeScheduleItemsCache(profileId, payload.items)
+      setStatus('已加入日程')
       setScheduleDate('today')
       setScheduleTime('')
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : '加入日程失败')
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -912,12 +1039,52 @@ export function ReadingBox() {
 
       {visibleItems.length ? (
         <section className='reading-file-list' aria-label='阅读内容'>
-          <header>
-            <span>{archivedMode ? '已归档内容' : '当前文件夹'}</span>
-            <strong>{visibleItems.length} 篇</strong>
+          <header className='reading-file-list-head'>
+            <div>
+              <label className='reading-select-all'>
+                <input
+                  type='checkbox'
+                  checked={visibleItems.every(item => selectedIds.includes(item.id))}
+                  onChange={selectAllVisible}
+                  disabled={busy}
+                />
+                <span>{selectedItems.length ? `已选 ${selectedItems.length} 篇` : archivedMode ? '已归档内容' : '当前文件夹'}</span>
+              </label>
+              <strong>{visibleItems.length} 篇</strong>
+            </div>
+            {selectedItems.length ? (
+              <div className='reading-bulk-actions'>
+                {archivedMode ? (
+                  <button type='button' onClick={() => archiveSelected(true)} disabled={busy}>
+                    恢复
+                  </button>
+                ) : (
+                  <>
+                    <button type='button' onClick={askMoveSelected} disabled={busy}>移动到…</button>
+                    <button type='button' onClick={markSelectedDone} disabled={busy}>
+                      {selectedItems.every(item => item.status === 'done') ? '恢复待读' : '标为已读'}
+                    </button>
+                    <button type='button' onClick={() => archiveSelected(false)} disabled={busy}>归档</button>
+                  </>
+                )}
+                <button className='is-danger' type='button' onClick={askDeleteSelected} disabled={busy}>
+                  删除
+                </button>
+                <button type='button' onClick={clearSelection} disabled={busy}>取消选择</button>
+              </div>
+            ) : null}
           </header>
           {visibleItems.map(item => (
-            <article key={item.id}>
+            <article className={selectedIds.includes(item.id) ? 'is-selected' : ''} key={item.id}>
+              <label className='reading-select-control'>
+                <input
+                  type='checkbox'
+                  checked={selectedIds.includes(item.id)}
+                  onChange={() => toggleSelected(item.id)}
+                  disabled={busy}
+                />
+                <span>选择“{readingItemTitle(item)}”</span>
+              </label>
               <button className='reading-file-open' type='button' onClick={() => openItem(item)}>
                 <span className='reading-file-kind'>{readingTrace(item).readingKind === 'course-brief' ? '课' : '文'}</span>
                 <span>
