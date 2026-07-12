@@ -49,7 +49,7 @@ function SignedInFallback({ compact = false }) {
 
 function AccountMenuEnabled({ placement = 'desk' }) {
   const router = useRouter()
-  const { signOut } = useClerk()
+  const { openUserProfile, signOut } = useClerk()
   const {
     isLoaded: clerkLoaded,
     isSignedIn: clerkSignedIn
@@ -221,6 +221,18 @@ function AccountMenuEnabled({ placement = 'desk' }) {
           </nav>
 
           <footer>
+            <button
+              type='button'
+              disabled={busy}
+              aria-label='登录与安全：管理 Passkey、Touch ID、Face ID 与登录设备'
+              title='管理 Passkey、Touch ID、Face ID 与登录设备'
+              onClick={() => {
+                setOpen(false)
+                openUserProfile()
+              }}
+            >
+              登录与安全
+            </button>
             <button type='button' disabled={busy} onClick={signOutNow}>
               {busy ? '正在退出…' : '退出登录'}
             </button>

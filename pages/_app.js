@@ -77,7 +77,8 @@ const MyApp = ({ Component, pageProps }) => {
   const clerkContent = enableClerk ? (
     <ClerkProvider
       localization={zhCN}
-      __unstable_invokeMiddlewareOnAuthStateChange={false}>
+      signInUrl='/sign-in'
+      signUpUrl='/sign-up'>
       {content}
     </ClerkProvider>
   ) : (
