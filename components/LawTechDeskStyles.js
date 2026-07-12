@@ -7753,6 +7753,171 @@ html.course-focus-open body { overflow:hidden; }
     grid-template-columns: 1fr;
   }
 }
+/* BEGIN LAWTECH READING PATCH 20260712 */
+/* law-tech patch 20260712.1: reading bulk actions, balanced brief view, compact mobile sidebars */
+.reading-file-list-head {
+  display: grid;
+  gap: 10px;
+  align-items: center;
+}
+.reading-file-list-head > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.reading-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.reading-select-all input,
+.reading-select-control input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--leaf);
+}
+.reading-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.reading-bulk-actions button {
+  min-height: 32px;
+  border: 1px solid rgba(17,63,49,.09);
+  border-radius: 10px;
+  padding: 0 10px;
+  color: var(--leaf);
+  background: rgba(255,255,255,.62);
+  cursor: pointer;
+}
+.reading-bulk-actions button.is-danger {
+  color: var(--danger);
+}
+.reading-file-list > article {
+  grid-template-columns: 28px minmax(0,1fr) auto;
+}
+.reading-file-list > article.is-selected {
+  background: rgba(220,233,223,.58);
+  box-shadow: inset 0 0 0 1px rgba(17,63,49,.12);
+}
+.reading-select-control {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  cursor: pointer;
+}
+.reading-select-control span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.course-brief-reader .course-note-reader-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+}
+.course-brief-reader .course-note-article,
+.course-brief-reader .course-note-toc {
+  min-width: 0;
+}
+.course-brief-reader .course-note-toc {
+  width: auto;
+}
+@media (max-width: 980px) {
+  .desk-mobile-drawer {
+    width: min(78vw, 282px);
+    max-width: 282px;
+    padding: 10px;
+  }
+  .desk-mobile-drawer .desk-identity-card {
+    display: none;
+  }
+  .desk-mobile-drawer .desk-nav {
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .desk-mobile-drawer .desk-nav-group {
+    gap: 3px;
+  }
+  .desk-mobile-drawer .desk-nav a {
+    min-height: 38px;
+    padding: 7px 9px;
+    border-radius: 11px;
+    font-size: 13px;
+  }
+  .settings-layout,
+  .system-settings-layout {
+    grid-template-columns: 1fr !important;
+    overflow: visible !important;
+  }
+  .settings-nav,
+  .system-settings-nav {
+    position: static !important;
+    display: flex !important;
+    gap: 6px;
+    max-height: none !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 8px !important;
+    scrollbar-width: none;
+  }
+  .settings-nav::-webkit-scrollbar,
+  .system-settings-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .settings-nav button,
+  .settings-nav a,
+  .system-settings-nav button,
+  .system-settings-nav a {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 7px 10px !important;
+    white-space: nowrap;
+  }
+  .content-library-sidebar,
+  .public-search-filters {
+    max-height: min(40dvh, 320px) !important;
+    overflow: auto !important;
+    padding: 12px !important;
+  }
+}
+@media (max-width: 760px) {
+  .desk-app-window .desk-page {
+    padding: 10px !important;
+  }
+  .desk-app-window .desk-topbar {
+    min-height: 46px !important;
+    padding: 6px 10px !important;
+  }
+  .reading-file-list-head {
+    align-items: stretch;
+  }
+  .reading-bulk-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+  .reading-bulk-actions button {
+    width: 100%;
+  }
+  .reading-file-list > article {
+    grid-template-columns: 26px minmax(0,1fr) auto;
+  }
+  .course-brief-reader .course-note-reader-grid {
+    display: flex;
+    flex-direction: column;
+  }
+  .course-brief-reader .course-note-toc {
+    width: 100%;
+  }
+}
+/* END LAWTECH READING PATCH 20260712 */
+
 
 `}</style>
   )

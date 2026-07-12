@@ -240,5 +240,37 @@ describe('OpenClaw semantic mutation policy', () => {
   it('keeps reading intent separate from reading-status statements', () => {
     expect(hasExplicitReadingIntent('有空读这篇论文')).toBe(true)
     expect(hasExplicitReadingIntent('未读课程简报已全部读完')).toBe(false)
+  })  // BEGIN LAWTECH REAL CHAT REGRESSION 20260712
+  it('allows the real reminder report even when its content mentions deletion', () => {
+    const text = '明天上午十点提醒我阅读箱移动很慢，移动之后会跳转，删除好像卡很久都不删除'
+    const classification = classifyCommandText(text)
+    expect(classification.action).toBe('create')
+    expect(assessOpenClawMutation({ text, classification })).toMatchObject({
+      decision: 'allow',
+      classification: {
+        action: 'create'
+      }
+    })
   })
+
+  it('uses the previous schedule as context for an append request containing deletion text', () => {
+    const text = '还有前面识别错误命令的bug。把内容中的删除当做了删除命令，也加进刚刚的日程'
+    const classification = classifyCommandText(text)
+    expect(classification.action).toBe('update')
+    expect(
+      assessOpenClawMutation({
+        text,
+        classification,
+        referenceObject: { id: 'schedule-1', title: '反馈阅读箱问题' }
+      })
+    ).toMatchObject({
+      decision: 'allow',
+      classification: {
+        action: 'update'
+      }
+    })
+  })
+  // END LAWTECH REAL CHAT REGRESSION 20260712
+
+
 })
