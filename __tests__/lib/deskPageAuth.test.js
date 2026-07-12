@@ -13,6 +13,30 @@ describe('desk page authentication', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    delete process.env.VERCEL_ENV
+    delete process.env.NEXT_PUBLIC_SITE_URL
+    delete process.env.NEXT_PUBLIC_SITE_ORIGIN
+  })
+
+  it('redirects production aliases to the canonical auth origin before reading a session', async () => {
+    process.env.VERCEL_ENV = 'production'
+    const aliasCtx = {
+      req: {
+        headers: {
+          host: 'curacao-top.vercel.app',
+          'x-forwarded-proto': 'https'
+        }
+      },
+      resolvedUrl: '/desk/today?view=all'
+    }
+
+    await expect(requireDeskPage()(aliasCtx)).resolves.toEqual({
+      redirect: {
+        destination: 'https://law-tech.dev/desk/today?view=all',
+        permanent: false
+      }
+    })
+    expect(getWorkspaceSession).not.toHaveBeenCalled()
   })
 
   it('fails closed when the workspace session cannot be established', async () => {

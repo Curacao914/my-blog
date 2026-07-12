@@ -2,6 +2,7 @@ import { clerkClient } from '@clerk/nextjs/server'
 
 import {
   authenticateClerkRequest,
+  authorizedPartiesForRequest,
   nodeRequestToWebRequest,
   requestOrigin
 } from '@/lib/auth/clerkRequest'
@@ -96,6 +97,19 @@ describe('direct Clerk request authentication', () => {
         authorizedParties: ['https://preview.law-tech.dev']
       })
     )
+  })
+
+  it('uses stable canonical authorized parties in production', () => {
+    process.env.VERCEL_ENV = 'production'
+    expect(authorizedPartiesForRequest({
+      headers: {
+        host: 'curacao-top.vercel.app',
+        'x-forwarded-proto': 'https'
+      }
+    })).toEqual([
+      'https://law-tech.dev',
+      'https://www.law-tech.dev'
+    ])
   })
 
   it('surfaces a Clerk development handshake redirect', async () => {

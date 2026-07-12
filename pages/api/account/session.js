@@ -17,6 +17,8 @@ export default async function handler(req, res) {
       signedIn: Boolean(session.publicActor),
       code: session.code,
       error: session.error,
+      redirectUrl: session.redirectUrl || '',
+      retryable: ['auth_error', 'profile_unavailable'].includes(session.code),
       profile: session.publicActor || null
     })
   }
@@ -32,6 +34,7 @@ export default async function handler(req, res) {
   return res.status(200).json({
     ok: true,
     signedIn: true,
+    sessionId: session.sessionId || '',
     actor: session.publicActor,
     profile: session.publicProfile,
     isOwner: session.isOwner,
