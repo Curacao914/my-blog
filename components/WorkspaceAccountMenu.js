@@ -95,7 +95,7 @@ function AccountMenuEnabled({ placement = 'desk' }) {
       return <SignedInFallback compact={placement === 'desk'} />
     }
     if (!clerkLoaded || loading) {
-      return <span className='workspace-account-loading' aria-label='读取账号信息' />
+      return null
     }
     return <SignedOutActions compact={placement === 'desk'} />
   }

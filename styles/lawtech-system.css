@@ -5865,3 +5865,24 @@ body:has(.desk-system-scene) {
   .desk-app-window .desk-sidebar { border:0 !important;border-right:1px solid rgba(25,55,44,.1) !important;border-radius:0 !important;background:#e7ece6 !important;backdrop-filter:none !important; }
   .desk-app-window .desk-main,.desk-app-window .desk-topbar,.desk-app-window .desk-page { background:#f8f8f4 !important; }
 }
+
+/* v9 compositor safety: legacy SVG refraction can escape its paint bounds. */
+.system-menu-bar::before,
+.system-menu-bar::after,
+.system-dock::before,
+.system-dock::after,
+.home-app-titlebar-v7::before,
+.home-app-titlebar-v7::after,
+.home-smart-stack-v7::before,
+.home-smart-stack-v7::after,
+.home-focus-widget::before,
+.home-focus-widget::after,
+.home-quote-widget::before,
+.home-quote-widget::after,
+.home-utility-widget-v7::before,
+.home-utility-widget-v7::after,
+.desk-app-titlebar::before,
+.desk-app-titlebar::after {
+  content: none !important;
+  filter: none !important;
+}
