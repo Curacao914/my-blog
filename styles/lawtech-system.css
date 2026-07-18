@@ -5886,3 +5886,65 @@ body:has(.desk-system-scene) {
   content: none !important;
   filter: none !important;
 }
+
+/* Editorial workspace repair v10: complete the card grid and keep controls in flow. */
+@media (min-width: 1121px) {
+  .home-library-shelves {
+    grid-template-columns: minmax(0, 1.18fr) minmax(280px, .82fr) !important;
+    grid-template-rows: repeat(3, minmax(96px, 1fr)) !important;
+  }
+
+  .home-library-shelves article {
+    display: grid !important;
+    grid-template-rows: auto auto minmax(0, 1fr) auto !important;
+    min-height: 0 !important;
+    padding: 15px 18px !important;
+  }
+
+  .home-library-shelves article:first-child {
+    grid-row: 1 / 4 !important;
+    min-height: 312px !important;
+    padding: 28px !important;
+  }
+
+  .home-library-shelves h2 {
+    margin: 9px 0 4px !important;
+    font-size: clamp(20px, 1.55vw, 26px) !important;
+    line-height: 1.12 !important;
+  }
+
+  .home-library-shelves article:first-child h2 {
+    align-self: center;
+    margin: 18px 0 8px !important;
+    font-size: clamp(34px, 3.2vw, 52px) !important;
+  }
+
+  .home-library-shelves p {
+    min-width: 0;
+    align-self: start;
+    -webkit-line-clamp: 1 !important;
+  }
+
+  .home-library-shelves footer,
+  .home-library-shelves article:first-child footer {
+    position: relative !important;
+    inset: auto !important;
+    align-self: end;
+    margin-top: 8px;
+  }
+
+  .home-widget-column-v7 {
+    grid-template-rows: minmax(236px, 1fr) 126px minmax(94px, auto) 108px 124px !important;
+    gap: 12px !important;
+    padding: 12px 0 !important;
+  }
+
+  .home-signature-widget-v7 {
+    min-height: 124px !important;
+  }
+
+  .home-signature-widget-v7 .dynamic-signature {
+    width: min(220px, 72%) !important;
+    max-width: none !important;
+  }
+}

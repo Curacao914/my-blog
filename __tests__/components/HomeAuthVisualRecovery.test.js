@@ -13,9 +13,17 @@ describe('homepage and authentication visual recovery', () => {
     expect(styles).toContain("content: none !important")
   })
 
-  it('loads Clerk from a stable public SDK endpoint', () => {
-    expect(app).toContain('clerkJSUrl={CLERK_JS_URL}')
-    expect(app).toContain('cdn.jsdelivr.net/npm/@clerk/clerk-js@5.127.1')
+  it('lets Clerk resolve the SDK from the publishable-key domain', () => {
+    expect(app).not.toContain('clerkJSUrl=')
+    expect(app).not.toContain('cdn.jsdelivr.net/npm/@clerk/clerk-js')
+  })
+
+  it('keeps the editorial library grid complete and card footers in flow', () => {
+    expect(styles).toContain('Editorial workspace repair v10')
+    expect(styles).toContain('grid-template-columns: minmax(0, 1.18fr) minmax(280px, .82fr) !important')
+    expect(styles).toContain('grid-template-rows: repeat(3, minmax(96px, 1fr)) !important')
+    expect(styles).toContain('position: relative !important')
+    expect(styles).toContain('inset: auto !important')
   })
 
   it('does not render an unexplained public loading capsule', () => {

@@ -28,9 +28,6 @@ import NativeDifyChat from '@/components/NativeDifyChat'
 import { CourseTaskProvider } from '@/components/CourseTaskManager'
 import { SystemWindowProvider } from '@/components/law-tech/SystemWindowManager'
 
-const CLERK_JS_URL = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5.127.1/dist/clerk.browser.js'
-
-
 /**
  * App挂载DOM 入口文件
  * @param {*} param0
@@ -78,7 +75,6 @@ const MyApp = ({ Component, pageProps }) => {
 
   const clerkContent = enableClerk ? (
     <ClerkProvider
-      clerkJSUrl={CLERK_JS_URL}
       localization={zhCN}
       signInUrl='/sign-in'
       signUpUrl='/sign-up'>
