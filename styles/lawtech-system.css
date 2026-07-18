@@ -5412,7 +5412,7 @@ body:has(.desk-system-scene) {
   }
 }
 
-/* Round 11B — dock centering, signature clearance, mobile sidebar balance */
+    /* Round 11B — dock centering, signature clearance, mobile sidebar balance */
 
 /* Keep the signature fully visible at the bottom of the right column. */
 .home-widget-column-v7,
@@ -5422,6 +5422,58 @@ body:has(.desk-system-scene) {
 .home-signature-card,
 .home-widget-signature {
   overflow: visible !important;
+    }
+
+/* Unified public/workbench foundation. Keep this layer scoped away from NotionNext themes. */
+:where(.lawtech-public-page, .system-desktop, .desk-system-scene) {
+  --surface-solid: rgba(248, 251, 249, .94);
+  --surface-glass: rgba(247, 251, 248, .64);
+  --surface-border: rgba(255, 255, 255, .78);
+  --focus-ring: 0 0 0 3px rgba(48, 111, 89, .2);
+  --press-scale: .975;
+  font-optical-sizing: auto;
+}
+
+:where(.lawtech-public-page, .system-desktop, .desk-system-scene) :where(a, button, input, textarea, select):focus-visible {
+  outline: 2px solid rgba(32, 92, 72, .72);
+  outline-offset: 3px;
+  box-shadow: var(--focus-ring);
+}
+
+:where(.lawtech-public-page, .system-desktop, .desk-system-scene) :where(a, button):active {
+  transform: scale(var(--press-scale));
+  transition-duration: 90ms;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :where(.lawtech-public-page, .system-desktop, .desk-system-scene) :where(.system-menu-bar, .system-dock, .public-shell, .desk-app-window, .desk-sidebar) {
+    background: var(--surface-solid) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :where(.lawtech-public-page, .system-desktop, .desk-system-scene) {
+    --surface-border: rgba(18, 49, 39, .72);
+    --focus-ring: 0 0 0 4px rgba(20, 80, 59, .3);
+  }
+
+  :where(.lawtech-public-page, .system-desktop, .desk-system-scene) :where(.system-menu-bar, .system-dock, .public-shell, .desk-app-window, .desk-sidebar) {
+    border-color: var(--surface-border) !important;
+    background: var(--surface-solid) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.lawtech-public-page, .system-desktop, .desk-system-scene) *,
+  :where(.lawtech-public-page, .system-desktop, .desk-system-scene) *::before,
+  :where(.lawtech-public-page, .system-desktop, .desk-system-scene) *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
 }
 
 .home-signature-widget,
