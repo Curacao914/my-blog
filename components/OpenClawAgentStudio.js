@@ -575,7 +575,6 @@ export function OpenClawAgentStudio() {
             ) : (
               <div className='agent-empty'>
                 <strong>尚无草稿</strong>
-                <button className='agent-primary' disabled={Boolean(action)} onClick={() => { void createDraft() }} type='button'>新建草稿</button>
               </div>
             )}
           </div>
