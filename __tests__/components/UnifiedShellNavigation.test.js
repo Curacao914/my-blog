@@ -32,5 +32,14 @@ describe('unified shell navigation', () => {
     expect(deskShell).toContain('aria-expanded={mobileOpen}')
     expect(deskShell).toContain("event.key === 'Escape'")
     expect(deskShell).toContain("aria-current={active === item.key ? 'page' : undefined}")
+    expect(deskShell).toContain("role='dialog'")
+    expect(deskShell).toContain("aria-modal='true'")
+    expect(deskShell).toContain('mobileMenuButtonRef.current?.focus()')
+  })
+
+  it('uses one concise route heading in the workbench frame', () => {
+    expect(deskShell).not.toContain("<span className='eyebrow'>{kicker}</span>")
+    expect(deskShell).toContain("<strong>{activeItem?.label || title}</strong>")
+    expect(deskShell).toContain("<div className='desk-page-content'>{children}</div>")
   })
 })
