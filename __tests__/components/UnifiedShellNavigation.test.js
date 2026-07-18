@@ -5,6 +5,7 @@ const root = path.join(__dirname, '../..')
 const navigation = fs.readFileSync(path.join(root, 'lib/domain/navigation.js'), 'utf8')
 const deskShell = fs.readFileSync(path.join(root, 'components/DeskShell.js'), 'utf8')
 const publicHeader = fs.readFileSync(path.join(root, 'components/law-tech/PublicHeader.js'), 'utf8')
+const accountMenu = fs.readFileSync(path.join(root, 'components/WorkspaceAccountMenu.js'), 'utf8')
 
 describe('unified shell navigation', () => {
   it('retains every public and private destination', () => {
@@ -24,6 +25,13 @@ describe('unified shell navigation', () => {
     }
     expect(deskShell).toContain('NAV_PERMISSION')
     expect(deskShell).toContain("profile?.permissions?.[NAV_PERMISSION[item.key]]")
+  })
+
+  it('keeps public workspace navigation separate from account disclosure', () => {
+    expect(publicHeader).toContain("<WorkspaceAccountMenu placement='public' />")
+    expect(accountMenu).toContain("className='workspace-entry-link'")
+    expect(accountMenu).toContain("href={workspaceHref}")
+    expect(accountMenu).toContain("aria-label='账号与身份'")
   })
 
   it('keeps mobile navigation reversible and stateful', () => {

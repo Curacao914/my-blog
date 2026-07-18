@@ -367,6 +367,35 @@ select {
   z-index: 7600 !important;
 }
 
+.workspace-account-menu.placement-public {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.workspace-entry-link {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(17,63,49,.1);
+  border-radius: 13px;
+  padding: 7px 12px;
+  color: #f7fbf8 !important;
+  background: linear-gradient(145deg, rgba(34,95,75,.94), rgba(16,61,48,.96));
+  box-shadow: 0 9px 22px rgba(17,61,49,.16), inset 0 1px 0 rgba(255,255,255,.18);
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.workspace-entry-link:hover {
+  color: #fff !important;
+  transform: translateY(-1px);
+}
+
 .workspace-account-trigger {
   padding: 3px 8px 3px 4px !important;
 }
@@ -5094,6 +5123,22 @@ body:has(.desk-system-scene) {
     min-height: 36px !important;
     padding-right: 8px !important;
     padding-left: 8px !important;
+  }
+
+  .workspace-entry-link {
+    width: 36px;
+    min-height: 36px;
+    padding: 0;
+  }
+
+  .workspace-entry-link span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .system-dock {

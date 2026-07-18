@@ -63,15 +63,22 @@ function AccountMenuEnabled({ placement = 'desk' }) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const rootRef = useRef(null)
+  const triggerRef = useRef(null)
+  const popoverRef = useRef(null)
 
   useEffect(() => {
     if (!open) return undefined
+
+    popoverRef.current?.querySelector('a, button, select')?.focus()
 
     const onPointer = event => {
       if (!rootRef.current?.contains(event.target)) setOpen(false)
     }
     const onKey = event => {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key === 'Escape') {
+        setOpen(false)
+        triggerRef.current?.focus()
+      }
     }
 
     document.addEventListener('pointerdown', onPointer)
@@ -84,10 +91,12 @@ function AccountMenuEnabled({ placement = 'desk' }) {
   }, [open])
 
   if (!session?.signedIn) {
+    if (clerkLoaded && clerkSignedIn) {
+      return <SignedInFallback compact={placement === 'desk'} />
+    }
     if (!clerkLoaded || loading) {
       return <span className='workspace-account-loading' aria-label='读取账号信息' />
     }
-    if (clerkSignedIn) return <SignedInFallback compact={placement === 'desk'} />
     return <SignedOutActions compact={placement === 'desk'} />
   }
 
@@ -98,6 +107,11 @@ function AccountMenuEnabled({ placement = 'desk' }) {
     : profile.status === 'suspended'
       ? '/access-suspended'
       : '/desk/today'
+  const workspaceLabel = profile.status === 'active'
+    ? '工作台'
+    : profile.status === 'pending'
+      ? '查看申请状态'
+      : '查看账号状态'
 
   async function switchIdentity(profileId = '') {
     setBusy(true)
@@ -136,7 +150,14 @@ function AccountMenuEnabled({ placement = 'desk' }) {
 
   return (
     <div className={`workspace-account-menu placement-${placement}`} ref={rootRef}>
+      {placement === 'public' ? (
+        <Link className='workspace-entry-link' href={workspaceHref}>
+          <LawTechIcon name='desk' size={15} />
+          <span>{workspaceLabel}</span>
+        </Link>
+      ) : null}
       <button
+        ref={triggerRef}
         className='workspace-account-trigger'
         type='button'
         aria-expanded={open}
@@ -160,7 +181,7 @@ function AccountMenuEnabled({ placement = 'desk' }) {
       </button>
 
       {open ? (
-        <div className='workspace-account-popover' role='dialog' aria-label='账号菜单'>
+        <div ref={popoverRef} className='workspace-account-popover' role='dialog' aria-label='账号菜单'>
           <header>
             <Avatar profile={profile} size='large' />
             <div>
