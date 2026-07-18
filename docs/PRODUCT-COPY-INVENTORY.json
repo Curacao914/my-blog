@@ -1,21 +1,5 @@
 [
   {
-    "file": "components/about/PublicProfileEditor.js",
-    "text": "候选文章只在时间到期时换一部分，不会每次刷新重抽。"
-  },
-  {
-    "file": "components/about/PublicProfileEditor.js",
-    "text": "继续使用本地缓存与定时更新。"
-  },
-  {
-    "file": "components/about/PublicProfileEditor.js",
-    "text": "显示 OCR、引注、课程与写作入口。"
-  },
-  {
-    "file": "components/about/PublicProfileEditor.js",
-    "text": "显示首页底部签名。"
-  },
-  {
     "file": "components/Accessibility.js",
     "text": "快捷键: Alt+H (对比度), Alt+/- (字体)"
   },
@@ -165,10 +149,6 @@
   },
   {
     "file": "components/CourseAutomationSettings.js",
-    "text": "保留人工查看入口，但不让普通课程卡在确认门口。"
-  },
-  {
-    "file": "components/CourseAutomationSettings.js",
     "text": "保留转录、简报、完整笔记与来源信息，不长期保存课程视频。"
   },
   {
@@ -222,6 +202,10 @@
   {
     "file": "components/CourseAutomationSettings.js",
     "text": "完整笔记完成后生成五至十分钟阅读版，并写入阅读资料库。"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "异常节点仍需人工确认。"
   },
   {
     "file": "components/CourseAutomationSettings.js",
@@ -1045,11 +1029,11 @@
   },
   {
     "file": "components/SystemDesk.js",
-    "text": "账号、模型、消息、课程与站点配置。"
+    "text": "同步 Notion、搜索与页面缓存。"
   },
   {
     "file": "components/SystemDesk.js",
-    "text": "重新拉取 Notion，提升稳定快照，并同步搜索与页面缓存。 缓存尚未自动更新时，可以在这里手动取得最新内容。"
+    "text": "账号、模型、消息、课程与站点配置。"
   },
   {
     "file": "components/ThemeSwitch.js",
