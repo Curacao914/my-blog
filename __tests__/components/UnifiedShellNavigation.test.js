@@ -28,9 +28,13 @@ describe('unified shell navigation', () => {
   })
 
   it('keeps public workspace navigation separate from account disclosure', () => {
+    expect(publicHeader).toContain("className='workspace-entry-link'")
+    expect(publicHeader).toContain("href='/desk/today'")
+    expect(publicHeader.indexOf("className='workspace-entry-link'")).toBeLessThan(
+      publicHeader.indexOf("<WorkspaceAccountMenu placement='public' />")
+    )
     expect(publicHeader).toContain("<WorkspaceAccountMenu placement='public' />")
-    expect(accountMenu).toContain("className='workspace-entry-link'")
-    expect(accountMenu).toContain("href={workspaceHref}")
+    expect(accountMenu).not.toContain("className='workspace-entry-link'")
     expect(accountMenu).toContain("aria-label='账号与身份'")
   })
 

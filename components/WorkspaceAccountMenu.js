@@ -107,12 +107,6 @@ function AccountMenuEnabled({ placement = 'desk' }) {
     : profile.status === 'suspended'
       ? '/access-suspended'
       : '/desk/today'
-  const workspaceLabel = profile.status === 'active'
-    ? '工作台'
-    : profile.status === 'pending'
-      ? '查看申请状态'
-      : '查看账号状态'
-
   async function switchIdentity(profileId = '') {
     setBusy(true)
     try {
@@ -150,12 +144,6 @@ function AccountMenuEnabled({ placement = 'desk' }) {
 
   return (
     <div className={`workspace-account-menu placement-${placement}`} ref={rootRef}>
-      {placement === 'public' ? (
-        <Link className='workspace-entry-link' href={workspaceHref}>
-          <LawTechIcon name='desk' size={15} />
-          <span>{workspaceLabel}</span>
-        </Link>
-      ) : null}
       <button
         ref={triggerRef}
         className='workspace-account-trigger'

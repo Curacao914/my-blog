@@ -53,10 +53,10 @@ describe('public workspace and account controls', () => {
     mockUseWorkspaceSession.mockReturnValue(workspaceSession())
   })
 
-  it('keeps an active workspace one click away from the public header', () => {
+  it('keeps account disclosure separate from the public workspace entry', () => {
     render(<WorkspaceAccountMenu placement='public' />)
 
-    expect(screen.getByRole('link', { name: '工作台' })).toHaveAttribute('href', '/desk/today')
+    expect(screen.queryByRole('link', { name: '工作台' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '账号与身份' })).toHaveAttribute('aria-expanded', 'false')
   })
 
@@ -66,6 +66,7 @@ describe('public workspace and account controls', () => {
   ])('routes a %s profile to its existing status surface', (status, label, href) => {
     mockUseWorkspaceSession.mockReturnValue(workspaceSession({ status }))
     render(<WorkspaceAccountMenu placement='public' />)
+    fireEvent.click(screen.getByRole('button', { name: '账号与身份' }))
 
     expect(screen.getByRole('link', { name: label })).toHaveAttribute('href', href)
   })
