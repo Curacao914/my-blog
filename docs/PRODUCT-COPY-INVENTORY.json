@@ -1,5 +1,21 @@
 [
   {
+    "file": "components/about/PublicProfileEditor.js",
+    "text": "候选文章只在时间到期时换一部分，不会每次刷新重抽。"
+  },
+  {
+    "file": "components/about/PublicProfileEditor.js",
+    "text": "继续使用本地缓存与定时更新。"
+  },
+  {
+    "file": "components/about/PublicProfileEditor.js",
+    "text": "显示 OCR、引注、课程与写作入口。"
+  },
+  {
+    "file": "components/about/PublicProfileEditor.js",
+    "text": "显示首页底部签名。"
+  },
+  {
     "file": "components/Accessibility.js",
     "text": "快捷键: Alt+H (对比度), Alt+/- (字体)"
   },
@@ -177,7 +193,7 @@
   },
   {
     "file": "components/CourseAutomationSettings.js",
-    "text": "发现回放、转写、生成简报与完整笔记。"
+    "text": "发现回放后立即转写；课程笔记在经济时段批量生成。"
   },
   {
     "file": "components/CourseAutomationSettings.js",
@@ -201,6 +217,10 @@
   },
   {
     "file": "components/CourseAutomationSettings.js",
+    "text": "每十二小时检查一次；发现新回放后立即下载、转录并保存逐字稿。"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
     "text": "完整笔记完成后生成五至十分钟阅读版，并写入阅读资料库。"
   },
   {
@@ -209,7 +229,7 @@
   },
   {
     "file": "components/CourseAutomationSettings.js",
-    "text": "GitHub Action 每 30 分钟轻量检查一次，只在设定时间之后且当天尚未运行时启动完整 Worker。"
+    "text": "逐字稿先进入队列，再由经济模式在低价窗口生成大纲、笔记与简报。"
   },
   {
     "file": "components/CourseBriefReader.js",
@@ -776,10 +796,6 @@
     "text": "复制页面地址失败:"
   },
   {
-    "file": "components/DeskIdentityCard.js",
-    "text": "看到我记得喝口水"
-  },
-  {
     "file": "components/DeskShell.js",
     "text": "移动端工作台导航"
   },
@@ -802,6 +818,18 @@
   {
     "file": "components/law-tech/AdminContentSync.js",
     "text": "稳定快照 $ 篇 / 图片 $ 张"
+  },
+  {
+    "file": "components/law-tech/PublicHeader.js",
+    "text": "没有找到匹配内容。"
+  },
+  {
+    "file": "components/law-tech/PublicHeader.js",
+    "text": "全文索引未连接；按回车使用站内搜索。"
+  },
+  {
+    "file": "components/law-tech/PublicHeader.js",
+    "text": "搜索标题、内容或标签"
   },
   {
     "file": "components/MemberManagement.js",
@@ -836,6 +864,18 @@
     "text": "载入失败，请刷新重试"
   },
   {
+    "file": "components/OpenClawAgentStudio.js",
+    "text": "连接中断，状态已刷新。"
+  },
+  {
+    "file": "components/OpenClawAgentStudio.js",
+    "text": "已回滚到 v$ ，并生成新的发布版本。"
+  },
+  {
+    "file": "components/OpenClawAgentStudio.js",
+    "text": "正在读取版本与评估记录…"
+  },
+  {
     "file": "components/OpenWrite.js",
     "text": "当前路径不在黄名单中，放行"
   },
@@ -857,7 +897,19 @@
   },
   {
     "file": "components/ReadingBox.js",
+    "text": "$ 篇阅读内容已删除"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "$ 篇阅读内容已移动"
+  },
+  {
+    "file": "components/ReadingBox.js",
     "text": "按文件夹整理阅读资料。"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "保存失败，已恢复原状态"
   },
   {
     "file": "components/ReadingBox.js",
@@ -866,6 +918,30 @@
   {
     "file": "components/ReadingBox.js",
     "text": "可以粘贴原文片段，也可以写几句自己的判断。"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "日程响应格式异常"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "所选内容会一起移动；完成后仍停留在当前文件夹。"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "所选内容已标记读完"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "所选内容已恢复待读"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "所选内容已恢复到资料库"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "所选内容已移出日常阅读"
   },
   {
     "file": "components/ReadingBox.js",
@@ -909,11 +985,19 @@
   },
   {
     "file": "components/ReadingBox.js",
+    "text": "阅读资料响应格式异常"
+  },
+  {
+    "file": "components/ReadingBox.js",
     "text": "云端暂时不可用，显示最近内容"
   },
   {
     "file": "components/ReadingBox.js",
     "text": "这个文件夹还是空的"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "这会删除所选阅读条目；已经另存为笔记的内容不会被删除。"
   },
   {
     "file": "components/ReadingBox.js",
@@ -930,10 +1014,6 @@
   {
     "file": "components/ReadingBox.js",
     "text": "整理状态将在下次保存时同步"
-  },
-  {
-    "file": "components/ReadingBox.js",
-    "text": "正在同步最新内容"
   },
   {
     "file": "components/ReadingBox.js",
@@ -965,7 +1045,7 @@
   },
   {
     "file": "components/SystemDesk.js",
-    "text": "通用模型、课程自动化、微信发送、内容同步与站点连接各自归位， 不再让一个 API 同时出现在三块页面里。"
+    "text": "账号、模型、消息、课程与站点配置。"
   },
   {
     "file": "components/SystemDesk.js",
@@ -1153,6 +1233,10 @@
   },
   {
     "file": "components/WorkspaceAccountMenu.js",
+    "text": "登录与安全：管理 Passkey、Touch ID、Face ID 与登录设备"
+  },
+  {
+    "file": "components/WorkspaceAccountMenu.js",
     "text": "正在查看测试身份"
   },
   {
@@ -1164,20 +1248,8 @@
     "text": "发布设置读取失败"
   },
   {
-    "file": "pages/about/index.js",
-    "text": "北京大学法学院法律硕士（非法学）。本科就读于中南财经政法大学侦查学专业。"
-  },
-  {
-    "file": "pages/about/index.js",
-    "text": "个人网站、OCR 与学习工具。"
-  },
-  {
-    "file": "pages/about/index.js",
-    "text": "经济法、民法、刑法与国际法。"
-  },
-  {
-    "file": "pages/about/index.js",
-    "text": "课程笔记、案例分析与论文。"
+    "file": "pages/content/[...slug].js",
+    "text": "可以返回内容库继续浏览公开内容。"
   },
   {
     "file": "pages/content/[...slug].js",
@@ -1189,11 +1261,15 @@
   },
   {
     "file": "pages/content/[...slug].js",
-    "text": "这篇内容未公开展示正文。"
+    "text": "这篇内容未公开展示正文。验证通过后，正文会在当前页面展开。"
   },
   {
     "file": "pages/content/[...slug].js",
     "text": "这条内容的临时访问已经失效"
+  },
+  {
+    "file": "pages/content/[...slug].js",
+    "text": "extractMarkdownHeadings(readableBody), [readableBody]) const folderPath = content.folder?.path || [] const tags = content.display?.tags || content.tags || [] const category = folderPath[0] || content.display?.category || content.category || '未归档' const subPath = folderPath.slice(1).filter(Boolean) const typeLabel = typeLabels[content.type] || content.type || '内容' const dateLabel = formatDate(content.date || content.updatedAt) const accessLabel = content.access?.mode === 'password' ? '密码访问' : '公开阅读' return"
   },
   {
     "file": "pages/content/index.js",
@@ -1212,16 +1288,28 @@
     "text": "Curacao 的文章、课程笔记、读书记录与项目记录。"
   },
   {
-    "file": "pages/desk/tasks/index.js",
-    "text": "这里查看长期任务、未来安排与四象限；回到“今日”时，只保留现在需要执行的部分。"
+    "file": "pages/index.js",
+    "text": "答案会过期，值得追的问题通常不会。"
   },
   {
     "file": "pages/index.js",
-    "text": "法学笔记、文章、课程整理与工具。"
+    "text": "法学之外还有风，记得开窗。"
   },
   {
     "file": "pages/index.js",
-    "text": "还没有更多公开内容。"
+    "text": "系统负责记住，你负责改变主意。"
+  },
+  {
+    "file": "pages/index.js",
+    "text": "先找到真正的问题，再考虑写得漂亮。"
+  },
+  {
+    "file": "pages/index.js",
+    "text": "有些绕路后来会变成地图。"
+  },
+  {
+    "file": "pages/index.js",
+    "text": "Curacao 的笔记、写作与工具。"
   },
   {
     "file": "pages/search/index.js",
@@ -1242,6 +1330,10 @@
   {
     "file": "pages/search/index.js",
     "text": "文章中的一句话、课程、栏目或标签"
+  },
+  {
+    "file": "pages/tools/index.js",
+    "text": "课程材料、录音与笔记"
   },
   {
     "file": "pages/tools/index.js",

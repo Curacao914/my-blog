@@ -284,7 +284,7 @@ function SpacesWindow({ model, requestedCategory = '' }) {
 
   return (
     <div className='home-spaces-view'>
-      <header><div><span>Collections</span><h1>栏目</h1></div><p>共享标签只在确有关系时连接。</p></header>
+      <header><div><span>Collections</span><h1>栏目</h1></div></header>
       <div className='home-space-map'>
         <svg viewBox='0 0 1000 520' aria-hidden='true'>
           {model.connections.map(connection => (
@@ -329,21 +329,11 @@ function ChronicleWindow({ model }) {
 }
 
 function StudioWindow() {
-  const planned = [
-    { label: '案例板', icon: 'case', state: '计划' },
-    { label: '文献关联', icon: 'atlas', state: '计划' },
-    { label: '证据表', icon: 'table', state: '计划' },
-    { label: '引注检查', icon: 'citation', state: '计划' }
-  ]
   return (
     <div className='home-studio-view home-scroll-view'>
       <section className='home-studio-tools'>
         <header><span>Utilities</span><h1>常用工具</h1></header>
         <div>{HOME_TOOLS.map(tool => <Link href={tool.href} key={tool.label} rel={tool.href.startsWith('http') ? 'noreferrer' : undefined}><i><LawTechIcon name={tool.icon} size={21} /></i><span><strong>{tool.label}</strong><small>{tool.meta}</small></span><b>↗</b></Link>)}</div>
-      </section>
-      <section className='home-studio-roadmap'>
-        <header><span>Next</span><h2>计划</h2></header>
-        <div>{planned.map(item => <article key={item.label}><i><LawTechIcon name={item.icon} size={18} /></i><strong>{item.label}</strong><small>{item.state}</small></article>)}</div>
       </section>
     </div>
   )

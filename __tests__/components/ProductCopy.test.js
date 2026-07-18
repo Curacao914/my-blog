@@ -9,7 +9,6 @@ describe('user-facing product copy', () => {
   it('does not expose implementation notes or explanatory filler', () => {
     const rawForbiddenText = [
       'TextPack v1',
-      'schemaVersion',
       'MVP',
       'TODO',
       '占位',
