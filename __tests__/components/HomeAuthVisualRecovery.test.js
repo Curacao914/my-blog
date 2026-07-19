@@ -7,8 +7,8 @@ const app = fs.readFileSync(path.join(root, 'pages/_app.js'), 'utf8')
 const account = fs.readFileSync(path.join(root, 'components/WorkspaceAccountMenu.js'), 'utf8')
 
 describe('homepage and authentication visual recovery', () => {
-  it('disables legacy SVG refraction in the editorial shell', () => {
-    expect(styles).toContain('v9 compositor safety')
+  it('disables legacy SVG refraction in the system shell', () => {
+    expect(styles).toContain('Compositor safety')
     expect(styles).toContain("filter: none !important")
     expect(styles).toContain("content: none !important")
   })
