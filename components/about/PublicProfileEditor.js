@@ -178,7 +178,7 @@ export function PublicProfileEditor() {
             <legend>文章轮播</legend>
             <label className='settings-check-row'>
               <input type='checkbox' checked={home.reading?.enabled !== false} onChange={event => updateHome('reading', { enabled: event.target.checked })} />
-              <span><strong>显示 Reading 小组件</strong><small>候选文章只在时间到期时换一部分，不会每次刷新重抽。</small></span>
+              <span><strong>显示 Reading 小组件</strong></span>
             </label>
             <label><span>标题</span><input value={home.reading?.title || ''} onChange={event => updateHome('reading', { title: event.target.value })} /></label>
             <div className='profile-editor-inline'>
@@ -193,10 +193,10 @@ export function PublicProfileEditor() {
               <label><span>主窗口标题</span><input value={home.libraryTitle || ''} onChange={event => setForm(current => ({ ...current, home: { ...current.home, libraryTitle: event.target.value } }))} /></label>
               <label><span>更新区标题</span><input value={home.recentTitle || ''} onChange={event => setForm(current => ({ ...current, home: { ...current.home, recentTitle: event.target.value } }))} /></label>
             </div>
-            <label className='settings-check-row'><input type='checkbox' checked={home.quote?.enabled !== false} onChange={event => updateHome('quote', { enabled: event.target.checked })} /><span><strong>随机句</strong><small>继续使用本地缓存与定时更新。</small></span></label>
+            <label className='settings-check-row'><input type='checkbox' checked={home.quote?.enabled !== false} onChange={event => updateHome('quote', { enabled: event.target.checked })} /><span><strong>随机句</strong></span></label>
             <label><span>随机句更新</span><select value={home.quote?.refreshHours || 6} onChange={event => updateHome('quote', { refreshHours: Number(event.target.value) })}><option value='3'>每 3 小时</option><option value='6'>每 6 小时</option><option value='12'>每 12 小时</option><option value='24'>每天</option></select></label>
-            <label className='settings-check-row'><input type='checkbox' checked={home.launchpad?.enabled !== false} onChange={event => updateHome('launchpad', { enabled: event.target.checked })} /><span><strong>快捷工具</strong><small>显示 OCR、引注、课程与写作入口。</small></span></label>
-            <label className='settings-check-row'><input type='checkbox' checked={home.signature?.enabled !== false} onChange={event => updateHome('signature', { enabled: event.target.checked })} /><span><strong>动态签名</strong><small>显示首页底部签名。</small></span></label>
+            <label className='settings-check-row'><input type='checkbox' checked={home.launchpad?.enabled !== false} onChange={event => updateHome('launchpad', { enabled: event.target.checked })} /><span><strong>快捷工具</strong></span></label>
+            <label className='settings-check-row'><input type='checkbox' checked={home.signature?.enabled !== false} onChange={event => updateHome('signature', { enabled: event.target.checked })} /><span><strong>动态签名</strong></span></label>
           </fieldset>
 
           <fieldset>

@@ -219,7 +219,7 @@ export function OpenClawAgentStudio() {
         await load(environment)
         setNotice({
           kind: 'error',
-          text: '评估连接中断，已刷新服务器状态；运行结果会保留在评估账本。'
+          text: '连接中断，状态已刷新。'
         })
       } else {
         setNotice({ kind: 'error', text: error.message })
@@ -336,10 +336,6 @@ export function OpenClawAgentStudio() {
       <header className='agent-studio-head'>
         <span>Control plane laboratory</span>
         <h3>Agent Studio</h3>
-        <p>
-          模型只负责理解；规划、资源、风险与执行保持为不可绕过的代码边界。
-          此处管理版本与评估，不接管真实微信流量。
-        </p>
       </header>
 
       <div className='agent-environment' aria-label='Agent 环境'>
@@ -399,7 +395,7 @@ export function OpenClawAgentStudio() {
                 ) : null}
               </div>
             )) : (
-              <p className='settings-muted'>尚无配置版本。先创建一份安全默认草稿。</p>
+              <p className='settings-muted'>尚无版本。</p>
             )}
           </aside>
 
@@ -572,14 +568,13 @@ export function OpenClawAgentStudio() {
                       ) : null}
                     </div>
                   ) : (
-                    <p>需要 150 条完整评估、总体至少 98%、关键安全项 100%，才能发布。</p>
+                    <p>尚无评估结果。</p>
                   )}
                 </div>
               </>
             ) : (
               <div className='agent-empty'>
-                <strong>固定拓扑已经就位</strong>
-                <p>创建第一份草稿后，才能配置模型、能力、别名、阈值与预算。</p>
+                <strong>尚无草稿</strong>
               </div>
             )}
           </div>

@@ -19,7 +19,8 @@ describe('system UI round 7 final integration', () => {
     expect(home).toContain('buildSpaceModel')
     expect(home).toContain('const tags = [...new Set(publicContentTags(item).filter(Boolean))]')
     expect(home).toContain('if (!categoriesForTag || categoriesForTag.size < 2) return')
-    expect(home).toContain('共享标签只在确有关系时连接')
+    expect(home).toContain('connectionMap.set')
+    expect(home).not.toContain('共享标签只在确有关系时连接')
   })
 
   it('adds a configurable current-focus widget and balanced right column', () => {

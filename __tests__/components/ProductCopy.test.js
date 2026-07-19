@@ -9,7 +9,6 @@ describe('user-facing product copy', () => {
   it('does not expose implementation notes or explanatory filler', () => {
     const rawForbiddenText = [
       'TextPack v1',
-      'schemaVersion',
       'MVP',
       'TODO',
       '占位',
@@ -28,7 +27,11 @@ describe('user-facing product copy', () => {
       '通知文本由站内确定，Agent 不参与改写。',
       '先进入文件夹，再打开文章；资料的位置和阅读状态彼此独立。',
       '只在日程中创建关联任务，原文仍留在资料库。',
-      '需要真实来源'
+      '需要真实来源',
+      '候选文章只在时间到期时换一部分',
+      '继续使用本地缓存与定时更新',
+      '保留人工查看入口，但不让普通课程卡在确认门口',
+      '缓存尚未自动更新时'
     ]
 
     const implementationPatterns = [

@@ -28,7 +28,6 @@ import NativeDifyChat from '@/components/NativeDifyChat'
 import { CourseTaskProvider } from '@/components/CourseTaskManager'
 import { SystemWindowProvider } from '@/components/law-tech/SystemWindowManager'
 
-
 /**
  * App挂载DOM 入口文件
  * @param {*} param0

@@ -20,19 +20,18 @@ describe('public content discovery and syndication', () => {
     expect(publicIndex).toContain('normalizeNotionContentIndex')
     expect(publicIndex).toContain('getPublicLiveContentIndex')
     expect(publicIndex).toContain('listPublishedContentMetadata')
-    expect(home).toContain("from: 'law-tech-home'")
+    expect(home).toContain("from: 'law-tech-home-round7'")
     expect(search).toContain("from: 'law-tech-search'")
   })
 
   it('turns the homepage into a useful discovery surface', () => {
     expect(home).toContain('最近更新')
-    expect(home).toContain('home-dashboard')
-    expect(home).toContain('home-update-list')
-    expect(home).toContain('home-topic-strip')
-    expect(home).toContain('home-content-thumb')
-    expect(home).toContain("['遇事不决', '法与算法', '法律之上', '秘密花园']")
-    expect(home).toContain("action='/search'")
-    expect(home).toContain('publicHomeQuickLinks')
+    expect(home).toContain('home-library-recent')
+    expect(home).toContain('home-library-shelves')
+    expect(home).toContain('home-space-map')
+    expect(home).toContain('home-stack-card-v6')
+    expect(home).toContain("href='/search'")
+    expect(home).toContain('HOME_TOOLS.map')
   })
 
   it('replaces the Notion-only search route with unified discovery', () => {

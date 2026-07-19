@@ -45,7 +45,6 @@ export function AuthPage({ mode = 'sign-in', redirectTo = '/desk/today' }) {
           <div className='copy'>
             <p>law-tech.dev</p>
             <h1>{isSignUp ? '注册' : '登录工作台'}</h1>
-            <span className='auth-explainer'>{isSignUp ? '注册后，管理员会根据授权邮箱或申请状态开放你的私人工作区。' : '登录后进入仅属于当前账号的日程、笔记、课程与设置。'}</span>
           </div>
           {clerkEnabled ? (
             <ClerkAuthFlow mode={mode} redirectTo={redirectTo} />
@@ -136,8 +135,6 @@ export function AuthPage({ mode = 'sign-in', redirectTo = '/desk/today' }) {
           letter-spacing: 0.14em;
           text-transform: uppercase;
         }
-
-        .auth-page .auth-explainer { display:block; margin-top:10px; color:#66716b; font-size:13px; line-height:1.65; }
 
         .auth-page .copy h1 {
           margin: 0;

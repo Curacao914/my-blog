@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { PublicHeader } from '@/components/law-tech/PublicHeader'
 import { SystemWindowControls, useSystemWindow } from '@/components/law-tech/SystemWindowManager'
@@ -66,10 +66,11 @@ function DeskWindowBar({ title, windowController }) {
   )
 }
 
-export function DeskShell({ active = 'today', title, kicker, children }) {
+export function DeskShell({ active = 'today', title, children }) {
   const { session } = useWorkspaceSession()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const mobileMenuButtonRef = useRef(null)
   const activeItem = deskNav.flatMap(group => group.items).find(item => item.key === active)
   const windowTitle = `工作台 · ${activeItem?.label || title || 'Workspace'}`
   const deskWindow = useSystemWindow({ id: 'desk:workspace', title: windowTitle, href: `/desk/${active}`, kind: 'desk' })
@@ -81,7 +82,7 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
   useEffect(() => {
     if (!mobileOpen) return undefined
     const onKeyDown = event => {
-      if (event.key === 'Escape') setMobileOpen(false)
+      if (event.key === 'Escape') closeMobileNavigation()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -93,6 +94,11 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
       window.localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0')
       return next
     })
+  }
+
+  function closeMobileNavigation() {
+    setMobileOpen(false)
+    mobileMenuButtonRef.current?.focus()
   }
 
   return (
@@ -132,7 +138,8 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
             <header className='desk-topbar'>
               <div className='desk-route'>
                 <button
-                  className='desk-mobile-menu-button'
+                    className='desk-mobile-menu-button'
+                    ref={mobileMenuButtonRef}
                   type='button'
                   aria-label='打开工作台导航'
                   aria-expanded={mobileOpen}
@@ -143,10 +150,7 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
                 <span className='desk-route-icon'>
                   <LawTechIcon name={active} size={17} />
                 </span>
-                <div>
-                  <span className='eyebrow'>{kicker}</span>
-                  <strong>{activeItem?.label || title}</strong>
-                </div>
+                    <strong>{activeItem?.label || title}</strong>
               </div>
               <span className='desk-topbar-spacer' aria-hidden='true' />
             </header>
@@ -156,9 +160,9 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
                 className='desk-mobile-drawer-backdrop'
                 type='button'
                 aria-label='关闭工作台导航'
-                onClick={() => setMobileOpen(false)}
-              />
-              <aside className='desk-mobile-drawer' aria-label='移动端工作台导航'>
+                  onClick={closeMobileNavigation}
+                />
+                <aside className='desk-mobile-drawer' aria-label='移动端工作台导航' role='dialog' aria-modal='true'>
                 <header>
                   <Link
                     className='desk-home-link is-mobile'
@@ -169,7 +173,7 @@ export function DeskShell({ active = 'today', title, kicker, children }) {
                     <LawTechIcon name='home' size={14} />
                     <span>首页</span>
                   </Link>
-                  <button type='button' aria-label='关闭导航' onClick={() => setMobileOpen(false)}>×</button>
+                    <button type='button' aria-label='关闭导航' onClick={closeMobileNavigation}>×</button>
                 </header>
                 <DeskIdentityCard compact />
                 <DeskNavigation
