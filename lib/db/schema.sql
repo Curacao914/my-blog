@@ -602,3 +602,66 @@ create index if not exists idx_reminders_owner_status_time on reminders(owner_id
 create index if not exists idx_reminders_schedule_item on reminders(schedule_item_id, status);
 create index if not exists idx_reminder_events_reminder_time on reminder_events(reminder_id, created_at desc);
 create index if not exists idx_reminder_preferences_daily on reminder_preferences(daily_digest_enabled, weekly_digest_enabled);
+
+create or replace function law_tech_enforce_knowledge_private_access()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  parent_type text;
+begin
+  if TG_TABLE_NAME = 'content_access' then
+    select item.type
+    into parent_type
+    from public.content_items item
+    where item.id = new.item_id
+    for update;
+
+    if parent_type = 'knowledge' and (
+      new.mode is distinct from 'private'
+      or new.allow_indexing is distinct from false
+      or new.allow_rss is distinct from false
+      or new.allow_sitemap is distinct from false
+    ) then
+      raise exception 'knowledge content access must remain private and undiscoverable'
+        using errcode = '23514';
+    end if;
+
+    return new;
+  end if;
+
+  if TG_TABLE_NAME = 'content_items'
+    and old.type is distinct from 'knowledge'
+    and new.type = 'knowledge'
+    and exists (
+      select 1
+      from public.content_access access
+      where access.item_id = new.id
+        and (
+          access.mode is distinct from 'private'
+          or access.allow_indexing is distinct from false
+          or access.allow_rss is distinct from false
+          or access.allow_sitemap is distinct from false
+        )
+    )
+  then
+    raise exception 'content access must be private before changing an item to knowledge'
+      using errcode = '23514';
+  end if;
+
+  return new;
+end
+$$;
+
+drop trigger if exists content_access_knowledge_private_guard on content_access;
+create trigger content_access_knowledge_private_guard
+  before insert or update on content_access
+  for each row
+  execute function law_tech_enforce_knowledge_private_access();
+
+drop trigger if exists content_items_knowledge_private_guard on content_items;
+create trigger content_items_knowledge_private_guard
+  before update of type on content_items
+  for each row
+  execute function law_tech_enforce_knowledge_private_access();

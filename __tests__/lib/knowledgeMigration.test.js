@@ -97,4 +97,35 @@ describe('light knowledge database migration', () => {
     expect(migration).toContain('law_tech_is_owner()')
     expect(migration).not.toMatch(/storage\.buckets|insert into storage/i)
   })
+
+  it('normalizes existing knowledge access before installing the private guard', () => {
+    const normalizationPosition = migration.indexOf('update public.content_access access')
+    const triggerPosition = migration.indexOf('create trigger content_access_knowledge_private_guard')
+
+    expect(normalizationPosition).toBeGreaterThan(-1)
+    expect(triggerPosition).toBeGreaterThan(normalizationPosition)
+    expect(migration).toMatch(
+      /update public\.content_access access[\s\S]+set mode = 'private'[\s\S]+allow_indexing = false[\s\S]+allow_rss = false[\s\S]+allow_sitemap = false[\s\S]+item\.type = 'knowledge'/i
+    )
+  })
+
+  it('guards access writes and item type transitions with one reusable trigger function', () => {
+    for (const sql of [migration, schema]) {
+      expect(sql).toMatch(
+        /create or replace function law_tech_enforce_knowledge_private_access\(\)[\s\S]+returns trigger/i
+      )
+      expect(sql).toMatch(
+        /parent_type = 'knowledge'[\s\S]+new\.mode is distinct from 'private'[\s\S]+new\.allow_indexing is distinct from false[\s\S]+new\.allow_rss is distinct from false[\s\S]+new\.allow_sitemap is distinct from false[\s\S]+raise exception/i
+      )
+      expect(sql).toMatch(
+        /create trigger content_access_knowledge_private_guard[\s\S]+before insert or update on (?:public\.)?content_access[\s\S]+execute function law_tech_enforce_knowledge_private_access\(\)/i
+      )
+      expect(sql).toMatch(
+        /create trigger content_items_knowledge_private_guard[\s\S]+before update of type on (?:public\.)?content_items[\s\S]+execute function law_tech_enforce_knowledge_private_access\(\)/i
+      )
+      expect(sql).toMatch(
+        /old\.type is distinct from 'knowledge'[\s\S]+new\.type = 'knowledge'[\s\S]+from (?:public\.)?content_access access[\s\S]+access\.mode is distinct from 'private'[\s\S]+raise exception/i
+      )
+    }
+  })
 })

@@ -94,6 +94,85 @@ create index if not exists idx_knowledge_links_owner_source
 create index if not exists idx_knowledge_assets_owner_item
   on public.knowledge_assets (owner_id, item_id, created_at desc);
 
+update public.content_access access
+set mode = 'private',
+    allow_indexing = false,
+    allow_rss = false,
+    allow_sitemap = false,
+    updated_at = now()
+from public.content_items item
+where item.id = access.item_id
+  and item.type = 'knowledge'
+  and (
+    access.mode is distinct from 'private'
+    or access.allow_indexing is distinct from false
+    or access.allow_rss is distinct from false
+    or access.allow_sitemap is distinct from false
+  );
+
+create or replace function law_tech_enforce_knowledge_private_access()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  parent_type text;
+begin
+  if TG_TABLE_NAME = 'content_access' then
+    select item.type
+    into parent_type
+    from public.content_items item
+    where item.id = new.item_id
+    for update;
+
+    if parent_type = 'knowledge' and (
+      new.mode is distinct from 'private'
+      or new.allow_indexing is distinct from false
+      or new.allow_rss is distinct from false
+      or new.allow_sitemap is distinct from false
+    ) then
+      raise exception 'knowledge content access must remain private and undiscoverable'
+        using errcode = '23514';
+    end if;
+
+    return new;
+  end if;
+
+  if TG_TABLE_NAME = 'content_items'
+    and old.type is distinct from 'knowledge'
+    and new.type = 'knowledge'
+    and exists (
+      select 1
+      from public.content_access access
+      where access.item_id = new.id
+        and (
+          access.mode is distinct from 'private'
+          or access.allow_indexing is distinct from false
+          or access.allow_rss is distinct from false
+          or access.allow_sitemap is distinct from false
+        )
+    )
+  then
+    raise exception 'content access must be private before changing an item to knowledge'
+      using errcode = '23514';
+  end if;
+
+  return new;
+end
+$$;
+
+drop trigger if exists content_access_knowledge_private_guard on public.content_access;
+create trigger content_access_knowledge_private_guard
+  before insert or update on public.content_access
+  for each row
+  execute function law_tech_enforce_knowledge_private_access();
+
+drop trigger if exists content_items_knowledge_private_guard on public.content_items;
+create trigger content_items_knowledge_private_guard
+  before update of type on public.content_items
+  for each row
+  execute function law_tech_enforce_knowledge_private_access();
+
 alter table public.knowledge_entries enable row level security;
 alter table public.knowledge_links enable row level security;
 alter table public.knowledge_assets enable row level security;
