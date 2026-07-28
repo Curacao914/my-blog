@@ -1,7 +1,7 @@
 # law-tech.dev 工作台进度
 
-更新时间：2026-06-27  
-开发分支：`codex/homepage-phase1`  
+更新时间：2026-07-28
+开发分支：`codex/light-knowledge-b`（基于 `codex/homepage-phase1` 的隔离功能分支）
 Preview：`https://preview.law-tech.dev`  
 Production：`main`，尚未合并本阶段工作。
 
@@ -19,6 +19,7 @@ Production：`main`，尚未合并本阶段工作。
 
 ## 当前已经完成
 
+- 轻知识已在本地完整接入：外部模型提示词、Markdown/文本/ZIP 与私有图片导入、版本化编辑与归档、搜索、规则关联、跨工作台保存、发展为写作，以及不泄露私人内容的首页轻量组件。数据库迁移和 Preview 真实验收尚未执行，详见 `docs/LIGHT_KNOWLEDGE.md`。
 - Preview 的 Clerk 管理员登录已经跑通；服务端直接验证 Session，不依赖 Clerk Middleware。
 - 工作台包含今日、随手记、阅读、事项、课程整理、笔记库、写作、内容设置和系统页面。
 - 课程资料支持浏览器读取、扫描资料 OCR、课次归档、课程偏好、大纲确认、节点写作、独立审查、局部修订和最终拼装。

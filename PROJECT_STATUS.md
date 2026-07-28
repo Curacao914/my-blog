@@ -1,10 +1,10 @@
 # law-tech.dev Project Status
 
-Last updated: 2026-06-29, Asia/Shanghai
+Last updated: 2026-07-28, Asia/Shanghai
 
 Repository: `Curacao914/my-blog`
 
-Working branch: `codex/homepage-phase1`
+Working branch: `codex/light-knowledge-b` (isolated feature worktree, based on `codex/homepage-phase1`)
 
 Production branch: `main` — do not merge or promote without explicit user approval.
 
@@ -17,6 +17,8 @@ Production: `https://law-tech.dev`
 The development branch now contains a multi-user private workbench, durable course-note workflow, unified public content/discovery, Notion last-known-good relay with R2 assets, Writing Studio publication, and a content-first public homepage. The two-account isolation check has been completed by the user. The product north star is now explicit: preserve traces of thought, create memory anchors for lived experience, and keep exploration open beyond law.
 
 The current flagship is the course-replay automation described in `docs/COURSE_REPLAY_AUTOMATION.md`. It must be built as independently useful closed loops rather than an empty phased shell. First research the authorized platform flow and replay-link extraction project; then process one real replay end to end before scheduled monitoring. Production remains unchanged.
+
+The feature branch also contains the complete local implementation of private `轻知识`: external-model prompt handoff, Markdown/text/ZIP import with private images, versioned CRUD and search, deterministic user-confirmed relations, cross-workbench capture, Writing development, and a privacy-safe homepage widget. See `docs/LIGHT_KNOWLEDGE.md`. Its database migration, Preview behavior, and Production behavior have not been applied or verified remotely.
 
 ## Source of Truth and Safety
 

@@ -5561,3 +5561,21 @@ body:has(.desk-system-scene) {
     overflow-x: hidden !important;
   }
 }
+.knowledge-capture-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 9px;
+  border: 1px solid rgba(17, 63, 49, .1);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .48);
+  color: var(--leaf);
+  font-size: 9px;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.knowledge-capture-link:hover {
+  border-color: rgba(17, 63, 49, .22);
+  background: rgba(255, 255, 255, .8);
+}

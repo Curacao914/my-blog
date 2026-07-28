@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 
 import { LawTechIcon } from '@/components/LawTechIcons'
+import { HomeKnowledgeWidget } from '@/components/knowledge/HomeKnowledgeWidget'
 import { DynamicSignature } from '@/components/law-tech/DynamicSignature'
 import { PublicHeader } from '@/components/law-tech/PublicHeader'
 import { SystemWindowControls, useSystemWindow } from '@/components/law-tech/SystemWindowManager'
@@ -708,6 +709,7 @@ export default function HomeDesktop({ model, profile }) {
           <aside className='home-widget-column home-widget-column-v7'>
             <ArticleStack items={safeModel.carousel} settings={home.reading} />
             <FocusWidget focus={focus} />
+            <HomeKnowledgeWidget />
             <QuoteWidget settings={home.quote} />
             <UtilityWidget enabled={home.launchpad?.enabled !== false} />
             <SignatureWidget enabled={home.signature?.enabled !== false} />
