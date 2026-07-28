@@ -25,6 +25,12 @@ describe('workspace account and settings surface', () => {
     expect(menu).toContain('/api/admin/impersonation')
   })
 
+  it('shows signed-out actions after the server session resolves even if Clerk client loading stalls', () => {
+    expect(menu).toContain("if (loading && !session)")
+    expect(menu).toContain("if (session && !session.signedIn)")
+    expect(menu).not.toContain('if (!clerkLoaded || loading)')
+  })
+
   it('hydrates the client and updates every mounted account surface immediately after sign-out', () => {
     expect(sessionHook).toContain('primeWorkspaceSession')
     expect(sessionHook).toContain('markWorkspaceSignedOut')

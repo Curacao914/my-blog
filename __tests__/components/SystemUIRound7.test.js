@@ -27,7 +27,7 @@ describe('system UI round 7 final integration', () => {
     expect(home).toContain('safeProfile.focus')
     expect(profile).toContain('focus: {')
     expect(editor).toContain('首页状态')
-    expect(styles).toContain('grid-template-rows:214px 104px 98px 103px minmax(62px,1fr)')
+    expect(styles).toContain('grid-template-rows:214px 104px 128px 98px 103px minmax(62px,1fr)')
   })
 
   it('keeps date only in the menu and makes About owner-only', () => {

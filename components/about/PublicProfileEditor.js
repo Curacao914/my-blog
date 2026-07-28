@@ -195,6 +195,7 @@ export function PublicProfileEditor() {
             </div>
             <label className='settings-check-row'><input type='checkbox' checked={home.quote?.enabled !== false} onChange={event => updateHome('quote', { enabled: event.target.checked })} /><span><strong>随机句</strong><small>继续使用本地缓存与定时更新。</small></span></label>
             <label><span>随机句更新</span><select value={home.quote?.refreshHours || 6} onChange={event => updateHome('quote', { refreshHours: Number(event.target.value) })}><option value='3'>每 3 小时</option><option value='6'>每 6 小时</option><option value='12'>每 12 小时</option><option value='24'>每天</option></select></label>
+            <label className='settings-check-row'><input type='checkbox' checked={home.knowledge?.enabled !== false} onChange={event => updateHome('knowledge', { enabled: event.target.checked })} /><span><strong>轻知识</strong><small>显示轻知识入口和本人选择在首页展示的条目。</small></span></label>
             <label className='settings-check-row'><input type='checkbox' checked={home.launchpad?.enabled !== false} onChange={event => updateHome('launchpad', { enabled: event.target.checked })} /><span><strong>快捷工具</strong><small>显示 OCR、引注、课程与写作入口。</small></span></label>
             <label className='settings-check-row'><input type='checkbox' checked={home.signature?.enabled !== false} onChange={event => updateHome('signature', { enabled: event.target.checked })} /><span><strong>动态签名</strong><small>显示首页底部签名。</small></span></label>
           </fieldset>

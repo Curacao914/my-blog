@@ -50,10 +50,7 @@ function SignedInFallback({ compact = false }) {
 function AccountMenuEnabled({ placement = 'desk' }) {
   const router = useRouter()
   const { openUserProfile, signOut } = useClerk()
-  const {
-    isLoaded: clerkLoaded,
-    isSignedIn: clerkSignedIn
-  } = useAuth()
+  const { isSignedIn: clerkSignedIn } = useAuth()
   const {
     loading,
     session,
@@ -84,8 +81,11 @@ function AccountMenuEnabled({ placement = 'desk' }) {
   }, [open])
 
   if (!session?.signedIn) {
-    if (!clerkLoaded || loading) {
+    if (loading && !session) {
       return <span className='workspace-account-loading' aria-label='读取账号信息' />
+    }
+    if (session && !session.signedIn) {
+      return <SignedOutActions compact={placement === 'desk'} />
     }
     if (clerkSignedIn) return <SignedInFallback compact={placement === 'desk'} />
     return <SignedOutActions compact={placement === 'desk'} />

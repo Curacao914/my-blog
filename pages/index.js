@@ -709,7 +709,7 @@ export default function HomeDesktop({ model, profile }) {
           <aside className='home-widget-column home-widget-column-v7'>
             <ArticleStack items={safeModel.carousel} settings={home.reading} />
             <FocusWidget focus={focus} />
-            <HomeKnowledgeWidget />
+            {home.knowledge?.enabled !== false ? <HomeKnowledgeWidget /> : null}
             <QuoteWidget settings={home.quote} />
             <UtilityWidget enabled={home.launchpad?.enabled !== false} />
             <SignatureWidget enabled={home.signature?.enabled !== false} />

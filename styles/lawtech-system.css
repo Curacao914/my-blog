@@ -3292,7 +3292,7 @@ body,
 /* Right widgets: stack, current focus, quote, tools and signature. */
 .home-widget-column-v7 {
   display:grid;
-  grid-template-rows:214px 104px 98px 103px minmax(62px,1fr);
+  grid-template-rows:214px 104px 128px 98px 103px minmax(62px,1fr);
   gap:8px;
   min-width:0;
   min-height:0;
@@ -3374,7 +3374,7 @@ body,
 @media (max-width:1120px) {
   .home-desktop-grid-v7 { grid-template-columns:minmax(0,1fr) 270px; }
   .home-library-shelves { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .home-widget-column-v7 { grid-template-rows:204px 100px 96px 100px minmax(58px,1fr); }
+  .home-widget-column-v7 { grid-template-rows:204px 100px 124px 96px 100px minmax(58px,1fr); }
   .home-window-switcher button { min-width:64px;padding-inline:8px; }
 }
 
@@ -3383,7 +3383,7 @@ body,
   .home-desktop-v7 { height:auto;min-height:100dvh;overflow:visible; }
   .home-desktop-grid-v7 { height:auto;grid-template-columns:1fr; }
   .home-app-window-v7 { min-height:700px; }
-  .home-widget-column-v7 { grid-template-columns:1fr 1fr;grid-template-rows:210px 104px 98px 100px 64px; }
+  .home-widget-column-v7 { grid-template-columns:1fr 1fr;grid-template-rows:210px 104px 124px 98px 100px 64px; }
   .home-smart-stack-v7 { grid-row:1 / span 2; }
   .home-signature-widget-v7 { grid-column:1 / -1; }
   .system-menu-bar,.desk-system-scene > .system-menu-bar { grid-template-columns:minmax(0,1fr) auto !important; }
@@ -3399,7 +3399,7 @@ body,
   .home-space-map { min-height:760px;overflow-y:auto; }
   .home-space-map > svg { display:none; }
   .home-space-island { position:relative;left:auto !important;top:auto !important;width:100% !important;min-height:150px !important;margin-bottom:10px; }
-  .home-widget-column-v7 { grid-template-columns:1fr;grid-template-rows:210px 104px 98px 100px 64px; }
+  .home-widget-column-v7 { grid-template-columns:1fr;grid-template-rows:210px 104px 124px 98px 100px 64px; }
   .home-smart-stack-v7 { grid-row:auto; }
   .home-signature-widget-v7 { grid-column:auto; }
   .desk-app-window > .desk-layout { grid-template-columns:1fr !important; }
