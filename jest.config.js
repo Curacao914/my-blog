@@ -43,6 +43,7 @@ const customJestConfig = {
     '<rootDir>/node_modules/',
     '<rootDir>/out/',
     '<rootDir>/.vercel/',
+    '<rootDir>/.worktrees/',
     '<rootDir>/integrations/openclaw/law-tech-wechat-relay/tests/'
   ],
   
