@@ -12,6 +12,7 @@ jest.mock('@/lib/server/supabase', () => ({
 
 const ownerId = '11111111-1111-4111-8111-111111111111'
 const itemId = '22222222-2222-4222-8222-222222222222'
+const secondItemId = '44444444-4444-4444-8444-444444444444'
 
 const itemRow = {
   id: itemId,
@@ -137,11 +138,107 @@ describe('knowledgeRepository', () => {
     expect(batchPaths[0]).toContain(`owner_id=eq.${ownerId}`)
     expect(batchPaths[0]).toContain('type=eq.knowledge')
     expect(batchPaths[1]).toContain('/content_versions?')
-    expect(batchPaths[1]).toContain('order=version.desc')
+    expect(batchPaths[1]).toContain('order=item_id.asc,version.desc')
+    expect(batchPaths[1]).toContain('limit=200')
+    expect(batchPaths[1]).toContain('offset=0')
     expect(batchPaths[2]).toContain('/content_display?')
     expect(batchPaths[0]).toContain(`id=in.(${itemId})`)
     expect(batchPaths[1]).toContain(`item_id=in.(${itemId})`)
     expect(batchPaths[2]).toContain(`item_id=in.(${itemId})`)
+  })
+
+  it('pages stable batched version reads until every item can select its latest version', async () => {
+    const secondEntry = { ...entryRow, item_id: secondItemId }
+    const secondItem = {
+      ...itemRow,
+      id: secondItemId,
+      slug: 'knowledge-second',
+      title: '第二条'
+    }
+    const firstPage = Array.from({ length: 200 }, (_, index) => ({
+      ...versionRow,
+      id: `page-one-${index}`,
+      version: 201 - index
+    }))
+    const secondPage = [
+      { ...versionRow, id: 'oldest-first-item', version: 1 },
+      {
+        ...versionRow,
+        id: 'latest-second-item',
+        item_id: secondItemId,
+        version: 5,
+        body_markdown: '第二条正文'
+      }
+    ]
+
+    supabaseRest.mockImplementation(async (path) => {
+      if (path.startsWith('/knowledge_entries?')) return [entryRow, secondEntry]
+      if (path.startsWith('/content_items?')) return [itemRow, secondItem]
+      if (path.startsWith('/content_display?')) {
+        return [
+          displayRow,
+          { ...displayRow, item_id: secondItemId }
+        ]
+      }
+      if (path.startsWith('/content_versions?') && path.includes('offset=0')) {
+        return firstPage
+      }
+      if (path.startsWith('/content_versions?') && path.includes('offset=200')) {
+        return secondPage
+      }
+      return []
+    })
+
+    const entries = await listKnowledgeEntries(ownerId)
+
+    expect(entries).toHaveLength(2)
+    expect(entries[0]).toEqual(expect.objectContaining({
+      id: itemId,
+      version: 201
+    }))
+    expect(entries[1]).toEqual(expect.objectContaining({
+      id: secondItemId,
+      version: 5,
+      bodyMarkdown: '第二条正文'
+    }))
+    const versionPaths = supabaseRest.mock.calls
+      .map(([path]) => path)
+      .filter(path => path.startsWith('/content_versions?'))
+    expect(versionPaths).toHaveLength(2)
+    expect(versionPaths[0]).toContain('order=item_id.asc,version.desc')
+    expect(versionPaths[0]).toContain('limit=200')
+    expect(versionPaths[0]).toContain('offset=0')
+    expect(versionPaths[1]).toContain('limit=200')
+    expect(versionPaths[1]).toContain('offset=200')
+    for (const path of versionPaths) {
+      expect(path).toContain(`item_id=in.(${itemId},${secondItemId})`)
+    }
+  })
+
+  it('fails with a controlled error when version paging reaches its safety limit', async () => {
+    const fullPage = Array.from({ length: 200 }, (_, index) => ({
+      ...versionRow,
+      id: `full-page-${index}`,
+      version: 200 - index
+    }))
+    supabaseRest.mockImplementation(async (path) => {
+      if (path.startsWith('/knowledge_entries?')) return [entryRow]
+      if (path.startsWith('/content_items?')) return [itemRow]
+      if (path.startsWith('/content_display?')) return [displayRow]
+      if (path.startsWith('/content_versions?')) return fullPage
+      return []
+    })
+
+    await expect(listKnowledgeEntries(ownerId)).rejects.toMatchObject({
+      status: 503,
+      code: 'knowledge_versions_page_limit',
+      isKnowledgeRepositoryError: true
+    })
+    const versionCalls = supabaseRest.mock.calls.filter(([path]) =>
+      path.startsWith('/content_versions?')
+    )
+    expect(versionCalls.length).toBeGreaterThan(1)
+    expect(versionCalls.length).toBeLessThanOrEqual(50)
   })
 
   it('creates a private manual draft with version, display and searchable knowledge rows', async () => {
@@ -256,57 +353,88 @@ describe('knowledgeRepository', () => {
     expect(cleanupPath).toContain('type=eq.knowledge')
   })
 
-  it('does not add a version when an explicit body has the existing checksum', async () => {
+  it('updates through one atomic RPC, then reads the final entry', async () => {
     mockExistingEntry()
 
-    await updateKnowledgeEntry(ownerId, itemId, { bodyMarkdown: '旧正文' })
-
-    expect(
-      supabaseRest.mock.calls.some(([path, options]) =>
-        path.startsWith('/content_versions?') && options?.method === 'POST'
-      )
-    ).toBe(false)
-    expect(
-      supabaseRest.mock.calls.some(([path, options]) =>
-        path.startsWith('/content_access?') &&
-        options?.method === 'POST' &&
-        options?.headers?.Prefer.includes('resolution=merge-duplicates')
-      )
-    ).toBe(true)
-  })
-
-  it('does not add a version for non-body updates even if a stored checksum is stale', async () => {
-    mockExistingEntry({
-      version: { ...versionRow, checksum: 'legacy-checksum' }
+    await updateKnowledgeEntry(ownerId, itemId, {
+      ownerId: 'client-owner',
+      title: ' 新标题 ',
+      bodyMarkdown: ' 新正文 ',
+      kind: 'idea',
+      domain: ' 平台治理 ',
+      tags: ['证据', ' 证据 ', '责任'],
+      showOnHome: false
     })
 
-    await updateKnowledgeEntry(ownerId, itemId, { title: '新标题' })
-
-    expect(
-      supabaseRest.mock.calls.some(([path, options]) =>
-        path.startsWith('/content_versions?') && options?.method === 'POST'
-      )
-    ).toBe(false)
-  })
-
-  it('adds the next unpublished version only when the body checksum changes', async () => {
-    mockExistingEntry()
-
-    const updated = await updateKnowledgeEntry(ownerId, itemId, {
-      bodyMarkdown: '新正文'
-    })
-
-    const versionCall = supabaseRest.mock.calls.find(([path, options]) =>
-      path.startsWith('/content_versions?') && options?.method === 'POST'
+    const rpcCalls = supabaseRest.mock.calls.filter(([path]) =>
+      path === '/rpc/law_tech_update_knowledge_entry'
     )
-    expect(JSON.parse(versionCall[1].body)).toEqual(expect.objectContaining({
-      item_id: itemId,
-      version: 3,
-      body_markdown: '新正文',
-      is_published: false
-    }))
-    expect(updated.bodyMarkdown).toBe('新正文')
-    expect(updated.version).toBe(3)
+    expect(rpcCalls).toHaveLength(1)
+    expect(rpcCalls[0][1]).toEqual({
+      method: 'POST',
+      body: JSON.stringify({
+        p_owner_id: ownerId,
+        p_item_id: itemId,
+        p_patch: {
+          title: '新标题',
+          body_markdown: '新正文',
+          kind: 'idea',
+          domain: '平台治理',
+          tags: ['证据', '责任'],
+          show_on_home: false
+        }
+      })
+    })
+    expect(
+      supabaseRest.mock.calls.some(([path, options]) =>
+        path.startsWith('/content_items?') && options?.method === 'PATCH'
+      )
+    ).toBe(false)
+    expect(
+      supabaseRest.mock.calls.some(([path, options]) =>
+        path.startsWith('/content_versions?') && options?.method === 'POST'
+      )
+    ).toBe(false)
+    expect(
+      supabaseRest.mock.calls.some(([path, options]) =>
+        path.startsWith('/content_display?') && options?.method === 'PATCH'
+      )
+    ).toBe(false)
+    expect(
+      supabaseRest.mock.calls.some(([path, options]) =>
+        path.startsWith('/knowledge_entries?') && options?.method === 'PATCH'
+      )
+    ).toBe(false)
+    expect(supabaseRest).toHaveBeenCalledTimes(5)
+  })
+
+  it.each([
+    ['kind', { kind: 'unknown' }, 'invalid_kind'],
+    ['state', { state: 'published' }, 'invalid_state'],
+    ['reviewStatus', { reviewStatus: 'pending' }, 'invalid_review_status'],
+    ['showOnHome', { showOnHome: 'true' }, 'invalid_show_on_home'],
+    ['tags', { tags: ['证据', 42] }, 'invalid_tags']
+  ])('rejects invalid explicit %s before calling the RPC', async (_field, patch, code) => {
+    await expect(updateKnowledgeEntry(ownerId, itemId, patch)).rejects.toMatchObject({
+      status: 400,
+      code,
+      isKnowledgeRepositoryError: true
+    })
+    expect(supabaseRest).not.toHaveBeenCalled()
+  })
+
+  it('maps the RPC not-found signal to a controlled repository error', async () => {
+    const rpcError = new Error('database rejected update')
+    rpcError.data = { code: 'P0002' }
+    supabaseRest.mockRejectedValue(rpcError)
+
+    await expect(
+      updateKnowledgeEntry(ownerId, itemId, { title: '新标题' })
+    ).rejects.toMatchObject({
+      status: 404,
+      code: 'knowledge_not_found',
+      isKnowledgeRepositoryError: true
+    })
   })
 
   it('archives only the knowledge child state, never the content item status', async () => {

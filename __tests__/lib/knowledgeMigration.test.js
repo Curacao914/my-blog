@@ -169,6 +169,54 @@ describe('light knowledge database migration', () => {
     }
   })
 
+  it('updates knowledge atomically through an owner-scoped row-locking RPC', () => {
+    for (const sql of [migration, schema]) {
+      expect(sql).toMatch(
+        /create or replace function (?:public\.)?law_tech_update_knowledge_entry\s*\(\s*p_owner_id uuid,\s*p_item_id uuid,\s*p_patch jsonb\s*\)/i
+      )
+      expect(sql).toMatch(
+        /from (?:public\.)?content_items item[\s\S]+item\.id = p_item_id[\s\S]+item\.owner_id = p_owner_id[\s\S]+item\.type = 'knowledge'[\s\S]+for update/i
+      )
+      expect(sql).toMatch(
+        /if not found then[\s\S]+knowledge entry not found[\s\S]+errcode = 'P0002'/i
+      )
+      for (const key of [
+        'title',
+        'summary',
+        'body_markdown',
+        'kind',
+        'state',
+        'domain',
+        'topic',
+        'seed_text',
+        'tags',
+        'review_status',
+        'provenance',
+        'show_on_home'
+      ]) {
+        expect(sql).toContain(`p_patch ? '${key}'`)
+      }
+      expect(sql).toMatch(
+        /body_markdown[\s\S]+btrim[\s\S]+raise exception 'knowledge body is required'/i
+      )
+      expect(sql).toMatch(
+        /select coalesce\(max\(version\),\s*0\) \+ 1[\s\S]+insert into (?:public\.)?content_versions/i
+      )
+      expect(sql).toMatch(
+        /insert into (?:public\.)?content_access[\s\S]+on conflict \(item_id\)[\s\S]+mode = 'private'[\s\S]+allow_indexing = false[\s\S]+allow_rss = false[\s\S]+allow_sitemap = false/i
+      )
+      expect(sql).toMatch(
+        /update (?:public\.)?content_display[\s\S]+p_patch \? 'tags'[\s\S]+p_patch \? 'domain'/i
+      )
+      expect(sql).toMatch(
+        /from jsonb_array_elements\(p_patch->'tags'\) as tag\(value\)[\s\S]+jsonb_typeof\(value\) is distinct from 'string'/i
+      )
+      expect(sql).toMatch(
+        /search_text[\s\S]+v_title[\s\S]+v_summary[\s\S]+v_body_markdown[\s\S]+v_domain[\s\S]+v_topic[\s\S]+v_tags[\s\S]+v_seed_text/i
+      )
+    }
+  })
+
   it('makes fresh-schema knowledge tables fail closed without undefined auth helpers', () => {
     for (const table of ['knowledge_entries', 'knowledge_links', 'knowledge_assets']) {
       expect(schema).toMatch(

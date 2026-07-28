@@ -1,6 +1,7 @@
 begin;
 
 create extension if not exists pg_trgm;
+create extension if not exists pgcrypto;
 
 alter table public.content_items
   drop constraint if exists content_items_type_check;
@@ -242,6 +243,327 @@ create trigger knowledge_assets_parent_guard
   before insert or update on public.knowledge_assets
   for each row
   execute function law_tech_enforce_knowledge_parent();
+
+create or replace function public.law_tech_update_knowledge_entry(
+  p_owner_id uuid,
+  p_item_id uuid,
+  p_patch jsonb
+)
+returns uuid
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_item public.content_items%rowtype;
+  v_entry public.knowledge_entries%rowtype;
+  v_display public.content_display%rowtype;
+  v_version public.content_versions%rowtype;
+  v_now timestamptz := now();
+  v_title text;
+  v_summary text;
+  v_body_markdown text;
+  v_kind text;
+  v_state text;
+  v_domain text;
+  v_topic text;
+  v_seed_text text;
+  v_tags text[];
+  v_review_status text;
+  v_provenance jsonb;
+  v_show_on_home boolean;
+  v_checksum text;
+  v_next_version integer;
+  v_search_text text;
+begin
+  p_patch := coalesce(p_patch, '{}'::jsonb);
+
+  select item.*
+  into v_item
+  from public.content_items item
+  where item.id = p_item_id
+    and item.owner_id = p_owner_id
+    and item.type = 'knowledge'
+  for update;
+
+  if not found then
+    raise exception 'knowledge entry not found'
+      using errcode = 'P0002';
+  end if;
+
+  select entry.*
+  into v_entry
+  from public.knowledge_entries entry
+  where entry.item_id = p_item_id
+    and entry.owner_id = p_owner_id;
+
+  if not found then
+    raise exception 'knowledge entry not found'
+      using errcode = 'P0002';
+  end if;
+
+  select display.*
+  into v_display
+  from public.content_display display
+  where display.item_id = p_item_id;
+
+  if not found then
+    raise exception 'knowledge entry not found'
+      using errcode = 'P0002';
+  end if;
+
+  select version.*
+  into v_version
+  from public.content_versions version
+  where version.item_id = p_item_id
+  order by version.version desc
+  limit 1;
+
+  if not found then
+    raise exception 'knowledge entry not found'
+      using errcode = 'P0002';
+  end if;
+
+  v_title := v_item.title;
+  v_summary := coalesce(v_item.summary, '');
+  v_body_markdown := v_version.body_markdown;
+  v_kind := v_entry.kind;
+  v_state := v_entry.state;
+  v_domain := v_entry.domain;
+  v_topic := v_entry.topic;
+  v_seed_text := v_entry.seed_text;
+  v_tags := v_display.tags;
+  v_review_status := v_entry.review_status;
+  v_provenance := v_entry.provenance;
+  v_show_on_home := v_entry.show_on_home;
+
+  if p_patch ? 'title' then
+    v_title := btrim(coalesce(p_patch->>'title', ''));
+    if v_title = '' then
+      raise exception 'knowledge title is required'
+        using errcode = '22023';
+    end if;
+  end if;
+
+  if p_patch ? 'summary' then
+    v_summary := btrim(coalesce(p_patch->>'summary', ''));
+  end if;
+
+  if p_patch ? 'body_markdown' then
+    v_body_markdown := btrim(coalesce(p_patch->>'body_markdown', ''));
+    if v_body_markdown = '' then
+      raise exception 'knowledge body is required'
+        using errcode = '22023';
+    end if;
+  end if;
+
+  if p_patch ? 'kind' then
+    v_kind := p_patch->>'kind';
+    if not (
+      v_kind = any (
+        array['question', 'concept', 'idea', 'fact', 'observation', 'quote', 'connection']
+      )
+    ) then
+      raise exception 'invalid knowledge kind'
+        using errcode = '22023';
+    end if;
+  end if;
+
+  if p_patch ? 'state' then
+    v_state := p_patch->>'state';
+    if not (v_state = any (array['exploring', 'active', 'archived'])) then
+      raise exception 'invalid knowledge state'
+        using errcode = '22023';
+    end if;
+  end if;
+
+  if p_patch ? 'domain' then
+    v_domain := nullif(btrim(coalesce(p_patch->>'domain', '')), '');
+  end if;
+
+  if p_patch ? 'topic' then
+    v_topic := nullif(btrim(coalesce(p_patch->>'topic', '')), '');
+  end if;
+
+  if p_patch ? 'seed_text' then
+    v_seed_text := nullif(btrim(coalesce(p_patch->>'seed_text', '')), '');
+  end if;
+
+  if p_patch ? 'tags' then
+    if jsonb_typeof(p_patch->'tags') is distinct from 'array'
+      or exists (
+        select 1
+        from jsonb_array_elements(p_patch->'tags') as tag(value)
+        where jsonb_typeof(value) is distinct from 'string'
+      )
+    then
+      raise exception 'invalid knowledge tags'
+        using errcode = '22023';
+    end if;
+
+    select coalesce(
+      array_agg(btrim(value) order by ordinality)
+        filter (where btrim(value) <> ''),
+      '{}'::text[]
+    )
+    into v_tags
+    from jsonb_array_elements_text(p_patch->'tags')
+      with ordinality as tag(value, ordinality);
+  end if;
+
+  if p_patch ? 'review_status' then
+    v_review_status := p_patch->>'review_status';
+    if not (
+      v_review_status = any (array['needs_review', 'reviewed'])
+    ) then
+      raise exception 'invalid knowledge review status'
+        using errcode = '22023';
+    end if;
+  end if;
+
+  if p_patch ? 'provenance' then
+    if jsonb_typeof(p_patch->'provenance') is distinct from 'array' then
+      raise exception 'invalid knowledge provenance'
+        using errcode = '22023';
+    end if;
+    v_provenance := p_patch->'provenance';
+  end if;
+
+  if p_patch ? 'show_on_home' then
+    if jsonb_typeof(p_patch->'show_on_home') is distinct from 'boolean' then
+      raise exception 'invalid knowledge home visibility'
+        using errcode = '22023';
+    end if;
+    v_show_on_home := (p_patch->>'show_on_home')::boolean;
+  end if;
+
+  update public.content_items
+  set title = case when p_patch ? 'title' then v_title else title end,
+      summary = case
+        when p_patch ? 'summary' then nullif(v_summary, '')
+        else summary
+      end,
+      updated_at = v_now
+  where id = p_item_id
+    and owner_id = p_owner_id
+    and type = 'knowledge';
+
+  v_checksum := encode(digest(v_body_markdown, 'sha256'), 'hex');
+  if p_patch ? 'body_markdown'
+    and v_checksum is distinct from v_version.checksum
+  then
+    select coalesce(max(version), 0) + 1
+    into v_next_version
+    from public.content_versions
+    where item_id = p_item_id;
+
+    insert into public.content_versions (
+      item_id,
+      version,
+      body_markdown,
+      checksum,
+      is_published
+    )
+    values (
+      p_item_id,
+      v_next_version,
+      v_body_markdown,
+      v_checksum,
+      false
+    );
+  end if;
+
+  insert into public.content_access (
+    item_id,
+    mode,
+    password_hash,
+    expires_at,
+    allow_indexing,
+    allow_rss,
+    allow_sitemap,
+    updated_at
+  )
+  values (
+    p_item_id,
+    'private',
+    null,
+    null,
+    false,
+    false,
+    false,
+    v_now
+  )
+  on conflict (item_id)
+  do update set
+    mode = 'private',
+    password_hash = null,
+    expires_at = null,
+    allow_indexing = false,
+    allow_rss = false,
+    allow_sitemap = false,
+    updated_at = excluded.updated_at;
+
+  if p_patch ? 'tags' or p_patch ? 'domain' then
+    update public.content_display
+    set tags = case when p_patch ? 'tags' then v_tags else tags end,
+        folder_path = case
+          when p_patch ? 'domain' then
+            case
+              when v_domain is null then array['轻知识']::text[]
+              else array['轻知识', v_domain]::text[]
+            end
+          else folder_path
+        end,
+        updated_at = v_now
+    where item_id = p_item_id;
+  end if;
+
+  v_search_text := regexp_replace(
+    btrim(
+      concat_ws(
+        ' ',
+        v_title,
+        v_summary,
+        v_body_markdown,
+        v_domain,
+        v_topic,
+        array_to_string(v_tags, ' '),
+        v_seed_text
+      )
+    ),
+    '\s+',
+    ' ',
+    'g'
+  );
+
+  update public.knowledge_entries
+  set kind = case when p_patch ? 'kind' then v_kind else kind end,
+      state = case when p_patch ? 'state' then v_state else state end,
+      domain = case when p_patch ? 'domain' then v_domain else domain end,
+      topic = case when p_patch ? 'topic' then v_topic else topic end,
+      seed_text = case
+        when p_patch ? 'seed_text' then v_seed_text
+        else seed_text
+      end,
+      review_status = case
+        when p_patch ? 'review_status' then v_review_status
+        else review_status
+      end,
+      provenance = case
+        when p_patch ? 'provenance' then v_provenance
+        else provenance
+      end,
+      show_on_home = case
+        when p_patch ? 'show_on_home' then v_show_on_home
+        else show_on_home
+      end,
+      search_text = v_search_text,
+      updated_at = v_now
+  where item_id = p_item_id
+    and owner_id = p_owner_id;
+
+  return p_item_id;
+end
+$$;
 
 alter table public.knowledge_entries enable row level security;
 alter table public.knowledge_links enable row level security;

@@ -145,6 +145,7 @@ describe('/api/knowledge', () => {
     const error = new Error('Knowledge entry not found')
     error.status = 404
     error.code = 'knowledge_not_found'
+    error.isKnowledgeRepositoryError = true
     getKnowledgeEntry.mockRejectedValue(error)
     const req = { method: 'GET', query: { id: itemId }, body: {} }
     const res = createRes()
@@ -155,6 +156,52 @@ describe('/api/knowledge', () => {
     expect(res.body).toEqual({
       error: 'Knowledge entry not found',
       code: 'knowledge_not_found'
+    })
+  })
+
+  it('hides unknown collection errors behind a fixed service response', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
+    listKnowledgeEntries.mockRejectedValue(new Error('database host secret detail'))
+    const req = { method: 'GET', query: {}, body: {} }
+    const res = createRes()
+
+    try {
+      await collectionHandler(req, res)
+      expect(consoleError).toHaveBeenCalledWith(
+        'Knowledge collection API failed',
+        'Unexpected repository error'
+      )
+    } finally {
+      consoleError.mockRestore()
+    }
+
+    expect(res.statusCode).toBe(500)
+    expect(res.body).toEqual({
+      error: '轻知识服务暂时不可用',
+      code: 'knowledge_unavailable'
+    })
+  })
+
+  it('hides unknown item errors behind a fixed service response', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
+    getKnowledgeEntry.mockRejectedValue(new Error('internal query detail'))
+    const req = { method: 'GET', query: { id: itemId }, body: {} }
+    const res = createRes()
+
+    try {
+      await itemHandler(req, res)
+      expect(consoleError).toHaveBeenCalledWith(
+        'Knowledge item API failed',
+        'Unexpected repository error'
+      )
+    } finally {
+      consoleError.mockRestore()
+    }
+
+    expect(res.statusCode).toBe(500)
+    expect(res.body).toEqual({
+      error: '轻知识服务暂时不可用',
+      code: 'knowledge_unavailable'
     })
   })
 

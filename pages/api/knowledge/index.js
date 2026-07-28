@@ -5,10 +5,19 @@ import {
 } from '@/lib/server/knowledgeRepository'
 
 function sendError(res, error) {
-  const status = Number.isInteger(error?.status) ? error.status : 500
-  return res.status(status).json({
-    error: error?.message || 'Knowledge request failed',
-    code: error?.code || 'knowledge_request_failed'
+  if (error?.isKnowledgeRepositoryError === true) {
+    return res.status(error.status).json({
+      error: error.message,
+      code: error.code
+    })
+  }
+  console.error(
+    'Knowledge collection API failed',
+    'Unexpected repository error'
+  )
+  return res.status(500).json({
+    error: '轻知识服务暂时不可用',
+    code: 'knowledge_unavailable'
   })
 }
 
