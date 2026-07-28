@@ -19,14 +19,17 @@ describe('knowledge connections and module flow', () => {
     expect(repository).toContain("status: 'suggested'")
   })
 
-  it('lets the detail page confirm, dismiss, and manually add restrained relations', () => {
+  it('keeps manual review for legacy suggestions while AI owns new organization', () => {
     const source = read('components/knowledge/KnowledgeDetail.js')
+    const network = read('components/knowledge/KnowledgeNetwork.js')
 
     expect(source).toContain('/relations')
     expect(source).toContain('确认')
     expect(source).toContain('忽略')
-    expect(source).toContain('添加关联')
-    expect(source).not.toContain('知识图谱')
+    expect(source).toContain('/api/knowledge/organize')
+    expect(source).not.toContain('添加关联')
+    expect(network).toContain('linksBySource')
+    expect(network).toContain('↔')
   })
 
   it('adds one reusable capture link to existing modules without duplicating stores', () => {

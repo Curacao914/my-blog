@@ -27,8 +27,6 @@ export function KnowledgeDetail({ id }) {
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState('')
   const [relations, setRelations] = useState([])
-  const [candidates, setCandidates] = useState([])
-  const [targetId, setTargetId] = useState('')
 
   const load = useCallback(async () => {
     setStatus('')
@@ -38,17 +36,13 @@ export function KnowledgeDetail({ id }) {
       if (!response.ok) throw new Error(data.error || '读取失败')
       setEntry(data.entry)
       setDraft({ ...data.entry, tagsText: tagsText(data.entry.tags) })
-      const [relationResponse, candidateResponse] = await Promise.all([
-        fetch(`/api/knowledge/${id}/relations`, { credentials: 'same-origin', cache: 'no-store' }),
-        fetch('/api/knowledge?limit=100', { credentials: 'same-origin', cache: 'no-store' })
-      ])
+      const relationResponse = await fetch(
+        `/api/knowledge/${id}/relations`,
+        { credentials: 'same-origin', cache: 'no-store' }
+      )
       if (relationResponse.ok) {
         const relationData = await relationResponse.json()
         setRelations(relationData.relations || [])
-      }
-      if (candidateResponse.ok) {
-        const candidateData = await candidateResponse.json()
-        setCandidates((candidateData.entries || []).filter(item => item.id !== id))
       }
     } catch (error) {
       setStatus(error.message || '读取失败')
@@ -87,8 +81,21 @@ export function KnowledgeDetail({ id }) {
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || '保存失败')
-      setEntry(data.entry)
-      setDraft({ ...data.entry, tagsText: tagsText(data.entry.tags) })
+      let nextEntry = data.entry
+      if (!patch || Object.keys(patch).some(key => key !== 'state')) {
+        const organizeResponse = await fetch('/api/knowledge/organize', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ itemId: id })
+        })
+        if (organizeResponse.ok) {
+          const organized = await organizeResponse.json()
+          if (organized.entry) nextEntry = organized.entry
+        }
+      }
+      setEntry(nextEntry)
+      setDraft({ ...nextEntry, tagsText: tagsText(nextEntry.tags) })
       setEditing(false)
       setStatus(patch?.state === 'archived' ? '已归档' : '已保存')
     } catch (error) {
@@ -147,28 +154,6 @@ export function KnowledgeDetail({ id }) {
         : current.map(item => item.id === relationId ? { ...item, ...data.relation } : item))
     } catch (error) {
       setStatus(error.message || '关联更新失败')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function addRelation() {
-    if (!targetId) return
-    setBusy(true)
-    try {
-      const response = await fetch(`/api/knowledge/${id}/relations`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ targetType: 'knowledge', targetId, relationType: 'related' })
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || '添加关联失败')
-      const target = candidates.find(item => item.id === targetId) || null
-      setRelations(current => [{ ...data.relation, target }, ...current.filter(item => item.id !== data.relation.id)])
-      setTargetId('')
-    } catch (error) {
-      setStatus(error.message || '添加关联失败')
     } finally {
       setBusy(false)
     }
@@ -235,13 +220,6 @@ export function KnowledgeDetail({ id }) {
           <section className='knowledge-relations'>
             <header>
               <div><span className='eyebrow'>Connections</span><h2>相关内容</h2></div>
-              <div>
-                <select aria-label='选择关联内容' value={targetId} onChange={event => setTargetId(event.target.value)}>
-                  <option value=''>选择一条轻知识</option>
-                  {candidates.map(item => <option value={item.id} key={item.id}>{item.title}</option>)}
-                </select>
-                <button type='button' onClick={() => void addRelation()} disabled={busy || !targetId}>添加关联</button>
-              </div>
             </header>
             {relations.length ? relations.map(relation => (
               <div className='knowledge-relation-row' key={relation.id}>
@@ -256,7 +234,7 @@ export function KnowledgeDetail({ id }) {
                   <button type='button' onClick={() => void decideRelation(relation.id, 'dismissed')} disabled={busy}>忽略</button>
                 </div> : <i>已关联</i>}
               </div>
-            )) : <p className='knowledge-relations-empty'>尚无关联。共同标签和领域会产生少量建议。</p>}
+            )) : null}
           </section>
         </>
       )}

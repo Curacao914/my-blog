@@ -21,18 +21,19 @@ describe('external knowledge prompt', () => {
     expect(prompt).toContain('我看过一些平台治理案例')
     expect(prompt).toContain('不要写成法条罗列')
     expect(prompt).toContain('Markdown')
-    expect(prompt).toMatch(/事实.*推论.*不确定性/s)
+    expect(prompt).toContain('不得新增研究问题、分论点或内容范围')
+    expect(prompt).toContain('<用户需求>')
+    expect(prompt).toContain('</用户需求>')
     expect(prompt).toMatch(/可核查.*来源.*访问日期/s)
-    expect(prompt).toMatch(/图片.*alt.*出处.*相对路径/s)
-    expect(prompt).toMatch(/主 Markdown.*图片/s)
+    expect(prompt).toMatch(/图片.*相对路径.*alt.*出处/s)
+    expect(prompt).toMatch(/index\.md.*images\//s)
     expect(prompt).toContain('不要虚构来源')
-    expect(prompt).toMatch(/值得追问/)
-    expect(prompt).toMatch(/自行选择.*结构/)
+    expect(prompt).not.toContain('值得追问')
     expect(prompt).not.toMatch(/##\s*(定义|背景|原因|分析|结论)/)
     expect(prompt).not.toContain('主页 AI')
   })
 
-  it('is a pure prompt builder with no model or network integration imports', () => {
+  it('keeps the user request verbatim inside a deterministic delivery contract', () => {
     const source = fs.readFileSync(
       path.join(process.cwd(), 'lib/knowledge/prompt.js'),
       'utf8'

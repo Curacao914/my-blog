@@ -5,6 +5,7 @@ import { useRouter } from 'next/router'
 import { useEffect, useMemo, useState } from 'react'
 
 import { MarkdownDocument } from '@/components/content/MarkdownDocument'
+import { KnowledgeNetwork } from '@/components/knowledge/KnowledgeNetwork'
 import {
   KNOWLEDGE_KIND_LABELS,
   KNOWLEDGE_KINDS,
@@ -104,6 +105,8 @@ export function KnowledgeDesk() {
   const [kind, setKind] = useState('')
   const [state, setState] = useState('')
   const [composerOpen, setComposerOpen] = useState(false)
+  const [indexView, setIndexView] = useState('list')
+  const [networkLinks, setNetworkLinks] = useState([])
   const [draft, setDraft] = useState(() => initialDraft())
   const [prompt, setPrompt] = useState('')
   const [assets, setAssets] = useState([])
@@ -148,6 +151,23 @@ export function KnowledgeDesk() {
 
   function updateDraft(key, value) {
     setDraft(current => ({ ...current, [key]: value }))
+  }
+
+  async function toggleIndexView() {
+    if (indexView === 'network') return setIndexView('list')
+    try {
+      const response = await fetch('/api/knowledge/network', {
+        credentials: 'same-origin',
+        cache: 'no-store'
+      })
+      const data = await response.json()
+      if (response.ok) {
+        setEntries(data.entries || [])
+        setNetworkLinks(data.links || [])
+      }
+    } finally {
+      setIndexView('network')
+    }
   }
 
   async function preparePrompt() {
@@ -205,8 +225,8 @@ export function KnowledgeDesk() {
   }
 
   async function save() {
-    if (!draft.title.trim() || !draft.bodyMarkdown.trim()) {
-      setStatus('标题和导入结果不能为空')
+    if (!draft.bodyMarkdown.trim()) {
+      setStatus('导入结果不能为空')
       return
     }
     setBusy(true)
@@ -218,6 +238,7 @@ export function KnowledgeDesk() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           ...draft,
+          title: draft.title.trim() || '未命名知识',
           tags: splitTags(draft.tagsText)
         })
       })
@@ -255,6 +276,12 @@ export function KnowledgeDesk() {
         if (!patchResponse.ok) throw new Error(patched.error || '图片引用保存失败')
         saved = patched.entry
       }
+      await fetch('/api/knowledge/organize', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ itemId: saved.id })
+      })
       await router.push(`/desk/knowledge/${saved.id}`)
     } catch (error) {
       setStatus(error.message || '保存失败')
@@ -268,9 +295,14 @@ export function KnowledgeDesk() {
       <aside className='knowledge-index'>
         <header>
           <div><span className='eyebrow'>Light knowledge</span><h2>轻知识</h2></div>
-          <button type='button' onClick={() => setComposerOpen(value => !value)}>
-            {composerOpen ? '收起' : '记录'}
-          </button>
+          <div className='knowledge-index-actions'>
+            <button type='button' onClick={() => void toggleIndexView()}>
+              {indexView === 'list' ? '网络' : '列表'}
+            </button>
+            <button type='button' onClick={() => setComposerOpen(value => !value)}>
+              {composerOpen ? '收起' : '新建'}
+            </button>
+          </div>
         </header>
         <div className='knowledge-filters'>
           <label>
@@ -288,7 +320,9 @@ export function KnowledgeDesk() {
             <option value='archived'>已归档</option>
           </select>
         </div>
-        <KnowledgeList entries={entries} loading={loading} filtered={filtered} />
+        {indexView === 'network' && !loading
+          ? <KnowledgeNetwork entries={entries} links={networkLinks} />
+          : <KnowledgeList entries={entries} loading={loading} filtered={filtered} />}
       </aside>
 
       <section className={`knowledge-composer ${composerOpen ? 'is-open' : ''}`}>
@@ -323,19 +357,10 @@ export function KnowledgeDesk() {
             {warning ? <p className='knowledge-warning'>{warning}</p> : null}
 
             <div className='knowledge-editor-grid'>
-              <div className='knowledge-fields'>
-                <label><span>标题</span><input value={draft.title} onChange={event => updateDraft('title', event.target.value)} /></label>
-                <label><span>一句话判断</span><input value={draft.summary} onChange={event => updateDraft('summary', event.target.value)} /></label>
-                <div className='knowledge-field-pair'>
-                  <label><span>类型</span><select value={draft.kind} onChange={event => updateDraft('kind', event.target.value)}>{KNOWLEDGE_KINDS.map(value => <option value={value} key={value}>{KNOWLEDGE_KIND_LABELS[value]}</option>)}</select></label>
-                  <label><span>标签</span><input value={draft.tagsText} onChange={event => updateDraft('tagsText', event.target.value)} placeholder='逗号分隔' /></label>
-                </div>
-                <label className='knowledge-home-toggle'><input type='checkbox' checked={draft.showOnHome} onChange={event => updateDraft('showOnHome', event.target.checked)} /><span>在首页“正在探索”中显示</span></label>
-              </div>
               <div className='knowledge-document-input'>
                 <span>导入结果</span>
                 {preview ? (
-                  <MarkdownDocument markdown={draft.bodyMarkdown} title={draft.title} emptyText='导入内容后在这里预览。' />
+                  <MarkdownDocument markdown={draft.bodyMarkdown} title={draft.title} emptyText='暂无内容' />
                 ) : (
                   <textarea value={draft.bodyMarkdown} onChange={event => updateDraft('bodyMarkdown', event.target.value)} />
                 )}
@@ -343,7 +368,7 @@ export function KnowledgeDesk() {
             </div>
             <footer>
               <span>{assets.length ? `${assets.length} 张图片` : status}</span>
-              <button type='button' className='is-primary' onClick={() => void save()} disabled={busy}>{busy ? '保存中…' : '审阅并保存'}</button>
+              <button type='button' className='is-primary' onClick={() => void save()} disabled={busy}>{busy ? '保存中…' : '保存'}</button>
             </footer>
           </>
         ) : (

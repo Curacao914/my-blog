@@ -24,7 +24,7 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      if (req.query?.refresh !== 'false') await refreshKnowledgeSuggestions(auth.profile.id, id)
+      if (req.query?.refresh === 'true') await refreshKnowledgeSuggestions(auth.profile.id, id)
       return res.status(200).json({ relations: await listKnowledgeRelations(auth.profile.id, id) })
     }
     if (req.method === 'POST') {
