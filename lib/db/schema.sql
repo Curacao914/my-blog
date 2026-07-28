@@ -635,23 +635,32 @@ begin
     return new;
   end if;
 
-  if TG_TABLE_NAME = 'content_items'
-    and old.type is distinct from 'knowledge'
-    and new.type = 'knowledge'
-    and exists (
-      select 1
-      from public.content_access access
-      where access.item_id = new.id
-        and (
-          access.mode is distinct from 'private'
-          or access.allow_indexing is distinct from false
-          or access.allow_rss is distinct from false
-          or access.allow_sitemap is distinct from false
-        )
-    )
-  then
-    raise exception 'content access must be private before changing an item to knowledge'
-      using errcode = '23514';
+  if TG_TABLE_NAME = 'content_items' then
+    if old.type = 'knowledge' and (
+      new.type is distinct from 'knowledge'
+      or new.owner_id is distinct from old.owner_id
+    ) then
+      raise exception 'knowledge content item type and owner are immutable'
+        using errcode = '23514';
+    end if;
+
+    if old.type is distinct from 'knowledge'
+      and new.type = 'knowledge'
+      and exists (
+        select 1
+        from public.content_access access
+        where access.item_id = new.id
+          and (
+            access.mode is distinct from 'private'
+            or access.allow_indexing is distinct from false
+            or access.allow_rss is distinct from false
+            or access.allow_sitemap is distinct from false
+          )
+      )
+    then
+      raise exception 'content access must be private before changing an item to knowledge'
+        using errcode = '23514';
+    end if;
   end if;
 
   return new;
@@ -666,7 +675,7 @@ create trigger content_access_knowledge_private_guard
 
 drop trigger if exists content_items_knowledge_private_guard on content_items;
 create trigger content_items_knowledge_private_guard
-  before update of type on content_items
+  before update of type, owner_id on content_items
   for each row
   execute function law_tech_enforce_knowledge_private_access();
 

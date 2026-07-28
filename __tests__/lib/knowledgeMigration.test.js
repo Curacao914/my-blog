@@ -121,10 +121,21 @@ describe('light knowledge database migration', () => {
         /create trigger content_access_knowledge_private_guard[\s\S]+before insert or update on (?:public\.)?content_access[\s\S]+execute function law_tech_enforce_knowledge_private_access\(\)/i
       )
       expect(sql).toMatch(
-        /create trigger content_items_knowledge_private_guard[\s\S]+before update of type on (?:public\.)?content_items[\s\S]+execute function law_tech_enforce_knowledge_private_access\(\)/i
+        /create trigger content_items_knowledge_private_guard[\s\S]+before update of type,\s*owner_id on (?:public\.)?content_items[\s\S]+execute function law_tech_enforce_knowledge_private_access\(\)/i
       )
       expect(sql).toMatch(
         /old\.type is distinct from 'knowledge'[\s\S]+new\.type = 'knowledge'[\s\S]+from (?:public\.)?content_access access[\s\S]+access\.mode is distinct from 'private'[\s\S]+raise exception/i
+      )
+    }
+  })
+
+  it('keeps knowledge item identity and ownership immutable after child creation', () => {
+    for (const sql of [migration, schema]) {
+      expect(sql).toMatch(
+        /TG_TABLE_NAME = 'content_items'[\s\S]+old\.type = 'knowledge'[\s\S]+new\.type is distinct from 'knowledge'[\s\S]+new\.owner_id is distinct from old\.owner_id[\s\S]+raise exception/i
+      )
+      expect(sql).toMatch(
+        /create trigger content_items_knowledge_private_guard[\s\S]+before update of type,\s*owner_id on (?:public\.)?content_items[\s\S]+execute function law_tech_enforce_knowledge_private_access\(\)/i
       )
     }
   })
