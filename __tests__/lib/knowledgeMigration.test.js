@@ -1,0 +1,100 @@
+const fs = require('fs')
+const path = require('path')
+
+describe('light knowledge database migration', () => {
+  const migration = fs.readFileSync(
+    path.join(process.cwd(), 'lib/db/migrations/20260728_light_knowledge.sql'),
+    'utf8'
+  )
+  const schema = fs.readFileSync(
+    path.join(process.cwd(), 'lib/db/schema.sql'),
+    'utf8'
+  )
+
+  it('creates exactly the three approved knowledge tables in the migration and schema', () => {
+    const migrationTables = Array.from(
+      migration.matchAll(/create table if not exists (?:public\.)?(knowledge_[a-z_]+)/gi),
+      match => match[1]
+    )
+
+    expect(migrationTables).toEqual([
+      'knowledge_entries',
+      'knowledge_links',
+      'knowledge_assets'
+    ])
+    for (const table of migrationTables) {
+      expect(schema).toMatch(new RegExp(`create table if not exists ${table}`, 'i'))
+    }
+  })
+
+  it('safely expands the content item type while fresh installs include knowledge', () => {
+    expect(migration).toMatch(/drop constraint if exists content_items_type_check/i)
+    expect(migration).toMatch(
+      /add constraint content_items_type_check[\s\S]+type in \([\s\S]*'knowledge'/i
+    )
+    expect(migration).toMatch(
+      /add constraint content_items_knowledge_draft_check[\s\S]+type <> 'knowledge' or status = 'draft'/i
+    )
+    expect(schema).toMatch(
+      /type text not null check \(type in \([\s\S]*'knowledge'/i
+    )
+    expect(schema).toMatch(
+      /constraint content_items_knowledge_draft_check[\s\S]+type <> 'knowledge' or status = 'draft'/i
+    )
+  })
+
+  it('defines approved enums, provenance and asset safety constraints', () => {
+    expect(migration).toMatch(
+      /kind text not null[\s\S]+question[\s\S]+concept[\s\S]+idea[\s\S]+fact[\s\S]+observation[\s\S]+quote[\s\S]+connection/i
+    )
+    expect(migration).toMatch(
+      /state text not null[\s\S]+exploring[\s\S]+active[\s\S]+archived/i
+    )
+    expect(migration).toMatch(
+      /review_status text not null[\s\S]+needs_review[\s\S]+reviewed/i
+    )
+    expect(migration).toMatch(/provenance jsonb not null default '\[\]'::jsonb/i)
+    expect(migration).toMatch(
+      /target_type text not null[\s\S]+knowledge[\s\S]+note[\s\S]+reading[\s\S]+course[\s\S]+writing[\s\S]+today/i
+    )
+    expect(migration).toMatch(
+      /relation_type text not null[\s\S]+related[\s\S]+derived_from[\s\S]+developed_into[\s\S]+supports[\s\S]+challenges/i
+    )
+    expect(migration).toMatch(/score[\s\S]+score >= 0[\s\S]+score <= 1/i)
+    expect(migration).toMatch(
+      /mime_type text not null[\s\S]+image\/jpeg[\s\S]+image\/png[\s\S]+image\/webp[\s\S]+image\/gif/i
+    )
+    expect(migration).toMatch(
+      /size_bytes bigint not null[\s\S]+size_bytes > 0[\s\S]+size_bytes <= 2097152/i
+    )
+    expect(migration).toMatch(/storage_path text not null unique/i)
+  })
+
+  it('adds trigram search and owner-scoped indexes without a vector service', () => {
+    expect(migration).toMatch(/create extension if not exists pg_trgm/i)
+    expect(migration).toMatch(
+      /knowledge_entries[\s\S]+owner_id,\s*state,\s*updated_at desc/i
+    )
+    expect(migration).toMatch(
+      /using gin\s*\(search_text gin_trgm_ops\)/i
+    )
+    expect(`${migration}\n${schema}`).not.toMatch(/pgvector|vector\s*\(/i)
+    expect(`${migration}\n${schema}`).not.toMatch(
+      /create table if not exists (?:public\.)?knowledge_(?:sources|provenance)/i
+    )
+  })
+
+  it('enables RLS with the existing profile helpers and no storage bucket mutation', () => {
+    for (const table of ['knowledge_entries', 'knowledge_links', 'knowledge_assets']) {
+      expect(migration).toMatch(
+        new RegExp(`alter table public\\.${table} enable row level security`, 'i')
+      )
+      expect(migration).toMatch(
+        new RegExp(`drop policy if exists ${table}_(?:owner_scope|parent_owner)`, 'i')
+      )
+    }
+    expect(migration).toContain('law_tech_current_profile_id()')
+    expect(migration).toContain('law_tech_is_owner()')
+    expect(migration).not.toMatch(/storage\.buckets|insert into storage/i)
+  })
+})

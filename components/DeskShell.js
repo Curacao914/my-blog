@@ -14,6 +14,7 @@ const NAV_PERMISSION = {
   tasks: 'schedule',
   inbox: 'notes',
   reading: 'reading',
+  knowledge: 'knowledge',
   courses: 'courses',
   materials: 'courses',
   writing: 'writing',

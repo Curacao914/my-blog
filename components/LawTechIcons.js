@@ -2,6 +2,7 @@ const paths = {
   today: <><path d='M8 2v3M16 2v3M3.5 9h17'/><rect x='3' y='4.5' width='18' height='16' rx='3'/><path d='m8 14 2.1 2.1L16 10.8'/></>,
   inbox: <><path d='M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13A2.5 2.5 0 0 1 17.5 21h-11A2.5 2.5 0 0 1 4 18.5z'/><path d='M8 8h8M8 12h8M8 16h5'/></>,
   reading: <><path d='M4 5.5A2.5 2.5 0 0 1 6.5 3H11a3 3 0 0 1 3 3v15a3 3 0 0 0-3-3H6.5A2.5 2.5 0 0 0 4 20.5z'/><path d='M20 5.5A2.5 2.5 0 0 0 17.5 3H14v18a3 3 0 0 1 3-3h.5a2.5 2.5 0 0 1 2.5 2.5z'/></>,
+  knowledge: <><path d='M8 3h7l4 4v14H8z'/><path d='M15 3v5h5M11 12h5M11 16h5'/><circle cx='4' cy='8' r='1.5'/><circle cx='4' cy='16' r='1.5'/><path d='M5.5 8H8M5.5 16H8M4 9.5v5'/></>,
   tasks: <><rect x='3' y='4' width='18' height='16' rx='3'/><path d='M8 2v4M16 2v4M7.5 11h9M7.5 15h6'/></>,
   courses: <><path d='m3 7 9-4 9 4-9 4z'/><path d='m6 9.5 6 2.7 6-2.7V16l-6 3-6-3z'/></>,
   materials: <><path d='M7 3h8l4 4v14H7z'/><path d='M15 3v5h5M4 7v14h10'/></>,

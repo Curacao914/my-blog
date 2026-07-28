@@ -1,16 +1,19 @@
 create extension if not exists pgcrypto;
+create extension if not exists pg_trgm;
 
 create table if not exists content_items (
   id uuid primary key default gen_random_uuid(),
   slug text unique not null,
   title text not null,
-  type text not null check (type in ('article', 'course-note', 'reading-note', 'project', 'page')),
+  type text not null check (type in ('article', 'course-note', 'reading-note', 'project', 'page', 'knowledge')),
   status text not null default 'draft' check (status in ('draft', 'published', 'archived')),
   source text not null default 'manual' check (source in ('notion', 'markdown', 'manual', 'course-worker')),
   source_id text,
   summary text,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint content_items_knowledge_draft_check
+    check (type <> 'knowledge' or status = 'draft')
 );
 
 create table if not exists content_versions (
@@ -311,6 +314,72 @@ alter table tasks add column if not exists owner_id uuid references profiles(id)
 alter table content_items add column if not exists owner_id uuid references profiles(id) on delete cascade;
 alter table course_jobs add column if not exists owner_id uuid references profiles(id) on delete cascade;
 
+create table if not exists knowledge_entries (
+  item_id uuid primary key references content_items(id) on delete cascade,
+  owner_id uuid not null references profiles(id) on delete cascade,
+  kind text not null default 'idea' check (
+    kind in ('question', 'concept', 'idea', 'fact', 'observation', 'quote', 'connection')
+  ),
+  state text not null default 'exploring' check (
+    state in ('exploring', 'active', 'archived')
+  ),
+  domain text,
+  topic text,
+  seed_text text,
+  review_status text not null default 'needs_review' check (
+    review_status in ('needs_review', 'reviewed')
+  ),
+  provenance jsonb not null default '[]'::jsonb,
+  show_on_home boolean not null default false,
+  search_text text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists knowledge_links (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references profiles(id) on delete cascade,
+  source_item_id uuid not null references content_items(id) on delete cascade,
+  target_type text not null check (
+    target_type in ('knowledge', 'note', 'reading', 'course', 'writing', 'today')
+  ),
+  target_id text not null,
+  relation_type text not null check (
+    relation_type in ('related', 'derived_from', 'developed_into', 'supports', 'challenges')
+  ),
+  origin text not null default 'user' check (
+    origin in ('rule', 'import', 'user')
+  ),
+  status text not null default 'suggested' check (
+    status in ('suggested', 'confirmed', 'dismissed')
+  ),
+  score double precision check (
+    score is null or (score >= 0 and score <= 1)
+  ),
+  note text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (source_item_id, target_type, target_id, relation_type)
+);
+
+create table if not exists knowledge_assets (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references profiles(id) on delete cascade,
+  item_id uuid not null references content_items(id) on delete cascade,
+  storage_path text not null unique,
+  original_name text not null,
+  mime_type text not null check (
+    mime_type in ('image/jpeg', 'image/png', 'image/webp', 'image/gif')
+  ),
+  size_bytes bigint not null check (
+    size_bytes > 0 and size_bytes <= 2097152
+  ),
+  checksum text not null,
+  alt_text text,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists captures (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid references profiles(id) on delete cascade,
@@ -518,6 +587,10 @@ create index if not exists idx_user_integrations_owner on user_integrations(owne
 create index if not exists idx_content_items_owner_status on content_items(owner_id, status, updated_at desc);
 create index if not exists idx_course_jobs_owner_status on course_jobs(owner_id, status, updated_at desc);
 create index if not exists idx_tasks_owner_status on tasks(owner_id, status, due_at);
+create index if not exists idx_knowledge_entries_owner_state_updated on knowledge_entries(owner_id, state, updated_at desc);
+create index if not exists idx_knowledge_entries_search_text_trgm on knowledge_entries using gin(search_text gin_trgm_ops);
+create index if not exists idx_knowledge_links_owner_source on knowledge_links(owner_id, source_item_id, status);
+create index if not exists idx_knowledge_assets_owner_item on knowledge_assets(owner_id, item_id, created_at desc);
 create index if not exists idx_schedule_items_owner_date on schedule_items(owner_id, schedule_date, status, starts_at);
 create index if not exists idx_schedule_items_owner_type on schedule_items(owner_id, content_type, status, schedule_date);
 create index if not exists idx_materials_owner_kind on materials(owner_id, kind, created_at desc);

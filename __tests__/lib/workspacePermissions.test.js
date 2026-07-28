@@ -10,6 +10,7 @@ describe('workspace permissions', () => {
       schedule: true,
       notes: true,
       reading: true,
+      knowledge: true,
       courses: true,
       writing: true,
       reminders: true,
