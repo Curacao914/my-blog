@@ -1,6 +1,9 @@
 import { requireWorkspaceRequest } from '@/lib/auth/serverAdmin'
 import { storeKnowledgeAsset } from '@/lib/server/knowledgeAssets'
 
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 function sendError(res, error) {
   if (
     error?.isKnowledgeAssetError === true ||
@@ -46,10 +49,18 @@ export default async function handler(req, res) {
     })
   }
 
+  const itemId = req.body?.itemId
+  if (!uuidPattern.test(itemId || '')) {
+    return res.status(400).json({
+      error: '无效的内容编号',
+      code: 'invalid_id'
+    })
+  }
+
   try {
     const asset = await storeKnowledgeAsset(
       auth.profile.id,
-      req.body?.itemId,
+      itemId,
       req.body || {}
     )
     return res.status(201).json({ asset })

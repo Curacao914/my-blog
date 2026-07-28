@@ -146,6 +146,34 @@ describe('knowledge file import', () => {
     ])
   })
 
+  it('matches percent-encoded Markdown image paths to upload relative paths with spaces', async () => {
+    const assetId = '33333333-3333-4333-8333-333333333333'
+    const result = await parseKnowledgeArchive(await zipFile({
+      'index.md': [
+        '# Encoded',
+        '![local](images/a%20b.png)',
+        '![remote](https://example.com/a%20b.png)',
+        '![inline](data:image/png;base64,AAAA)'
+      ].join('\n\n'),
+      'images/a b.png': Buffer.from('space-image')
+    }))
+
+    expect(result.assets).toEqual([
+      expect.objectContaining({
+        path: 'images/a b.png'
+      })
+    ])
+    expect(rewriteKnowledgeAssetReferences(result.markdown, [{
+      relativePath: result.assets[0].path,
+      id: assetId
+    }])).toBe([
+      '# Encoded',
+      `![local](/api/knowledge/assets/${assetId})`,
+      '![remote](https://example.com/a%20b.png)',
+      '![inline](data:image/png;base64,AAAA)'
+    ].join('\n\n'))
+  })
+
   it('rejects file-count, expanded-size, and per-image size limit violations', async () => {
     const tooMany = {}
     for (let index = 0; index < 21; index += 1) {

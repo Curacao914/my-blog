@@ -81,6 +81,28 @@ describe('/api/knowledge/assets', () => {
     expect(res.body.asset.id).toBe(assetId)
   })
 
+  it('rejects an invalid POST itemId before calling the asset service', async () => {
+    const req = {
+      method: 'POST',
+      query: {},
+      body: {
+        itemId: 'not-a-uuid',
+        name: 'diagram.png',
+        dataUrl: 'data:image/png;base64,aW1hZ2U='
+      }
+    }
+    const res = createRes()
+
+    await collectionHandler(req, res)
+
+    expect(res.statusCode).toBe(400)
+    expect(res.body).toEqual({
+      error: '无效的内容编号',
+      code: 'invalid_id'
+    })
+    expect(storeKnowledgeAsset).not.toHaveBeenCalled()
+  })
+
   it('streams a UUID-addressed private asset with inline private-cache headers', async () => {
     readKnowledgeAsset.mockResolvedValue({
       buffer: Buffer.from('private-image'),
