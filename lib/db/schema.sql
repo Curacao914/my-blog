@@ -380,6 +380,10 @@ create table if not exists knowledge_assets (
   created_at timestamptz not null default now()
 );
 
+alter table knowledge_entries enable row level security;
+alter table knowledge_links enable row level security;
+alter table knowledge_assets enable row level security;
+
 create table if not exists captures (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid references profiles(id) on delete cascade,
@@ -665,3 +669,64 @@ create trigger content_items_knowledge_private_guard
   before update of type on content_items
   for each row
   execute function law_tech_enforce_knowledge_private_access();
+
+create or replace function law_tech_enforce_knowledge_parent()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  parent_item_id uuid;
+  parent_type text;
+  parent_owner_id uuid;
+begin
+  if TG_TABLE_NAME = 'knowledge_links' then
+    parent_item_id := new.source_item_id;
+  else
+    parent_item_id := new.item_id;
+  end if;
+
+  select item.type, item.owner_id
+  into parent_type, parent_owner_id
+  from public.content_items item
+  where item.id = parent_item_id
+  for update;
+
+  if not found then
+    raise exception 'knowledge parent content item does not exist'
+      using errcode = '23503';
+  end if;
+
+  if parent_type is distinct from 'knowledge' then
+    raise exception 'knowledge records require a knowledge content item'
+      using errcode = '23514';
+  end if;
+
+  if parent_owner_id is null
+    or new.owner_id is distinct from parent_owner_id
+  then
+    raise exception 'knowledge record owner must match its content item owner'
+      using errcode = '23514';
+  end if;
+
+  return new;
+end
+$$;
+
+drop trigger if exists knowledge_entries_parent_guard on knowledge_entries;
+create trigger knowledge_entries_parent_guard
+  before insert or update on knowledge_entries
+  for each row
+  execute function law_tech_enforce_knowledge_parent();
+
+drop trigger if exists knowledge_links_parent_guard on knowledge_links;
+create trigger knowledge_links_parent_guard
+  before insert or update on knowledge_links
+  for each row
+  execute function law_tech_enforce_knowledge_parent();
+
+drop trigger if exists knowledge_assets_parent_guard on knowledge_assets;
+create trigger knowledge_assets_parent_guard
+  before insert or update on knowledge_assets
+  for each row
+  execute function law_tech_enforce_knowledge_parent();

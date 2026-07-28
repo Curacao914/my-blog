@@ -128,4 +128,42 @@ describe('light knowledge database migration', () => {
       )
     }
   })
+
+  it('guards every knowledge child with a knowledge parent owned by the same profile', () => {
+    for (const sql of [migration, schema]) {
+      expect(sql).toMatch(
+        /create or replace function law_tech_enforce_knowledge_parent\(\)[\s\S]+returns trigger/i
+      )
+      expect(sql).toMatch(
+        /TG_TABLE_NAME = 'knowledge_links'[\s\S]+parent_item_id := new\.source_item_id[\s\S]+parent_item_id := new\.item_id/i
+      )
+      expect(sql).toMatch(
+        /select item\.type,\s*item\.owner_id[\s\S]+into parent_type,\s*parent_owner_id[\s\S]+where item\.id = parent_item_id[\s\S]+if not found[\s\S]+raise exception/i
+      )
+      expect(sql).toMatch(
+        /parent_type is distinct from 'knowledge'[\s\S]+raise exception/i
+      )
+      expect(sql).toMatch(
+        /new\.owner_id is distinct from parent_owner_id[\s\S]+raise exception/i
+      )
+
+      for (const table of ['knowledge_entries', 'knowledge_links', 'knowledge_assets']) {
+        expect(sql).toMatch(
+          new RegExp(
+            `create trigger ${table}_parent_guard[\\s\\S]+before insert or update on (?:public\\.)?${table}[\\s\\S]+execute function law_tech_enforce_knowledge_parent\\(\\)`,
+            'i'
+          )
+        )
+      }
+    }
+  })
+
+  it('makes fresh-schema knowledge tables fail closed without undefined auth helpers', () => {
+    for (const table of ['knowledge_entries', 'knowledge_links', 'knowledge_assets']) {
+      expect(schema).toMatch(
+        new RegExp(`alter table ${table} enable row level security`, 'i')
+      )
+    }
+    expect(schema).not.toMatch(/law_tech_current_profile_id\(\)|law_tech_is_owner\(\)/i)
+  })
 })
