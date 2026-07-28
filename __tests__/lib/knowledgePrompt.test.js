@@ -13,16 +13,13 @@ describe('external knowledge prompt', () => {
     )
   })
 
-  it('builds Chinese guidance without prescribing fixed answer chapters', () => {
+  it('builds a flexible fallback without prescribing fixed answer chapters', () => {
     const prompt = buildKnowledgePrompt({
-      seedText: '平台为什么需要承担算法说明义务？',
-      domain: '平台治理',
-      context: '希望从比较法和实际案例继续探索'
+      seedText: '我看过一些平台治理案例，但不确定算法说明义务应当如何理解，希望比较不同法域，不要写成法条罗列。'
     })
 
-    expect(prompt).toContain('平台为什么需要承担算法说明义务？')
-    expect(prompt).toContain('平台治理')
-    expect(prompt).toContain('比较法和实际案例')
+    expect(prompt).toContain('我看过一些平台治理案例')
+    expect(prompt).toContain('不要写成法条罗列')
     expect(prompt).toContain('Markdown')
     expect(prompt).toMatch(/事实.*推论.*不确定性/s)
     expect(prompt).toMatch(/可核查.*来源.*访问日期/s)

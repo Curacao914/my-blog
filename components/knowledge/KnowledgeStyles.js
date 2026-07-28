@@ -27,9 +27,9 @@ export function KnowledgeStyles() {
     .knowledge-loading{padding:20px;color:var(--quiet);font-size:10px}
     .knowledge-composer{min-width:0;padding-bottom:16px}
     .knowledge-composer>header small{max-width:160px;color:var(--quiet);font-size:9px;line-height:1.5;text-align:right}
-    .knowledge-seed-row{display:grid;grid-template-columns:1.5fr .6fr .8fr;gap:8px;padding:0 18px}
+    .knowledge-seed-row{display:grid;padding:0 18px}
     .knowledge-seed-row label,.knowledge-fields label,.knowledge-detail-fields label{display:grid;gap:5px;color:var(--muted);font-size:9px}
-    .knowledge-seed-row textarea{min-height:64px;resize:vertical}
+    .knowledge-seed-row textarea{min-height:128px;resize:vertical}
     .knowledge-prompt-actions,.knowledge-import-bar{display:flex;align-items:center;gap:7px;padding:10px 18px 0}
     .knowledge-prompt-output{display:block;width:calc(100% - 36px);min-height:150px;margin:9px 18px 0;border:1px solid rgba(17,63,49,.08);border-radius:13px;padding:12px;color:#294c3f;background:rgba(231,237,225,.48);font:10px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical}
     .knowledge-import-bar{justify-content:space-between;margin-top:4px}

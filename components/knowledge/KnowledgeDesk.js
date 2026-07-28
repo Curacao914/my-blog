@@ -15,6 +15,7 @@ import {
   rewriteKnowledgeAssetReferences
 } from '@/lib/knowledge/import'
 import { buildKnowledgePrompt } from '@/lib/knowledge/prompt'
+import { compressKnowledgeImage } from '@/lib/knowledge/imageCompression'
 
 function splitTags(value = '') {
   return [...new Set(
@@ -65,8 +66,7 @@ function EmptyList({ filtered }) {
   return (
     <div className='knowledge-empty'>
       <span aria-hidden='true'>⌁</span>
-      <strong>{filtered ? '没有符合条件的内容' : '从一个真实问题开始'}</strong>
-      <p>{filtered ? '调整搜索或筛选条件。' : '先记录，再把外部模型完成的 Markdown 带回来。'}</p>
+      <strong>{filtered ? '没有符合条件的内容' : '暂无内容'}</strong>
     </div>
   )
 }
@@ -150,26 +150,30 @@ export function KnowledgeDesk() {
     setDraft(current => ({ ...current, [key]: value }))
   }
 
-  function preparePrompt() {
+  async function preparePrompt() {
+    if (!draft.seedText.trim()) return setStatus('请输入知识需求')
+    setBusy(true)
+    setStatus('')
     try {
-      setPrompt(buildKnowledgePrompt({
-        seedText: draft.seedText,
-        domain: draft.domain,
-        context: draft.topic
-      }))
-      setStatus('')
+      const response = await fetch('/api/knowledge/prompt', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ request: draft.seedText })
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || '生成失败')
+      setPrompt(data.prompt)
     } catch (error) {
-      setStatus(error.message || '先写下想知道什么')
+      setPrompt(buildKnowledgePrompt({ seedText: draft.seedText }))
+      setStatus(error.message || '生成失败')
+    } finally {
+      setBusy(false)
     }
   }
 
   async function copyPrompt() {
-    if (!prompt) preparePrompt()
-    const value = prompt || buildKnowledgePrompt({
-      seedText: draft.seedText,
-      domain: draft.domain,
-      context: draft.topic
-    })
+    const value = prompt || buildKnowledgePrompt({ seedText: draft.seedText })
     await navigator.clipboard.writeText(value)
     setPrompt(value)
     setStatus('提示词已复制')
@@ -187,7 +191,9 @@ export function KnowledgeDesk() {
         title: current.title || result.title,
         bodyMarkdown: result.markdown
       }))
-      setAssets(result.assets || [])
+      setAssets(await Promise.all(
+        (result.assets || []).map(compressKnowledgeImage)
+      ))
       setWarning(result.warning || '')
       setPreview(true)
     } catch (error) {
@@ -289,24 +295,21 @@ export function KnowledgeDesk() {
         {composerOpen ? (
           <>
             <header>
-              <div><span className='eyebrow'>Capture · Import</span><h2>从问题到可读内容</h2></div>
-              <small>内容由你选择的外部模型完成</small>
+              <div><span className='eyebrow'>Knowledge</span><h2>新建轻知识</h2></div>
             </header>
 
             <div className='knowledge-seed-row'>
               <label>
-                <span>想知道什么</span>
-                <textarea value={draft.seedText} onChange={event => updateDraft('seedText', event.target.value)} placeholder='一个问题、概念、事实或观察' />
+                <span>知识需求</span>
+                <textarea value={draft.seedText} onChange={event => updateDraft('seedText', event.target.value)} />
               </label>
-              <label><span>领域</span><input value={draft.domain} onChange={event => updateDraft('domain', event.target.value)} placeholder='可选' /></label>
-              <label><span>补充语境</span><input value={draft.topic} onChange={event => updateDraft('topic', event.target.value)} placeholder='可选' /></label>
             </div>
 
             <div className='knowledge-prompt-actions'>
-              <button type='button' onClick={preparePrompt}>生成提示词</button>
+              <button type='button' onClick={() => void preparePrompt()} disabled={busy}>生成提示词</button>
               <button type='button' onClick={() => void copyPrompt()} disabled={!draft.seedText.trim()}>复制提示词</button>
             </div>
-            {prompt ? <textarea className='knowledge-prompt-output' readOnly value={prompt} aria-label='外部模型提示词' /> : null}
+            {prompt ? <textarea className='knowledge-prompt-output' value={prompt} onChange={event => setPrompt(event.target.value)} aria-label='外部模型提示词' /> : null}
 
             <div className='knowledge-import-bar'>
               <label>
@@ -334,21 +337,19 @@ export function KnowledgeDesk() {
                 {preview ? (
                   <MarkdownDocument markdown={draft.bodyMarkdown} title={draft.title} emptyText='导入内容后在这里预览。' />
                 ) : (
-                  <textarea value={draft.bodyMarkdown} onChange={event => updateDraft('bodyMarkdown', event.target.value)} placeholder='粘贴外部模型完成的 Markdown，或从上方导入文件。' />
+                  <textarea value={draft.bodyMarkdown} onChange={event => updateDraft('bodyMarkdown', event.target.value)} />
                 )}
               </div>
             </div>
             <footer>
-              <span>{assets.length ? `${assets.length} 张引用图片将在保存后进入私有存储` : status}</span>
+              <span>{assets.length ? `${assets.length} 张图片` : status}</span>
               <button type='button' className='is-primary' onClick={() => void save()} disabled={busy}>{busy ? '保存中…' : '审阅并保存'}</button>
             </footer>
           </>
         ) : (
           <div className='knowledge-rest-state'>
             <span aria-hidden='true'>∴</span>
-            <strong>记录、带回来、再连接</strong>
-            <p>这里不替你生成答案，只保存你决定留下的内容。</p>
-            <button type='button' onClick={() => setComposerOpen(true)}>记录一个问题</button>
+            <button type='button' onClick={() => setComposerOpen(true)}>新建轻知识</button>
           </div>
         )}
       </section>

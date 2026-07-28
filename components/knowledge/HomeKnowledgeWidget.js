@@ -41,8 +41,7 @@ export function HomeKnowledgeWidget() {
         </div>
       ) : (
         <Link className='home-knowledge-empty' href='/desk/knowledge'>
-          <strong>捕捉一个念头</strong>
-          <span>生成提示词，导入外部模型的回答</span>
+          <strong>新建轻知识</strong>
         </Link>
       )}
       <style jsx>{`

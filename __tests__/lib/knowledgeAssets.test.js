@@ -3,7 +3,9 @@ const path = require('path')
 
 import {
   decodeKnowledgeAssetDataUrl,
+  decryptKnowledgeAsset,
   deleteKnowledgeAsset,
+  encryptKnowledgeAsset,
   readKnowledgeAsset,
   storeKnowledgeAsset
 } from '@/lib/server/knowledgeAssets'
@@ -18,10 +20,7 @@ jest.mock('@/lib/db/client', () => ({
   getSupabaseStorageConfig: jest.fn(() => ({
     baseUrl: 'https://supabase.test/storage/v1/object',
     bucket: 'knowledge-assets',
-    headers: {
-      apikey: 'service-role',
-      Authorization: 'Bearer service-role'
-    }
+    headers: { authorization: 'Bearer service-role' }
   }))
 }))
 
@@ -62,7 +61,13 @@ describe('private knowledge assets', () => {
       'SUPABASE_URL',
       'SUPABASE_SERVICE_ROLE_KEY',
       'SUPABASE_SECRET_KEY',
-      'SUPABASE_STORAGE_BUCKET'
+      'SUPABASE_STORAGE_BUCKET',
+      'R2_ACCOUNT_ID',
+      'R2_ENDPOINT',
+      'R2_BUCKET',
+      'R2_ACCESS_KEY_ID',
+      'R2_SECRET_ACCESS_KEY',
+      'USER_SECRETS_ENCRYPTION_KEY'
     ]) {
       previousEnv[key] = process.env[key]
     }
@@ -76,6 +81,11 @@ describe('private knowledge assets', () => {
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role'
     delete process.env.SUPABASE_SECRET_KEY
     delete process.env.SUPABASE_STORAGE_BUCKET
+    process.env.R2_ENDPOINT = 'https://r2.example'
+    process.env.R2_BUCKET = 'assets'
+    process.env.R2_ACCESS_KEY_ID = 'access'
+    process.env.R2_SECRET_ACCESS_KEY = 'secret'
+    process.env.USER_SECRETS_ENCRYPTION_KEY = 'test-encryption-secret'
     getKnowledgeEntry.mockResolvedValue({
       id: itemId,
       ownerId,
@@ -90,18 +100,13 @@ describe('private knowledge assets', () => {
     }
   })
 
-  it('allows a private bucket override without the shared storage bucket variable', () => {
+  it('keeps knowledge binaries out of Supabase Storage', () => {
     const source = fs.readFileSync(
-      path.join(process.cwd(), 'lib/db/client.js'),
+      path.join(process.cwd(), 'lib/server/knowledgeAssets.js'),
       'utf8'
     )
-    expect(source).toMatch(
-      /getSupabaseStorageConfig\(bucketOverride = ''\)/
-    )
-    expect(source).toMatch(
-      /String\(bucketOverride \|\| ''\)\.trim\(\) \|\| config\.storageBucket/
-    )
-    expect(source).toMatch(/bucket,\s*headers:/)
+    expect(source).toContain('putR2Object')
+    expect(source).toContain("getSupabaseStorageConfig('knowledge-assets')")
   })
 
   it('uploads a decoded image privately after verifying the knowledge owner', async () => {
@@ -110,7 +115,7 @@ describe('private knowledge assets', () => {
       id: assetId,
       owner_id: ownerId,
       item_id: itemId,
-      storage_path: `${ownerId}/${itemId}/stored.png`,
+      storage_path: `knowledge/${ownerId}/${itemId}/stored.bin`,
       original_name: 'diagram.png',
       mime_type: 'image/png',
       size_bytes: 5,
@@ -128,17 +133,18 @@ describe('private knowledge assets', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1)
     const [uploadUrl, uploadOptions] = global.fetch.mock.calls[0]
     expect(uploadUrl).toMatch(
-      new RegExp(`/storage/v1/object/knowledge-assets/${ownerId}/${itemId}/[0-9a-f-]+\\.png$`)
+      new RegExp(`/assets/knowledge/${ownerId}/${itemId}/[0-9a-f-]+\\.bin$`)
     )
     expect(uploadUrl).not.toContain('/public/')
     expect(uploadOptions).toEqual(expect.objectContaining({
-      method: 'POST',
-      body: Buffer.from('image')
+      method: 'PUT',
+      body: expect.any(Buffer)
     }))
     expect(uploadOptions.headers).toEqual(expect.objectContaining({
-      'Content-Type': 'image/png',
-      'x-upsert': 'false'
+      'content-type': 'application/octet-stream',
+      authorization: expect.stringContaining('AWS4-HMAC-SHA256')
     }))
+    expect(decryptKnowledgeAsset(uploadOptions.body)).toEqual(Buffer.from('image'))
     expect(supabaseRest).toHaveBeenCalledWith(
       '/knowledge_assets?select=*',
       expect.objectContaining({
@@ -161,7 +167,7 @@ describe('private knowledge assets', () => {
       mimeType: 'image/png',
       originalName: 'diagram.png'
     }))
-    expect(JSON.stringify(asset)).not.toContain('/storage/v1/object')
+    expect(JSON.stringify(asset)).not.toContain('r2.example')
   })
 
   it('does not upload when the knowledge entry is outside the owner scope', async () => {
@@ -205,7 +211,7 @@ describe('private knowledge assets', () => {
       id: assetId,
       owner_id: ownerId,
       item_id: itemId,
-      storage_path: `${ownerId}/${itemId}/stored.gif`,
+      storage_path: `knowledge/${ownerId}/${itemId}/stored.bin`,
       original_name: 'proof.gif',
       mime_type: 'image/gif',
       size_bytes: 7,
@@ -213,7 +219,7 @@ describe('private knowledge assets', () => {
       alt_text: '证据'
     }])
     global.fetch.mockResolvedValue(response({
-      bytes: Buffer.from('content')
+      bytes: encryptKnowledgeAsset(Buffer.from('content'))
     }))
 
     const asset = await readKnowledgeAsset(ownerId, assetId)
@@ -222,13 +228,34 @@ describe('private knowledge assets', () => {
       `/knowledge_assets?select=*&id=eq.${assetId}&owner_id=eq.${ownerId}`
     )
     expect(global.fetch.mock.calls[0][0]).toBe(
-      `https://supabase.test/storage/v1/object/authenticated/knowledge-assets/${ownerId}/${itemId}/stored.gif`
+      `https://r2.example/assets/knowledge/${ownerId}/${itemId}/stored.bin`
     )
+    expect(global.fetch.mock.calls[0][1].method).toBe('GET')
     expect(asset).toEqual(expect.objectContaining({
       buffer: Buffer.from('content'),
       mimeType: 'image/gif',
       originalName: 'proof.gif'
     }))
+  })
+
+  it('keeps legacy Supabase-backed images readable', async () => {
+    supabaseRest.mockResolvedValue([{
+      id: assetId,
+      owner_id: ownerId,
+      item_id: itemId,
+      storage_path: `${ownerId}/${itemId}/legacy.png`,
+      original_name: 'legacy.png',
+      mime_type: 'image/png',
+      size_bytes: 7
+    }])
+    global.fetch.mockResolvedValue(response({ bytes: Buffer.from('legacy') }))
+
+    const asset = await readKnowledgeAsset(ownerId, assetId)
+
+    expect(global.fetch.mock.calls[0][0]).toContain(
+      `/authenticated/knowledge-assets/${ownerId}/${itemId}/legacy.png`
+    )
+    expect(asset.buffer).toEqual(Buffer.from('legacy'))
   })
 
   it('deletes storage before the owner-scoped database row and tolerates storage 404', async () => {
@@ -237,7 +264,7 @@ describe('private knowledge assets', () => {
         id: assetId,
         owner_id: ownerId,
         item_id: itemId,
-        storage_path: `${ownerId}/${itemId}/stored.webp`,
+        storage_path: `knowledge/${ownerId}/${itemId}/stored.webp`,
         original_name: 'proof.webp',
         mime_type: 'image/webp',
         size_bytes: 7,
