@@ -26,6 +26,9 @@ export function KnowledgeDetail({ id }) {
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState('')
+  const [relations, setRelations] = useState([])
+  const [candidates, setCandidates] = useState([])
+  const [targetId, setTargetId] = useState('')
 
   const load = useCallback(async () => {
     setStatus('')
@@ -35,6 +38,18 @@ export function KnowledgeDetail({ id }) {
       if (!response.ok) throw new Error(data.error || '读取失败')
       setEntry(data.entry)
       setDraft({ ...data.entry, tagsText: tagsText(data.entry.tags) })
+      const [relationResponse, candidateResponse] = await Promise.all([
+        fetch(`/api/knowledge/${id}/relations`, { credentials: 'same-origin', cache: 'no-store' }),
+        fetch('/api/knowledge?limit=100', { credentials: 'same-origin', cache: 'no-store' })
+      ])
+      if (relationResponse.ok) {
+        const relationData = await relationResponse.json()
+        setRelations(relationData.relations || [])
+      }
+      if (candidateResponse.ok) {
+        const candidateData = await candidateResponse.json()
+        setCandidates((candidateData.entries || []).filter(item => item.id !== id))
+      }
     } catch (error) {
       setStatus(error.message || '读取失败')
     }
@@ -116,6 +131,49 @@ export function KnowledgeDetail({ id }) {
     }
   }
 
+  async function decideRelation(relationId, decision) {
+    setBusy(true)
+    try {
+      const response = await fetch(`/api/knowledge/${id}/relations`, {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ relationId, status: decision })
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || '关联更新失败')
+      setRelations(current => decision === 'dismissed'
+        ? current.filter(item => item.id !== relationId)
+        : current.map(item => item.id === relationId ? { ...item, ...data.relation } : item))
+    } catch (error) {
+      setStatus(error.message || '关联更新失败')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function addRelation() {
+    if (!targetId) return
+    setBusy(true)
+    try {
+      const response = await fetch(`/api/knowledge/${id}/relations`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ targetType: 'knowledge', targetId, relationType: 'related' })
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || '添加关联失败')
+      const target = candidates.find(item => item.id === targetId) || null
+      setRelations(current => [{ ...data.relation, target }, ...current.filter(item => item.id !== data.relation.id)])
+      setTargetId('')
+    } catch (error) {
+      setStatus(error.message || '添加关联失败')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (!entry || !draft) {
     return <div className='knowledge-detail-state'><p>{status || '正在读取…'}</p><Link href='/desk/knowledge'>返回轻知识</Link></div>
   }
@@ -174,6 +232,32 @@ export function KnowledgeDetail({ id }) {
               ))}
             </section>
           ) : null}
+          <section className='knowledge-relations'>
+            <header>
+              <div><span className='eyebrow'>Connections</span><h2>相关内容</h2></div>
+              <div>
+                <select aria-label='选择关联内容' value={targetId} onChange={event => setTargetId(event.target.value)}>
+                  <option value=''>选择一条轻知识</option>
+                  {candidates.map(item => <option value={item.id} key={item.id}>{item.title}</option>)}
+                </select>
+                <button type='button' onClick={() => void addRelation()} disabled={busy || !targetId}>添加关联</button>
+              </div>
+            </header>
+            {relations.length ? relations.map(relation => (
+              <div className='knowledge-relation-row' key={relation.id}>
+                <span>
+                  {relation.targetType === 'knowledge' && relation.target
+                    ? <Link href={`/desk/knowledge/${relation.targetId}`}>{relation.target.title}</Link>
+                    : <strong>{relation.metadata?.title || relation.targetType}</strong>}
+                  <small>{relation.metadata?.reasons?.join(' · ') || relation.note || '用户关联'}</small>
+                </span>
+                {relation.status === 'suggested' ? <div>
+                  <button type='button' onClick={() => void decideRelation(relation.id, 'confirmed')} disabled={busy}>确认</button>
+                  <button type='button' onClick={() => void decideRelation(relation.id, 'dismissed')} disabled={busy}>忽略</button>
+                </div> : <i>已关联</i>}
+              </div>
+            )) : <p className='knowledge-relations-empty'>尚无关联。共同标签和领域会产生少量建议。</p>}
+          </section>
         </>
       )}
       {status && !editing ? <p className='knowledge-detail-status' role='status'>{status}</p> : null}

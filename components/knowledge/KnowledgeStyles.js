@@ -66,8 +66,15 @@ export function KnowledgeStyles() {
     .knowledge-provenance{max-width:760px;margin:35px auto 0;border-top:1px solid rgba(17,63,49,.08);padding-top:18px}
     .knowledge-provenance h2{margin:4px 0 12px;font-family:var(--font-serif);font-size:18px}
     .knowledge-provenance p{display:flex;justify-content:space-between;margin:0;padding:8px 0;border-top:1px solid rgba(17,63,49,.05);font-size:10px}
+    .knowledge-relations{max-width:760px;margin:32px auto 0;border-top:1px solid rgba(17,63,49,.08);padding-top:18px}
+    .knowledge-relations>header{display:flex;align-items:flex-end;justify-content:space-between;gap:15px;margin-bottom:8px}
+    .knowledge-relations h2{margin:4px 0 0;font-family:var(--font-serif);font-size:18px}
+    .knowledge-relations>header>div:last-child{display:flex;gap:6px}.knowledge-relations select{min-width:190px}
+    .knowledge-relation-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid rgba(17,63,49,.05);padding:10px 0}
+    .knowledge-relation-row>span{display:grid;gap:3px}.knowledge-relation-row a,.knowledge-relation-row strong{color:var(--ink);font-size:11px}.knowledge-relation-row small,.knowledge-relation-row i{color:var(--quiet);font-size:9px;font-style:normal}
+    .knowledge-relation-row>div{display:flex;gap:5px}.knowledge-relations-empty{color:var(--quiet);font-size:10px}
     .knowledge-detail-status{position:fixed;right:24px;bottom:24px;border-radius:10px;padding:9px 12px;color:white;background:var(--leaf);font-size:10px}
-    @media (max-width:900px){.knowledge-workspace{grid-template-columns:1fr}.knowledge-composer{min-height:420px}.knowledge-seed-row,.knowledge-editor-grid{grid-template-columns:1fr}.knowledge-detail{margin:8px;padding:18px}.knowledge-detail-head{display:grid}.knowledge-detail-actions{justify-content:flex-start}.knowledge-detail-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:900px){.knowledge-workspace{grid-template-columns:1fr}.knowledge-composer{min-height:420px}.knowledge-seed-row,.knowledge-editor-grid{grid-template-columns:1fr}.knowledge-detail{margin:8px;padding:18px}.knowledge-detail-head{display:grid}.knowledge-detail-actions{justify-content:flex-start}.knowledge-detail-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.knowledge-relations>header{align-items:flex-start;flex-direction:column}}
     @media (max-width:560px){.knowledge-workspace{padding:8px}.knowledge-filters{grid-template-columns:1fr 1fr}.knowledge-filters label{grid-column:1/-1}.knowledge-field-pair,.knowledge-detail-fields{grid-template-columns:1fr}.knowledge-composer>header{display:grid}.knowledge-composer>header small{text-align:left}.knowledge-detail-head h1{font-size:25px}.knowledge-detail-actions button{flex:1}.knowledge-reading-document{font-size:13px}}
     @media (prefers-reduced-motion:reduce){.knowledge-list>a,.knowledge-index button,.knowledge-composer button{transition:none!important}}
   `}</style>

@@ -5,6 +5,7 @@ import { selectRelevantItems } from '@/lib/domain/schedule-context'
 import { cleanDisplayText, tagsFromItem } from '@/lib/domain/metadata'
 import { calendarDateInTimeZone, calendarDateLabel, isCalendarDate } from '@/lib/domain/calendarDate'
 import { useWorkspaceSession } from '@/hooks/useWorkspaceSession'
+import { KnowledgeCaptureLink } from '@/components/knowledge/KnowledgeCaptureLink'
 import {
   fetchScheduleItems,
   readScheduleItemsCache,
@@ -539,6 +540,12 @@ function ItemCard({
                   {actionButton.label}
                 </button>
               ) : null}
+              <KnowledgeCaptureLink
+                sourceType='today'
+                sourceId={item.id}
+                sourceTitle={item.title}
+                seed={item.summary || item.note || item.title}
+              />
             </div>
           ) : null}
         </div>

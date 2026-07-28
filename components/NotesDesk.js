@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import { excerptText } from '@/lib/domain/metadata'
 import { WritingPublishDialog } from '@/components/WritingPublishDialog'
+import { KnowledgeCaptureLink } from '@/components/knowledge/KnowledgeCaptureLink'
 
 function noteTitle(note) {
   return note?.title || '未命名随手记'
@@ -267,6 +268,12 @@ export function NotesDesk() {
                 </button>
                 {!isNewId(activeId) && activeNote ? (
                   <>
+                    <KnowledgeCaptureLink
+                      sourceType='note'
+                      sourceId={activeNote.id}
+                      sourceTitle={title || noteTitle(activeNote)}
+                      seed={excerptText(body, 180)}
+                    />
                     <button type='button' onClick={archiveNote} disabled={isSaving}>
                       归档
                     </button>

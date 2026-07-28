@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { MarkdownDocument } from '@/components/content/MarkdownDocument'
 import { ReadingLibraryDialog } from '@/components/ReadingLibraryDialog'
+import { KnowledgeCaptureLink } from '@/components/knowledge/KnowledgeCaptureLink'
 import { useWorkspaceSession } from '@/hooks/useWorkspaceSession'
 // LAWTECH_READING_BOX_PATCH_20260712
 import {
@@ -924,6 +925,12 @@ export function ReadingBox() {
                 打开笔记
               </a>
             ) : null}
+            <KnowledgeCaptureLink
+              sourceType='reading'
+              sourceId={activeItem.id}
+              sourceTitle={activeItem.title}
+              seed={activeItem.summary || activeItem.note || ''}
+            />
             {status ? <span>{status}</span> : null}
           </div>
         </article>

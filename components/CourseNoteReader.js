@@ -9,6 +9,7 @@ import {
 } from '@/components/content/MarkdownDocument'
 import { ReadingNavigator } from '@/components/content/ReadingNavigator'
 import { DynamicSignature } from '@/components/law-tech/DynamicSignature'
+import { KnowledgeCaptureLink } from '@/components/knowledge/KnowledgeCaptureLink'
 import { formatCourseApiError, requestCourseJson } from '@/lib/course/clientApi'
 
 function formatDate(value) {
@@ -120,6 +121,12 @@ export function CourseNoteReader({ jobId, lessonKey }) {
           <div>
             <Link href={`/desk/courses?job=${encodeURIComponent(course.id)}&lesson=${encodeURIComponent(lesson.key)}`}>编辑原笔记</Link>
             <Link href={`/desk/publish?job=${encodeURIComponent(course.id)}&lesson=${encodeURIComponent(lesson.key)}`}>转入发布</Link>
+            <KnowledgeCaptureLink
+              sourceType='course'
+              sourceId={`${course.id}:${lesson.key}`}
+              sourceTitle={`${course.name} · ${lesson.title}`}
+              seed={lesson.summary || lesson.title}
+            />
             <button className='danger' type='button' disabled={busy} onClick={() => void moveToTrash()}>{busy ? '处理中…' : '移入回收站'}</button>
           </div>
         </details>
