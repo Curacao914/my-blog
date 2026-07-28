@@ -84,7 +84,7 @@ describe('light knowledge database migration', () => {
     )
   })
 
-  it('enables RLS with the existing profile helpers and no storage bucket mutation', () => {
+  it('enables RLS and provisions only the approved private storage bucket', () => {
     for (const table of ['knowledge_entries', 'knowledge_links', 'knowledge_assets']) {
       expect(migration).toMatch(
         new RegExp(`alter table public\\.${table} enable row level security`, 'i')
@@ -95,7 +95,16 @@ describe('light knowledge database migration', () => {
     }
     expect(migration).toContain('law_tech_current_profile_id()')
     expect(migration).toContain('law_tech_is_owner()')
-    expect(migration).not.toMatch(/storage\.buckets|insert into storage/i)
+    expect(migration).toMatch(
+      /insert into storage\.buckets[\s\S]+knowledge-assets[\s\S]+public[\s\S]+false[\s\S]+2097152[\s\S]+image\/jpeg[\s\S]+image\/png[\s\S]+image\/webp[\s\S]+image\/gif/i
+    )
+    expect(migration).toMatch(
+      /on conflict \(id\) do update[\s\S]+public = false[\s\S]+file_size_limit = 2097152[\s\S]+allowed_mime_types/i
+    )
+    expect(migration).not.toMatch(
+      /create policy[\s\S]+on storage\.objects/i
+    )
+    expect(schema).not.toMatch(/storage\.buckets|knowledge-assets/i)
   })
 
   it('normalizes existing knowledge access before installing the private guard', () => {

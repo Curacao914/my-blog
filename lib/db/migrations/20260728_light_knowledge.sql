@@ -3,6 +3,26 @@ begin;
 create extension if not exists pg_trgm;
 create extension if not exists pgcrypto;
 
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+)
+values (
+  'knowledge-assets',
+  'knowledge-assets',
+  false,
+  2097152,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif']::text[]
+)
+on conflict (id) do update
+set public = false,
+    file_size_limit = 2097152,
+    allowed_mime_types =
+      array['image/jpeg', 'image/png', 'image/webp', 'image/gif']::text[];
+
 alter table public.content_items
   drop constraint if exists content_items_type_check;
 
