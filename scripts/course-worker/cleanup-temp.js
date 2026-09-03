@@ -23,7 +23,10 @@ function parseArgs(argv) {
 }
 
 const args = parseArgs(process.argv)
-const hours = Math.max(1, Number(args.hours || process.env.COURSE_TEMP_TTL_HOURS || 24))
+const configuredHours = Number(args.hours || process.env.COURSE_TEMP_TTL_HOURS || 24)
+const hours = Number.isFinite(configuredHours) && configuredHours > 0
+  ? Math.max(1, configuredHours)
+  : 24
 const root = args.root ? path.resolve(args.root) : TEMP_ROOT
 const removed = cleanupExpiredTempDirs({
   root,
