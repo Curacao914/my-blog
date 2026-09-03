@@ -15,13 +15,13 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "pages/api/courses/**/*.js": {
-      "maxDuration": "max"
+      "maxDuration": 300
     },
     "pages/api/content/sync.js": {
-      "maxDuration": "max"
+      "maxDuration": 300
     },
     "pages/api/reminders/run.js": {
-      "maxDuration": "max"
+      "maxDuration": 300
     }
   }
 }
