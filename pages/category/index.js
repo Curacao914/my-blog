@@ -1,31 +1,19 @@
-import BLOG from '@/blog.config'
-import { siteConfig } from '@/lib/config'
-import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
-import { DynamicLayout } from '@/themes/theme'
+import { PublicDirectoryPage } from '@/components/content/PublicDirectoryPage'
+import { categoryDirectory } from '@/lib/content/directory'
+import { loadPublicContentIndex } from '@/lib/content/publicIndex'
 
-/**
- * 分类首页
- * @param {*} props
- * @returns
- */
-export default function Category(props) {
-  const theme = siteConfig('THEME', BLOG.THEME, props.NOTION_CONFIG)
-  return (
-    <DynamicLayout theme={theme} layoutName='LayoutCategoryIndex' {...props} />
-  )
+export default function CategoryIndex({ groups = [] }) {
+  return <PublicDirectoryPage
+    eyebrow='Categories'
+    title='栏目'
+    description='先进入内容所属的领域，再逐步展开合集与具体文章。'
+    groups={groups}
+  />
 }
 
-export async function getStaticProps({ locale }) {
-  const props = await fetchGlobalAllData({ from: 'category-index-props', locale })
-  delete props.allPages
-  return {
-    props,
-    revalidate: process.env.EXPORT
-      ? undefined
-      : siteConfig(
-          'NEXT_REVALIDATE_SECOND',
-          BLOG.NEXT_REVALIDATE_SECOND,
-          props.NOTION_CONFIG
-        )
-  }
+CategoryIndex.layout = 'bare'
+
+export async function getStaticProps() {
+  const { items } = await loadPublicContentIndex({ from: 'public-category-index' })
+  return { props: { groups: categoryDirectory(items) }, revalidate: 1800 }
 }

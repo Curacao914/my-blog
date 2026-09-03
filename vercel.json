@@ -1,5 +1,27 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
-  "headers": []
+  "headers": [],
+  "crons": [
+    {
+      "path": "/api/reminders/run",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/openclaw-agent-trace-retention",
+      "schedule": "20 1 * * *"
+    }
+  ],
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "pages/api/courses/**/*.js": {
+      "maxDuration": 300
+    },
+    "pages/api/content/sync.js": {
+      "maxDuration": 300
+    },
+    "pages/api/reminders/run.js": {
+      "maxDuration": 300
+    }
+  }
 }
