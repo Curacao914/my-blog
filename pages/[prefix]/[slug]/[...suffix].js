@@ -1,11 +1,10 @@
 import BLOG from '@/blog.config'
 import { siteConfig } from '@/lib/config'
-import { fetchGlobalAllDataWithRelay, resolvePostPropsWithRelay } from '@/lib/content/notionRelayPage'
+import { fetchGlobalAllData, resolvePostProps } from '@/lib/db/SiteDataApi'
 import { checkSlugHasMorThanTwoSlash } from '@/lib/utils/post'
 import Slug from '..'
 import { isExport } from '@/lib/utils/buildMode'
 import { getPriorityPages, prefetchAllBlockMaps } from '@/lib/build/prefetch'
-import { shouldSkipNotionRoute } from '@/lib/notionRouteGuard'
 
 /**
  * 根据notion的slug访问页面
@@ -20,7 +19,7 @@ const PrefixSlug = props => {
 
 export async function getStaticPaths() {
   const from = 'slug-paths'
-  const { allPages } = await fetchGlobalAllDataWithRelay({ from })
+  const { allPages } = await fetchGlobalAllData({ from })
 
   // Export 模式：全量预生成
   if (isExport()) {
@@ -67,11 +66,7 @@ export async function getStaticProps({
   params: { prefix, slug, suffix },
   locale
 }) {
-  if (shouldSkipNotionRoute(prefix)) {
-    return { notFound: true }
-  }
-
-  const props = await resolvePostPropsWithRelay({
+  const props = await resolvePostProps({
     prefix,
     slug,
     suffix,

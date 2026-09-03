@@ -40,11 +40,7 @@ module.exports = {
     'space-before-function-paren': 0,
     'react-hooks/rules-of-hooks': 'error', // Checks rules of Hooks
     '@typescript-eslint/no-unused-vars': 'off', // 关闭未使用的变量报错
-    '@typescript-eslint/explicit-function-return-type': 'off', // 关闭强制函数返回类型声明
-        // Lower severity of certain type-checking rules that currently block linting errors. Convert them to warnings so lint passes while still reporting issues.
-        '@typescript-eslint/require-await': 'warn',
-        '@typescript-eslint/no-misused-promises': 'warn',
-        '@typescript-eslint/await-thenable': 'warn',
+    '@typescript-eslint/explicit-function-return-type': 'off' // 关闭强制函数返回类型声明
   },
   overrides: [
     {

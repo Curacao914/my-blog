@@ -1,19 +1,73 @@
-import { PublicDirectoryPage } from '@/components/content/PublicDirectoryPage'
-import { archiveDirectory } from '@/lib/content/directory'
-import { loadPublicContentIndex } from '@/lib/content/publicIndex'
+import BLOG from '@/blog.config'
+import { siteConfig } from '@/lib/config'
+import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
+import { isBrowser } from '@/lib/utils'
+import { formatDateFmt } from '@/lib/utils/formatDate'
+import { DynamicLayout } from '@/themes/theme'
+import { useEffect } from 'react'
 
-export default function ArchivePage({ groups = [] }) {
-  return <PublicDirectoryPage
-    eyebrow='Archive'
-    title='时间归档'
-    description='按更新时间回看文章、课程笔记与项目，沿着写作与学习的轨迹逐年展开。'
-    groups={groups}
-  />
+/**
+ * 归档首页
+ * @param {*} props
+ * @returns
+ */
+const ArchiveIndex = props => {
+  useEffect(() => {
+    if (isBrowser) {
+      const anchor = window.location.hash
+      if (anchor) {
+        setTimeout(() => {
+          const anchorElement = document.getElementById(anchor.substring(1))
+          if (anchorElement) {
+            anchorElement.scrollIntoView({ block: 'start', behavior: 'smooth' })
+          }
+        }, 300)
+      }
+    }
+  }, [])
+
+  const theme = siteConfig('THEME', BLOG.THEME, props.NOTION_CONFIG)
+  return <DynamicLayout theme={theme} layoutName='LayoutArchive' {...props} />
 }
 
-ArchivePage.layout = 'bare'
+export async function getStaticProps({ locale }) {
+  const props = await fetchGlobalAllData({ from: 'archive-index', locale })
+  // 处理分页
+  props.posts = props.allPages?.filter(
+    page => page.type === 'Post' && page.status === 'Published'
+  )
+  delete props.allPages
 
-export async function getStaticProps() {
-  const { items } = await loadPublicContentIndex({ from: 'public-archive' })
-  return { props: { groups: archiveDirectory(items) }, revalidate: 1800 }
+  const postsSortByDate = Object.create(props.posts)
+
+  postsSortByDate.sort((a, b) => {
+    return b?.publishDate - a?.publishDate
+  })
+
+  const archivePosts = {}
+
+  postsSortByDate.forEach(post => {
+    const date = formatDateFmt(post.publishDate, 'yyyy-MM')
+    if (archivePosts[date]) {
+      archivePosts[date].push(post)
+    } else {
+      archivePosts[date] = [post]
+    }
+  })
+
+  props.archivePosts = archivePosts
+  delete props.allPages
+
+  return {
+    props,
+    revalidate: process.env.EXPORT
+      ? undefined
+      : siteConfig(
+          'NEXT_REVALIDATE_SECOND',
+          BLOG.NEXT_REVALIDATE_SECOND,
+          props.NOTION_CONFIG
+        )
+  }
 }
+
+export default ArchiveIndex

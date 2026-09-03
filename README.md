@@ -1,41 +1,79 @@
-# Law-Tech
+# 帮助教程
 
-> 公开个人站点 + 私人认知工作台 + 内容与自动化控制面
+访问帮助：[NotionNext帮助手册](https://docs.tangly1024.com/)
 
-- Production：<https://law-tech.dev>
-- Repository：`Curacao914/my-blog`
-- Runtime：Vercel + Supabase + Tencent OpenClaw
-- Framework：Next.js 14 / React 18 / NotionNext compatibility
+> 本项目教程为免费、公开资源，仅限个人学习使用，禁止利用本教程建立的博客发布非法内容、进行违法犯罪活动。严禁任何个人或组织将本教程用于商业用途，包括但不限于直接售卖、间接收费、或其他变相盈利行为。转载、复制或介绍本教程内容时，须保留作者信息并明确注明来源。 
+> 本项目仅提供由作者团队授权的付费咨询服务，请注意辨别，谨防诈骗行为。任何未经授权的收费服务均可能存在法律风险。
 
-Law-Tech 已不再是单纯的 Notion 博客。它保留公开内容与旧文章兼容，同时建设 Today、Reading、Course、Writing、Content、Tools、System 等私人工作台，并通过微信/OpenClaw 提供自然语言控制入口。
+Notion是一个能让效率暴涨的生产力引擎，可以帮你书写文档、管理笔记，搭建知识库，甚至可以为你规划项目、时间管理、组织团队、提高生产力、还有当前最强大的AI技术加持。
 
-当前第一产品主线是重建 **model-first 微信 AI Agent 控制平面**：模型负责理解自然语言、选择能力和解析上下文，代码负责读取真实对象、权限校验、安全执行和审计。不得继续以正则表达式作为主要意图分类器。
+> 若希望进一步探索Notion的功能，欢迎购买《[Notion笔记从入门到精通进阶课程](https://docs.tangly1024.com/article/notion-tutorial)》
 
-## 项目文档
+> 若希望获得稳定、高速、不限设备数量的VPN科学上网服务，欢迎使用[飞鸟VPN](https://fbinv02.fbaff.cc/auth/register?code=kaA7t4kh)，这是我目前在用的VPN，仅作友情推广
 
-| 文档 | 用途 |
-|---|---|
-| [`docs/project/README.md`](docs/project/README.md) | 文档索引、状态词汇和维护规则 |
-| [`docs/project/PROJECT-OVERVIEW.md`](docs/project/PROJECT-OVERVIEW.md) | 产品定位、模块和技术边界 |
-| [`docs/project/CURRENT-STATUS.md`](docs/project/CURRENT-STATUS.md) | 当前已验证事实、运行边界和 P0 风险 |
-| [`docs/project/ROADMAP.md`](docs/project/ROADMAP.md) | 完整未来路线、优先级和明确暂缓项 |
-| [`docs/project/AGENT-ARCHITECTURE.md`](docs/project/AGENT-ARCHITECTURE.md) | 微信 AI Agent 产品宪法与目标架构 |
-| [`docs/project/DECISIONS.md`](docs/project/DECISIONS.md) | 已冻结的产品与架构决策 |
-| [`docs/project/LESSONS-LEARNED.md`](docs/project/LESSONS-LEARNED.md) | 发布、脚本、运行和产品教训 |
-| [`docs/project/OPERATIONS.md`](docs/project/OPERATIONS.md) | 环境、发布、变量、备份和一键包规范 |
-| [`docs/project/PROJECT-LOG.md`](docs/project/PROJECT-LOG.md) | 重要 PR、发布、事故和阶段日志 |
-| [`docs/project/HANDOFF.md`](docs/project/HANDOFF.md) | 新窗口/新维护者续接入口 |
+# NotionNext
 
-## 开发原则
+<p>
+  <a aria-label="GitHub commit activity" href="https://github.com/tangly1024/NotionNext/commits/main" title="GitHub commit activity">
+    <img src="https://img.shields.io/github/commit-activity/m/tangly1024/NotionNext?style=for-the-badge"/>
+  </a>
+  <a aria-label="GitHub contributors" href="https://github.com/tangly1024/NotionNext/graphs/contributors" title="GitHub contributors">
+    <img src="https://img.shields.io/github/contributors/tangly1024/NotionNext?color=orange&style=for-the-badge"/>
+  </a>
+  <a aria-label="Build status" href="#" title="Build status">
+    <img src="https://img.shields.io/github/deployments/tangly1024/NotionNext/Production?logo=Vercel&style=for-the-badge"/>
+  </a>
+  <a aria-label="Powered by Vercel" href="https://vercel.com?utm_source=Craigary&utm_campaign=oss" title="Powered by Vercel">
+    <img src="https://www.datocms-assets.com/31049/1618983297-powered-by-vercel.svg" height="28"/>
+  </a>
+</p>
 
-1. 不直接修改或 force-push `main`。
-2. 代码存在、测试通过、Preview 成功、Production 上线和自然周期验收是不同证据等级。
-3. 每次只完成一个可独立使用、可验收、可回滚的闭环。
-4. 生产发布必须保留 exact SHA、备份、回滚锚点和 smoke 证据。
-5. 模型不得直接执行 SQL；所有写入必须落到真实对象 ID，并通过受控工具执行。
-6. 紧急精确时刻提醒继续使用 iOS 提醒事项；Law-Tech 不新增精确到点的微信提醒功能。
-7. 任何改变项目状态、路线、架构或运维流程的 PR，必须同步更新对应项目文档。
+中文文档 | [README in English](./README_EN.md)
 
-## Upstream
+<hr/>
 
-本项目基于 [NotionNext](https://github.com/tangly1024/NotionNext) 演进，并继续保留其必要的公开博客兼容能力。原项目与第三方依赖的许可证继续适用。
+一个使用 NextJS + Notion API 实现的，部署在 Vercel 上的静态博客系统。为Notion和所有创作者设计。
+
+支持多种部署方案
+
+## 预览效果
+
+在线演示：[https://preview.tangly1024.com/](https://preview.tangly1024.com/) ，点击左下角挂件可以切换主题，没找到喜欢的主题？[贡献](/CONTRIBUTING.md)一个吧~
+
+| Next                                                                                                  | Medium                                                                                                      | Hexo                                                                                                  | Fukasawa                                                                                                          |
+| ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| <img src='./docs/theme-next.png' width='300'/> [预览NEXT](https://preview.tangly1024.com/?theme=next) | <img src='./docs/theme-medium.png' width='300'/> [预览MEDIUM](https://preview.tangly1024.com/?theme=medium) | <img src='./docs/theme-hexo.png' width='300'/> [预览HEXO](https://preview.tangly1024.com/?theme=hexo) | <img src='./docs/theme-fukasawa.png' width='300'/> [预览FUKASAWA](https://preview.tangly1024.com/?theme=fukasawa) |
+
+## 致谢
+
+感谢Craig Hart发起的Nobelium项目
+
+<table><tr align="left">
+  <td align="center"><a href="https://github.com/craigary" title="Craig Hart"><img src="https://avatars.githubusercontent.com/u/10571717" width="64px;"alt="Craig Hart"/></a><br/><a href="https://github.com/craigary" title="Craig Hart">Craig Hart</a></td>
+</tr></table>
+
+## 贡献者
+
+致敬每一位开发者！
+
+[![Contributors](https://contrib.rocks/image?repo=tangly1024/NotionNext)](https://github.com/tangly1024/NotionNext/graphs/contributors)
+
+## 引用技术
+
+- **框架**: [Next.js](https://nextjs.org)
+- **样式**: [Tailwind CSS](https://www.tailwindcss.cn/)
+- **渲染**: [React-notion-x](https://github.com/NotionX/react-notion-x)
+- **评论**: [Twikoo](https://github.com/imaegoo/twikoo), [Giscus](https://giscus.app/zh-CN), [Gitalk](https://gitalk.github.io), [Cusdis](https://cusdis.com), [Utterances](https://utteranc.es)
+- **图标**: [Fontawesome](https://fontawesome.com/v6/icons/)
+
+## 🔗 友情链接
+
+- [Elog](https://github.com/LetTTGACO/elog) Markdown 批量导出工具、开放式跨平台博客解决方案，随意组合写作平台(语雀/Notion/FlowUs/飞书)和博客平台(Hexo/Vitepress/Halo/Confluence/WordPress等)
+
+## License
+
+The MIT License.
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=tangly1024/NotionNext&type=Date)](https://star-history.com/#tangly1024/NotionNext&Date)

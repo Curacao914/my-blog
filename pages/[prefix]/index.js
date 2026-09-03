@@ -2,7 +2,7 @@ import BLOG from '@/blog.config'
 import useNotification from '@/components/Notification'
 import OpenWrite from '@/components/OpenWrite'
 import { siteConfig } from '@/lib/config'
-import { fetchGlobalAllDataWithRelay, resolvePostPropsWithRelay } from '@/lib/content/notionRelayPage'
+import { fetchGlobalAllData, resolvePostProps } from '@/lib/db/SiteDataApi'
 import { useGlobal } from '@/lib/global'
 import { getPageTableOfContents } from '@/lib/db/notion/getPageTableOfContents'
 import { getPasswordQuery } from '@/lib/utils/password'
@@ -14,7 +14,6 @@ import PropTypes from 'prop-types'
 import { useEffect, useState } from 'react'
 import { isExport } from '@/lib/utils/buildMode'
 import { getPriorityPages, prefetchAllBlockMaps } from '@/lib/build/prefetch'
-import { shouldSkipNotionRoute } from '@/lib/notionRouteGuard'
 
 /**
  * 根据notion的slug访问页面
@@ -114,7 +113,7 @@ Slug.propTypes = {
 
 export async function getStaticPaths() {
   const from = 'slug-paths'
-  const { allPages } = await fetchGlobalAllDataWithRelay({ from })
+  const { allPages } = await fetchGlobalAllData({ from })
 
   // Export 模式：全量预生成
   if (isExport()) {
@@ -140,11 +139,7 @@ export async function getStaticPaths() {
 }
 
 export async function getStaticProps({ params: { prefix }, locale }) {
-  if (shouldSkipNotionRoute(prefix)) {
-    return { notFound: true }
-  }
-
-  const props = await resolvePostPropsWithRelay({
+  const props = await resolvePostProps({
     prefix,
     locale,
   })

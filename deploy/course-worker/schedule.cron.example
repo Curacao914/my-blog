@@ -1,7 +1,0 @@
-# Example: run the one-shot Worker three times per day.
-# Replace /srv/law-tech/my-blog with the real repository path.
-# The container exits after each cycle.
-
-20 8  * * * cd /srv/law-tech/my-blog && docker compose -f deploy/course-worker/compose.yaml run --rm course-worker cycle >> /var/log/law-tech-course-worker.log 2>&1
-20 13 * * * cd /srv/law-tech/my-blog && docker compose -f deploy/course-worker/compose.yaml run --rm course-worker cycle >> /var/log/law-tech-course-worker.log 2>&1
-20 19 * * * cd /srv/law-tech/my-blog && docker compose -f deploy/course-worker/compose.yaml run --rm course-worker cycle >> /var/log/law-tech-course-worker.log 2>&1

@@ -1,13 +1,23 @@
-import { PublicStatusPage } from '@/components/law-tech/PublicStatusPage'
+import BLOG from '@/blog.config'
+import { siteConfig } from '@/lib/config'
+import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
+import { DynamicLayout } from '@/themes/theme'
 
-export default function NotFoundPage() {
-  return <PublicStatusPage
-    code='404'
-    title='这里没有这一页。'
-    description='地址可能已经变化，也可能还没有公开。可以回到内容库继续浏览，或者直接搜索站内内容。'
-    primary={{ label: '回到首页', href: '/' }}
-    secondary={{ label: '搜索内容', href: '/search' }}
-    noIndex
-  />
+/**
+ * 404
+ * @param {*} props
+ * @returns
+ */
+const NoFound = props => {
+  const theme = siteConfig('THEME', BLOG.THEME, props.NOTION_CONFIG)
+  return <DynamicLayout theme={theme} layoutName='Layout404' {...props} />
 }
-NotFoundPage.layout = 'bare'
+
+export async function getStaticProps(req) {
+  const { locale } = req
+
+  const props = (await fetchGlobalAllData({ from: '404', locale })) || {}
+  return { props }
+}
+
+export default NoFound
