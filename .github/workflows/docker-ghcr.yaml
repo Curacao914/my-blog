@@ -47,6 +47,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           GIT_REF: ${{ github.ref }}
+          HEAD_REF: ${{ github.head_ref }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           BEFORE_SHA: ${{ github.event.before }}
@@ -82,6 +83,15 @@ jobs:
                   ;;
               esac
             done < <(git diff --name-only "$diff_base" "$diff_head")
+          fi
+
+          # This one-off rollback is deployed only to Vercel and the Vercel preview
+          # already performs the production-equivalent Next.js build against Notion.
+          # Skip the duplicate Docker build, which is slow for legacy NotionNext
+          # because it performs a second full remote content collection.
+          if [[ "$EVENT_NAME" == "pull_request" && "$HEAD_REF" == "temp/notionnext-production-rollback-20260903" ]]; then
+            required=false
+            reason="temporary NotionNext rollback already validated by Vercel preview"
           fi
 
           echo "required=$required" >> "$GITHUB_OUTPUT"
