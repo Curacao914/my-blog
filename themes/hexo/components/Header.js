@@ -6,7 +6,6 @@ import { useRouter } from 'next/router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import CONFIG from '../config'
 import ButtonRandomPost from './ButtonRandomPost'
-import NotionRefreshButton from '@/components/NotionRefreshButton'
 import CategoryGroup from './CategoryGroup'
 import Logo from './Logo'
 import { MenuListTop } from './MenuListTop'
@@ -15,7 +14,6 @@ import SearchDrawer from './SearchDrawer'
 import SideBar from './SideBar'
 import SideBarDrawer from './SideBarDrawer'
 import TagGroups from './TagGroups'
-import { SignedIn } from '@clerk/nextjs'
 
 let windowTop = 0
 
@@ -177,9 +175,6 @@ const Header = props => {
             </div>
             {showSearchButton && <SearchButton />}
             {showRandomButton && <ButtonRandomPost {...props} />}
-            {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && (
-              <SignedIn><NotionRefreshButton /></SignedIn>
-            )}
           </div>
         </div>
       </div>

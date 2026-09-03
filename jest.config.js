@@ -23,8 +23,6 @@ const customJestConfig = {
     '^@/types/(.*)$': '<rootDir>/types/$1',
     '^@/conf/(.*)$': '<rootDir>/conf/$1',
     '^@/themes/(.*)$': '<rootDir>/themes/$1',
-    '^react-markdown$': '<rootDir>/__tests__/mocks/react-markdown.js',
-    '^@theme-components$': '<rootDir>/__tests__/mocks/theme-components.js',
   },
   
   // Test environment
@@ -38,12 +36,10 @@ const customJestConfig = {
   
   // Files to ignore
   testPathIgnorePatterns: [
-    '<rootDir>/__tests__/mocks/',
     '<rootDir>/.next/',
     '<rootDir>/node_modules/',
     '<rootDir>/out/',
-    '<rootDir>/.vercel/',
-    '<rootDir>/integrations/openclaw/law-tech-wechat-relay/tests/'
+    '<rootDir>/.vercel/'
   ],
   
   // Transform files

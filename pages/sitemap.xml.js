@@ -4,16 +4,9 @@ import { siteConfig } from '@/lib/config'
 import { fetchGlobalAllData } from '@/lib/db/SiteDataApi'
 import { extractLangId, extractLangPrefix } from '@/lib/utils/pageId'
 import { getServerSideSitemap } from 'next-sitemap'
-import { loadPublicContentIndex } from '@/lib/content/publicIndex'
-import {
-  publicContentDate,
-  publicContentHref,
-  selectSitemapPublicContent
-} from '@/lib/content/publicContent'
 
 export const getServerSideProps = async ctx => {
   let fields = []
-  let publicLink = normalizeLink(BLOG.LINK)
   const siteIds = BLOG.NOTION_PAGE_ID.split(',')
 
   for (let index = 0; index < siteIds.length; index++) {
@@ -25,24 +18,16 @@ export const getServerSideProps = async ctx => {
       pageId: id,
       from: 'sitemap.xml'
     })
-    const link = normalizeLink(siteConfig(
+    const link = siteConfig(
       'LINK',
       siteData?.siteInfo?.link,
       siteData.NOTION_CONFIG
-    ))
-    if (index === 0 && link) publicLink = link
+    )
     const localeFields = generateLocalesSitemap(link, siteData.allPages, locale)
     fields = fields.concat(localeFields)
   }
 
-  try {
-    const { items } = await loadPublicContentIndex({ from: 'sitemap-public-content' })
-    fields = fields.concat(generatePublicContentSitemap(publicLink, items))
-  } catch (error) {
-    console.warn('[sitemap] public content index failed; keeping Notion routes', error)
-  }
-
-  fields = getUniqueFields(fields)
+  fields = getUniqueFields(fields);
 
   // 缓存
   ctx.res.setHeader(
@@ -70,18 +55,6 @@ function generateLocalesSitemap(link, allPages, locale) {
       priority: '0.7'
     },
     {
-      loc: `${link}${locale}/content`,
-      lastmod: dateNow,
-      changefreq: 'daily',
-      priority: '0.9'
-    },
-    {
-      loc: `${link}${locale}/search`,
-      lastmod: dateNow,
-      changefreq: 'weekly',
-      priority: '0.6'
-    },
-    {
       loc: `${link}${locale}/archive`,
       lastmod: dateNow,
       changefreq: 'daily',
@@ -95,6 +68,12 @@ function generateLocalesSitemap(link, allPages, locale) {
     },
     {
       loc: `${link}${locale}/rss/feed.xml`,
+      lastmod: dateNow,
+      changefreq: 'daily',
+      priority: '0.7'
+    },
+    {
+      loc: `${link}${locale}/search`,
       lastmod: dateNow,
       changefreq: 'daily',
       priority: '0.7'
@@ -115,35 +94,13 @@ function generateLocalesSitemap(link, allPages, locale) {
           : post.slug
         return {
           loc: `${link}${locale}/${slugWithoutLeadingSlash}`,
-          lastmod: safeIsoDate(post?.publishDay || post?.publishDate || post?.lastEditedDate).split('T')[0],
+          lastmod: new Date(post?.publishDay).toISOString().split('T')[0],
           changefreq: 'daily',
           priority: '0.7'
         }
       }) ?? []
 
   return defaultFields.concat(postFields)
-}
-
-function normalizeLink(value) {
-  const link = String(value || 'law-tech.dev').trim()
-  const normalized = /^https?:\/\//i.test(link) ? link : `https://${link}`
-  return normalized.replace(/\/+$/, '')
-}
-
-function safeIsoDate(value) {
-  const date = new Date(value || Date.now())
-  return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString()
-}
-
-function generatePublicContentSitemap(link, items = []) {
-  return selectSitemapPublicContent(items)
-    .filter(item => item.source !== 'notion')
-    .map(item => ({
-      loc: new URL(publicContentHref(item), `${normalizeLink(link)}/`).toString(),
-      lastmod: safeIsoDate(publicContentDate(item)),
-      changefreq: 'weekly',
-      priority: item.display?.pinned ? '0.9' : '0.8'
-    }))
 }
 
 function getUniqueFields(fields) {
