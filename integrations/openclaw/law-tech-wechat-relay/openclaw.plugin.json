@@ -1,0 +1,27 @@
+{
+  "id": "law-tech-wechat-relay",
+  "name": "Law-Tech WeChat Relay",
+  "description": "Deterministic WeChat relay for forwarding OpenClaw WeChat inbound messages to Law-Tech schedule capture.",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "captureUrl": {
+        "type": "string"
+      },
+      "token": {
+        "type": "string"
+      }
+    }
+  },
+  "activation": {
+    "onStartup": true
+  },
+  "contracts": {
+    "hooks": [
+      "message_received",
+      "before_agent_reply"
+    ]
+  }
+}

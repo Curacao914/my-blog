@@ -1,0 +1,38 @@
+const fs = require('fs')
+const path = require('path')
+
+const root = path.join(__dirname, '../..')
+const contentPage = fs.readFileSync(path.join(root, 'pages/content/index.js'), 'utf8')
+const searchPage = fs.readFileSync(path.join(root, 'pages/search/index.js'), 'utf8')
+const publicCard = fs.readFileSync(path.join(root, 'components/content/PublicContentCard.js'), 'utf8')
+
+describe('public browse surface polish', () => {
+  it('keeps content directory on the lighter browse surface system', () => {
+    expect(contentPage).toContain('public-browse-surface-v1')
+    expect(contentPage).toContain('grid-template-columns: 220px minmax(0,1fr)')
+    expect(contentPage).toContain('grid-template-columns: 1fr')
+    expect(contentPage).toContain('min-height: 96px')
+    expect(contentPage).toContain('min-height: 154px')
+    expect(contentPage).not.toContain('grid-template-columns: 250px minmax(0,1fr)')
+    expect(contentPage).not.toContain('backdrop-filter: blur(22px) saturate(1.08)')
+    expect(contentPage).not.toContain('min-height: 220px')
+  })
+
+  it('keeps search page lighter than the old dense glass workspace', () => {
+    expect(searchPage).toContain('public-search-surface-v1')
+    expect(searchPage).toContain('grid-template-columns: 210px minmax(0,1fr)')
+    expect(searchPage).toContain('backdrop-filter: blur(14px)')
+    expect(searchPage).toContain('grid-template-columns: repeat(auto-fit,minmax(240px,1fr))')
+    expect(searchPage).not.toContain('grid-template-columns: 230px minmax(0,1fr)')
+    expect(searchPage).not.toContain('backdrop-filter: blur(22px)')
+  })
+
+  it('reduces the shared public content card weight', () => {
+    expect(publicCard).toContain('public-content-card-surface-v1')
+    expect(publicCard).toContain('min-height: 104px')
+    expect(publicCard).toContain('min-height: 154px')
+    expect(publicCard).toContain('.is-compact .public-content-card-cover { min-height: 86px; }')
+    expect(publicCard).not.toContain('backdrop-filter: blur(20px)')
+    expect(publicCard).not.toContain('min-height: 228px')
+  })
+})

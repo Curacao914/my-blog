@@ -1,0 +1,1250 @@
+[
+  {
+    "file": "components/Accessibility.js",
+    "text": "快捷键: Alt+H (对比度), Alt+/- (字体)"
+  },
+  {
+    "file": "components/Accessibility.js",
+    "text": "已关闭高对比度模式"
+  },
+  {
+    "file": "components/Accessibility.js",
+    "text": "已开启高对比度模式"
+  },
+  {
+    "file": "components/Accessibility.js",
+    "text": "字体大小已调整为$"
+  },
+  {
+    "file": "components/AdBlockDetect.js",
+    "text": "<style>.wwads-horizontal,.wwads-vertical .wwads-horizontal .wwads-vertical .wwads-horizontal a,.wwads-vertical a .wwads-horizontal .wwads-img,.wwads-vertical .wwads-img .wwads-horizontal .wwads-content,.wwads-vertical .wwads-content .wwads-horizontal .wwads-content .wwads-vertical .wwads-content .wwads-horizontal .wwads-text,.wwads-content .wwads-text .wwads-horizontal .wwads-poweredby,.wwads-vertical .wwads-poweredby .wwads-vertical .wwads-poweredby .wwads-horizontal .wwads-poweredby span,.wwads-vertical .wwads-poweredby span .wwads-horizontal .wwads-poweredby span:first-child,.wwads-vertical .wwads-poweredby span:first-child .wwads-horizontal:hover .wwads-poweredby span,.wwads-vertical:hover .wwads-poweredby span .wwads-horizontal .wwads-hide,.wwads-vertical .wwads-hide .wwads-horizontal .wwads-hide:hover,.wwads-vertical .wwads-hide:hover .wwads-horizontal .wwads-hide svg,.wwads-vertical .wwads-hide svg .wwads-horizontal .wwads-hide:hover svg,.wwads-vertical .wwads-hide:hover svg </style><a href='https://wwads.cn/page/whitelist-wwads' class='wwads-img' target='_blank' rel='nofollow'><img src='https://creatives-1301677708.file.myqcloud.com/images/placeholder/wwads-friendly-ads.png' width='130'></a><div class='wwads-content'><a href='https://wwads.cn/page/whitelist-wwads' class='wwads-text' target='_blank' rel='nofollow'>为了本站的长期运营，请将我们的网站加入广告拦截器的白名单，感谢您的支持！</a><a href='https://wwads.cn/page/end-user-privacy' class='wwads-poweredby' title='万维广告 ～ 让广告更优雅，且有用' target='_blank'><span>万维</span><span>广告</span></a></div><a class='wwads-hide' onclick='parentNode.remove()' title='隐藏广告'><svg xmlns='http://www.w3.org/2000/svg' width='6' height='7'><path d='M.879.672L3 2.793 5.121.672a.5.5 0 11.707.707L3.708 3.5l2.12 2.121a.5.5 0 11-.707.707l-2.12-2.12-2.122 2.12a.5.5 0 11-.707-.707l2.121-2.12L.172 1.378A.5.5 0 01.879.672z'></path></svg></a>"
+  },
+  {
+    "file": "components/AdBlockDetect.js",
+    "text": "为了本站的长期运营，请将我们的网站加入广告拦截器的白名单，感谢您的支持！"
+  },
+  {
+    "file": "components/AiSettings.js",
+    "text": "关闭后保留 OpenClaw 当前本地模型，不再自动改动。"
+  },
+  {
+    "file": "components/AiSettings.js",
+    "text": "课程简报、大纲、写作、审查、错峰和媒体清理都在“课程自动化”中管理。 微信日程解析会优先使用这里保存的个人 DeepSeek 配置。"
+  },
+  {
+    "file": "components/AiSettings.js",
+    "text": "前端保存期望模型，本机 Relay 在线时自动同步。DeepSeek API Key 只保存在 OpenClaw 本机环境中，不通过网页接口回传。"
+  },
+  {
+    "file": "components/AiSettings.js",
+    "text": "删除当前 AI 配置？课程自动化将停止使用模型。"
+  },
+  {
+    "file": "components/AiSettings.js",
+    "text": "已保存；OpenClaw 在线时会自动同步所选模型"
+  },
+  {
+    "file": "components/AiUsageSettings.js",
+    "text": "当前人民币换算单价"
+  },
+  {
+    "file": "components/AiUsageSettings.js",
+    "text": "另有 $ 次非 DeepSeek 或未知模型调用未计价。"
+  },
+  {
+    "file": "components/AiUsageSettings.js",
+    "text": "有 $ 个旧输入 Token 没有缓存拆分，未强行计价。"
+  },
+  {
+    "file": "components/AiUsageSettings.js",
+    "text": "正在汇总最近 30 天的课程调用…"
+  },
+  {
+    "file": "components/AlgoliaSearchModal.js",
+    "text": "在这里输入搜索关键词..."
+  },
+  {
+    "file": "components/ArticleExpirationNotice.js",
+    "text": "这篇文章发布于 %%DAYS%% 天前，内容可能已过时，请谨慎参考。"
+  },
+  {
+    "file": "components/AuthPage.js",
+    "text": "登录后进入仅属于当前账号的日程、笔记、课程与设置。"
+  },
+  {
+    "file": "components/AuthPage.js",
+    "text": "请在 Vercel Preview 中补充 Clerk 环境变量后再进入工作台。"
+  },
+  {
+    "file": "components/AuthPage.js",
+    "text": "注册后，管理员会根据授权邮箱或申请状态开放你的私人工作区。"
+  },
+  {
+    "file": "components/content/PublicDirectoryPage.js",
+    "text": "内容整理完成后会出现在这里。"
+  },
+  {
+    "file": "components/content/PublicDirectoryPage.js",
+    "text": "暂时没有公开内容。"
+  },
+  {
+    "file": "components/content/ReadingNavigator.js",
+    "text": "正文没有可导航的标题。"
+  },
+  {
+    "file": "components/ContentPublishingDesk.js",
+    "text": "笔记库里还没有可发布的最终笔记。"
+  },
+  {
+    "file": "components/ContentPublishingDesk.js",
+    "text": "草稿与已发布内容"
+  },
+  {
+    "file": "components/ContentPublishingDesk.js",
+    "text": "当前身份只能保存私人草稿。"
+  },
+  {
+    "file": "components/ContentPublishingDesk.js",
+    "text": "发布内容读取失败"
+  },
+  {
+    "file": "components/ContentPublishingDesk.js",
+    "text": "课程笔记读取失败"
+  },
+  {
+    "file": "components/ContentPublishingDesk.js",
+    "text": "课程笔记发布信息读取失败"
+  },
+  {
+    "file": "components/ContentPublishingDesk.js",
+    "text": "课程笔记默认按栏目、课程合集和课次内容归档。"
+  },
+  {
+    "file": "components/ContentPublishingDesk.js",
+    "text": "留空则沿用原密码"
+  },
+  {
+    "file": "components/ContentPublishingDesk.js",
+    "text": "没有更多已有标签。"
+  },
+  {
+    "file": "components/ContentPublishingDesk.js",
+    "text": "尚未建立发布草稿"
+  },
+  {
+    "file": "components/ContentPublishingDesk.js",
+    "text": "设置内容归档、访问方式和公开信息。"
+  },
+  {
+    "file": "components/ContentPublishingDesk.js",
+    "text": "选择一份已经完成的课次笔记"
+  },
+  {
+    "file": "components/ContentPublishingDesk.js",
+    "text": "暂无已有选项，可直接输入新名称。"
+  },
+  {
+    "file": "components/ContentPublishingDesk.js",
+    "text": "粘贴图片 URL；留空则使用自动生成封面"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "保留人工查看入口，但不让普通课程卡在确认门口。"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "保留转录、简报、完整笔记与来源信息，不长期保存课程视频。"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "本轮已处理 $ 节，仍有 $ 节可继续补齐"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "标准模式 · 高峰外运行"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "补齐历史课程简报"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "成功后清理原始媒体"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "读取课程自动化设置失败"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "发现回放、转写、生成简报与完整笔记。"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "经济模式 · 严格错峰"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "课程自动化设置已保存"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "历史简报补齐失败"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "历史课程简报已补齐，本轮完成 $ 节"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "立即处理 · 忽略价格窗口"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "完整笔记完成后生成五至十分钟阅读版，并写入阅读资料库。"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "只在这里管理课程专用模型；通用 API Key 和默认模型留在“模型与 API”。"
+  },
+  {
+    "file": "components/CourseAutomationSettings.js",
+    "text": "GitHub Action 每 30 分钟轻量检查一次，只在设定时间之后且当天尚未运行时启动完整 Worker。"
+  },
+  {
+    "file": "components/CourseBriefReader.js",
+    "text": "可以正常阅读，但已读状态暂时无法保存，请稍后重试。"
+  },
+  {
+    "file": "components/CourseBriefReader.js",
+    "text": "课程简报读取失败"
+  },
+  {
+    "file": "components/CourseBriefReader.js",
+    "text": "课程简报生成后会出现在这里。"
+  },
+  {
+    "file": "components/CourseBriefReader.js",
+    "text": "课程简报暂时打不开"
+  },
+  {
+    "file": "components/CourseBriefReader.js",
+    "text": "已读状态保存失败"
+  },
+  {
+    "file": "components/CourseBriefReader.js",
+    "text": "这节课还没有课程简报"
+  },
+  {
+    "file": "components/CourseBriefReader.js",
+    "text": "正在打开课程简报…"
+  },
+  {
+    "file": "components/CourseNoteReader.js",
+    "text": "将“$ ”移入回收站？正文和历史版本都会保留，可以随时恢复。"
+  },
+  {
+    "file": "components/CourseNoteReader.js",
+    "text": "没有找到可阅读的最终笔记。"
+  },
+  {
+    "file": "components/CourseNoteReader.js",
+    "text": "这份笔记暂时打不开"
+  },
+  {
+    "file": "components/CourseNotesLibrary.js",
+    "text": "按“遇事不决 → 课程 → 课次”收纳。课程默认收起，先找课程，再进入安静的独立阅读页。"
+  },
+  {
+    "file": "components/CourseNotesLibrary.js",
+    "text": "笔记已移入回收站。"
+  },
+  {
+    "file": "components/CourseNotesLibrary.js",
+    "text": "换一个课程名、教师或课次关键词试试。"
+  },
+  {
+    "file": "components/CourseNotesLibrary.js",
+    "text": "将“$ ”移入回收站？正文和历史版本都会保留，可以随时恢复。"
+  },
+  {
+    "file": "components/CourseNotesLibrary.js",
+    "text": "课程笔记按课程与课次归档，完成后可进入独立阅读页。"
+  },
+  {
+    "file": "components/CourseNotesLibrary.js",
+    "text": "没有找到匹配的笔记"
+  },
+  {
+    "file": "components/CourseNotesLibrary.js",
+    "text": "完成第一份课程笔记后，会按“遇事不决 → 课程 → 课次”出现在这里。"
+  },
+  {
+    "file": "components/CourseNotesLibrary.js",
+    "text": "移除的课次笔记会先保存在这里。"
+  },
+  {
+    "file": "components/CourseNotesLibrary.js",
+    "text": "已经生成最终笔记。"
+  },
+  {
+    "file": "components/CourseNotesLibrary.js",
+    "text": "永久删除“$ ”的最终笔记和最终版本？原始材料、大纲和节点正文会保留。"
+  },
+  {
+    "file": "components/CourseNotesLibrary.js",
+    "text": "这个课次尚未形成最终笔记。"
+  },
+  {
+    "file": "components/CourseNotesLibrary.js",
+    "text": "这是不可撤销操作。请输入“永久删除”继续："
+  },
+  {
+    "file": "components/CourseNotesLibrary.js",
+    "text": "最终笔记已永久删除；仍可从节点正文重新生成。"
+  },
+  {
+    "file": "components/CourseNotesLibrary.js",
+    "text": "最终笔记已永久删除；原始材料、大纲和节点正文仍然保留。"
+  },
+  {
+    "file": "components/CourseNotesLibrary.js",
+    "text": "最终笔记与历史版本仍然保留，恢复后即可继续阅读和修改。"
+  },
+  {
+    "file": "components/CourseTaskManager.js",
+    "text": "后台任务启动失败"
+  },
+  {
+    "file": "components/CourseTaskManager.js",
+    "text": "后台正在进行最终检查"
+  },
+  {
+    "file": "components/CourseTaskManager.js",
+    "text": "后台正在审查正文"
+  },
+  {
+    "file": "components/CourseTaskManager.js",
+    "text": "后台正在生成大纲"
+  },
+  {
+    "file": "components/CourseTaskManager.js",
+    "text": "后台正在修改正文"
+  },
+  {
+    "file": "components/CourseTaskManager.js",
+    "text": "后台正在修改最终笔记"
+  },
+  {
+    "file": "components/CourseTaskManager.js",
+    "text": "后台正在整理全文"
+  },
+  {
+    "file": "components/CourseTaskManager.js",
+    "text": "后台正在整理正文"
+  },
+  {
+    "file": "components/CourseTaskManager.js",
+    "text": "后台正在准备正文"
+  },
+  {
+    "file": "components/CourseTaskManager.js",
+    "text": "后台准备生成大纲"
+  },
+  {
+    "file": "components/CourseTaskManager.js",
+    "text": "课程处理失败，请打开课程查看详情。"
+  },
+  {
+    "file": "components/CourseTaskManager.js",
+    "text": "课程后台任务启动失败"
+  },
+  {
+    "file": "components/CourseTaskManager.js",
+    "text": "课程进度读取失败"
+  },
+  {
+    "file": "components/CourseTaskManager.js",
+    "text": "正在启动后台整理"
+  },
+  {
+    "file": "components/CourseTaskManager.js",
+    "text": "最终检查需要处理"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "· 当前笔记有更新，尚未同步"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "0 const completed = status === 'completed' const openLabel = completed ? '查看笔记' : pendingHuman ? '继续确认' : '继续整理' return"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "按课程归拢课次、材料、简报与完整笔记。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "本节点要解决什么"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "本课笔记已移入回收站"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "补充修改要求（可选）"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "补充修改要求已加入。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "补充资料已加入课程，相关课次将重新整理。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "查看历史自动检查结果"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "此版本未保存正文预览。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "从“导入资料”添加课堂转录、课件或已有笔记。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "从当前主操作继续。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "从已经批准的节点重新拼装最终笔记"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "当前还没有历史版本。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "当前筛选下没有节点"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "当前修改尚未保存，保存后才能确认或提交修改要求。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "分析完成，请检查低置信度分配。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "服务状态读取失败"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "告诉系统具体要改什么"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "归档关系已整理，请最后确认。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "还有 $ 份资料等待在线文字识别。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "换一个关键词，或从“导入资料”建立新课程。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "检查标题和来源范围，锁定后不会被自动覆盖。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "节点已进入修改队列。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "节点已重新加入处理队列。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "仅在系统无法继续处理时才会停在这里，并显示具体原因。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "可以分多次添加；同一课可包含多份材料。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "课程进度读取失败"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "课程列表读取失败"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "课程资料补充失败"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "课程资料导入失败"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "课程资料尚未准备完成。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "课程资料无法预览"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "课程资料整理失败"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "例如：第二部分太简略，请补足老师关于数据清洗的论证；其余内容保持不变。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "例如：老师的个人观点单独标记；案例必须保留事实、争点、结论和论证意义。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "例如：证据法专题课"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "没有发现影响准确性或学习效果的问题。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "没有可显示的转录来源。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "前文存在可能影响本节点的实质修改；前文通过后，本节点会自动重新检查一致性。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "切换到“全部”查看完整列表。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "请先保存当前手动修改"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "确定笔记整理方式"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "确认异常已处理，完成本课"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "人工判断说明或修改要求"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "仍可继续编辑或导出 Markdown。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "删除这门课程的文字资料和整理进度？原始本地文件不会受到影响。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "审查发现实质问题，本节点已自动进入修改队列；其他节点仍会继续处理。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "审查结论已经自动传给修订模型；这里只填写你想额外补充的要求。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "审查与当前版本一致"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "识别结果读取失败"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "识别进度读取失败"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "识别任务提交失败"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "说明为何接受当前版本，或填写希望系统如何修改。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "拖动材料到课次即可归档；点击材料可设置跨课次范围。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "无法连接在线文字识别"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "系统会检查跨节点矛盾、严重重复和整体结构，通过后自动完成本课。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "先添加转录、课件、讲义或已有笔记。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "新增材料会匹配到已有课次，也可以新建课次。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "修改后会重新审查"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "修改完成后会自动重新检查"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "修改完成后会自动重新检查。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "修改要求已提交，系统只会按你的要求调整最终稿。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "需要额外提醒系统什么？"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "选择或拖入课程资料"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "选择一份材料查看分配。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "已忽略 $ 份重复资料。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "已暂停领取新任务。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "永久删除本课最终笔记和最终版本？原始材料、大纲和节点正文会保留。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "原始材料、大纲、节点正文和节点审查仍然保留，不需要从头整理。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "在线文字识别可用"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "在线文字识别失败"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "在线文字识别未配置"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "找不到这份本地文件，请重新添加。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "这份课程资料已经存在，已打开原有进度。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "这个课次仍有材料分配。删除后，这些材料会回到未归档。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "这是不可撤销操作。请输入“永久删除”继续："
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "这些规则会同时用于大纲、正文和审查。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "正常通过后会自动完成，无需确认"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "正文按顺序生成，独立审查与局部修订在后台衔接。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "正文和历史版本仍然保留；恢复前不会参与笔记库展示。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "正文会自动生成，也可以在这里修改。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "正文生成后会自动进行独立检查。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "正文已修改，系统会根据当前版本重新检查。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "正在进行最终检查"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "正在进行最终检查…"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "正在修改最终笔记"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "正在修改最终笔记…"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "正在整理最终笔记…"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "重新生成会调用一次接缝整理模型，完成后会自动检查并结束。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "资料已读取，请确认课次和分配范围。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "资料已读取；AI 分析暂未完成：$"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "自动重试仍未成功，请重新加入队列。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "最终笔记修改已保存。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "最终笔记已进入重新生成队列。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "最终笔记已永久删除"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "最终笔记已永久删除。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "最终笔记已由你确认。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "最终检查发现无法自动处理的重大异常。"
+  },
+  {
+    "file": "components/CourseTextPackDesk.js",
+    "text": "最终检查需要处理"
+  },
+  {
+    "file": "components/CustomContextMenu.js",
+    "text": "复制页面地址失败:"
+  },
+  {
+    "file": "components/DeskIdentityCard.js",
+    "text": "看到我记得喝口水"
+  },
+  {
+    "file": "components/DeskShell.js",
+    "text": "移动端工作台导航"
+  },
+  {
+    "file": "components/DisableCopy.js",
+    "text": "抱歉，本网页内容不可复制！"
+  },
+  {
+    "file": "components/EmailSettings.js",
+    "text": "读取邮件配置失败"
+  },
+  {
+    "file": "components/EmailSettings.js",
+    "text": "删除当前邮件配置？"
+  },
+  {
+    "file": "components/law-tech/AdminContentSync.js",
+    "text": "从 Notion 重新拉取公开内容，并更新搜索与页面缓存"
+  },
+  {
+    "file": "components/law-tech/AdminContentSync.js",
+    "text": "稳定快照 $ 篇 / 图片 $ 张"
+  },
+  {
+    "file": "components/MemberManagement.js",
+    "text": "成员列表读取失败"
+  },
+  {
+    "file": "components/MemberManagement.js",
+    "text": "管理员拥有全部权限，不能在这里暂停或删除。"
+  },
+  {
+    "file": "components/MemberManagement.js",
+    "text": "邮箱已加入授权名单。对方注册后会自动获得成员工作区。"
+  },
+  {
+    "file": "components/MemberManagement.js",
+    "text": "这会永久删除该成员和关联私人数据。请输入“删除成员及数据”："
+  },
+  {
+    "file": "components/NativeDifyChat.js",
+    "text": "喝水小助手提醒您：问问题之前先喝口水😠👊🏻"
+  },
+  {
+    "file": "components/NativeDifyChat.js",
+    "text": "网络连接异常，请检查网络。"
+  },
+  {
+    "file": "components/NotesDesk.js",
+    "text": "写下一句话想法、课堂片段、写作灵感或阅读草稿。"
+  },
+  {
+    "file": "components/NotesDesk.js",
+    "text": "载入失败，请刷新重试"
+  },
+  {
+    "file": "components/OpenWrite.js",
+    "text": "当前路径不在黄名单中，放行"
+  },
+  {
+    "file": "components/OpenWrite.js",
+    "text": "当前路径在白名单中，放行"
+  },
+  {
+    "file": "components/OpenWrite.js",
+    "text": "请配置公众号二维码"
+  },
+  {
+    "file": "components/OpenWrite.js",
+    "text": "请配置公众号关键词"
+  },
+  {
+    "file": "components/OpenWrite.js",
+    "text": "原创不易，完成人机检测，阅读全文"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "按文件夹整理阅读资料。"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "恢复到阅读资料库"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "可以粘贴原文片段，也可以写几句自己的判断。"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "为这篇内容安排阅读时间。"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "文件夹副本已创建"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "文件夹已删除，文章已移到上一级"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "文件夹已移出日常阅读"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "新建一个阅读文件夹。"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "已打开原有笔记草稿"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "已恢复到阅读资料库"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "阅读资料读取失败"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "阅读资料库正在等待第一批内容"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "阅读资料没有载入"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "云端暂时不可用，显示最近内容"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "这个文件夹还是空的"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "这会删除阅读条目；已经另存为笔记的内容不会被删除。"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "这里保存已经退出日常阅读视线的资料。内容、标注和笔记都还在，随时可以恢复。"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "这条阅读内容暂时只有链接和摘要。"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "整理状态将在下次保存时同步"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "正在同步最新内容"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "资料归档还是空的"
+  },
+  {
+    "file": "components/ReadingBox.js",
+    "text": "子文件夹也会删除，但其中的文章会移到上一级，不会一起消失。"
+  },
+  {
+    "file": "components/ReminderSettings.js",
+    "text": "保存提醒设置失败"
+  },
+  {
+    "file": "components/ReminderSettings.js",
+    "text": "测试邮件发送失败"
+  },
+  {
+    "file": "components/ReminderSettings.js",
+    "text": "测试邮件已发送，请检查收件箱。"
+  },
+  {
+    "file": "components/ReminderSettings.js",
+    "text": "读取提醒设置失败"
+  },
+  {
+    "file": "components/ReminderSettings.js",
+    "text": "邮件提醒服务状态"
+  },
+  {
+    "file": "components/SystemDesk.js",
+    "text": "通用模型、课程自动化、微信发送、内容同步与站点连接各自归位， 不再让一个 API 同时出现在三块页面里。"
+  },
+  {
+    "file": "components/SystemDesk.js",
+    "text": "重新拉取 Notion，提升稳定快照，并同步搜索与页面缓存。 缓存尚未自动更新时，可以在这里手动取得最新内容。"
+  },
+  {
+    "file": "components/ThemeSwitch.js",
+    "text": "点击下方主题进行切换."
+  },
+  {
+    "file": "components/TodayBoard.js",
+    "text": "没有固定时间事项"
+  },
+  {
+    "file": "components/TodayBoard.js",
+    "text": "写下今天要处理的事、阅读材料或提醒。"
+  },
+  {
+    "file": "components/TodayBoard.js",
+    "text": "正在同步最新数据"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemAffliate.js",
+    "text": "前台无法查看推广订单详情，如需查看详情可联系管理员截图查看详细记录和时间"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemAffliate.js",
+    "text": "如果用户是你的下级，用户使用其他推荐人链接购买，以上下级关系为准，优先给注册推荐人而不是推荐链接"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemAffliate.js",
+    "text": "如果用户是通过您的链接新注册的用户，推荐人是您，该用户购买资都会给你佣金"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemAffliate.js",
+    "text": "如果用户是通过您的推广链接购买的资源或者开通会员，则按照推广佣金比列奖励到您的佣金中"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemAffliate.js",
+    "text": "如需提现请联系网站管理员，发送您的账号信息和收款码进行人工提现"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemAffliate.js",
+    "text": "推广奖励金额保留一位小数点四舍五入。0.1之类的奖励金额不计算"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemAffliate.js",
+    "text": "这只是一个演示页面，不存在真实功能！"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemBalance.js",
+    "text": "充值汇率为1元=1积分，人民币和积分不能互相转换"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemBalance.js",
+    "text": "充值项目（充值比例：1元=1积分）"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemBalance.js",
+    "text": "充值最低额度为1积分"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemBalance.js",
+    "text": "余额永久有效，无时间限制"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemBalance.js",
+    "text": "这只是一个演示页面，不存在真实功能！"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemHome.js",
+    "text": "欢迎来到用户中心页面！在这里，您可以查看用户的账号信息与业务订单概况。"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemHome.js",
+    "text": "监控您的系统数据，查看实时变化"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemMembership.js",
+    "text": "本站会员账号权限为虚拟数字资源，开通后不可退款"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemMembership.js",
+    "text": "会员特权到期后不享受特权"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemMembership.js",
+    "text": "开通会员后可享有对应会员特权的商品折扣，免费权限"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemMembership.js",
+    "text": "内部会员专属交流群"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemMembership.js",
+    "text": "全站素材直接复刻到学员新站"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemMembership.js",
+    "text": "全站资源免费获取"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemMembership.js",
+    "text": "日更5到20个热门项目"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemMembership.js",
+    "text": "软件一键同步更新"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemMembership.js",
+    "text": "设立高额福利的打卡机制（增强学员执行力）"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemMembership.js",
+    "text": "提供独家引流技术照做就能成功"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemMembership.js",
+    "text": "学员专属社群及交流群"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemMembership.js",
+    "text": "一对一扶持搭建网站"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemMembership.js",
+    "text": "站长学员请联系助理对接"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemMembership.js",
+    "text": "这只是一个演示页面，不存在真实功能！"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemMembership.js",
+    "text": "重复购买特权到期时间累计增加"
+  },
+  {
+    "file": "components/ui/dashboard/DashboardItemOrder.js",
+    "text": "这只是一个演示页面，不存在真实功能！"
+  },
+  {
+    "file": "components/WechatSettings.js",
+    "text": "保存微信设置失败"
+  },
+  {
+    "file": "components/WechatSettings.js",
+    "text": "测试微信发送失败"
+  },
+  {
+    "file": "components/WechatSettings.js",
+    "text": "测试消息没有取得发送编号"
+  },
+  {
+    "file": "components/WechatSettings.js",
+    "text": "测试消息入队失败"
+  },
+  {
+    "file": "components/WechatSettings.js",
+    "text": "测试消息已加入发送队列"
+  },
+  {
+    "file": "components/WechatSettings.js",
+    "text": "读取测试状态失败"
+  },
+  {
+    "file": "components/WechatSettings.js",
+    "text": "读取微信设置失败"
+  },
+  {
+    "file": "components/WechatSettings.js",
+    "text": "旧测试已由新测试替代"
+  },
+  {
+    "file": "components/WechatSettings.js",
+    "text": "课程简报发送到微信"
+  },
+  {
+    "file": "components/WechatSettings.js",
+    "text": "课程简报将发送到微信。"
+  },
+  {
+    "file": "components/WechatSettings.js",
+    "text": "每天在设定时间发送今日安排。"
+  },
+  {
+    "file": "components/WorkspaceAccountMenu.js",
+    "text": "正在查看测试身份"
+  },
+  {
+    "file": "components/WritingDesk.js",
+    "text": "]/g, ' ') .replace(/\\s+/g, ' ') .trim() .slice(0, limit) } function wordStats(value = '') { const text = String(value || '').trim() if (!text) return const chinese = (text.match(/[\\u3400-\\u9fff]/g) || []).length const latin = text .replace(/[\\u3400-\\u9fff]/g, ' ') .split(/\\s+/) .filter(Boolean).length return } export function WritingDesk() { const [state, setState] = useState('loading') const [notes, setNotes] = useState([]) const [activeId, setActiveId] = useState('') const [title, setTitle] = useState('') const [body, setBody] = useState('') const [query, setQuery] = useState('') const [mode, setMode] = useState('write') const [dirty, setDirty] = useState(false) const [saveState, setSaveState] = useState('idle') const [message, setMessage] = useState('') const [publishNote, setPublishNote] = useState(null) const saveLock = useRef(false) const pendingSaveRef = useRef(false) const editRevisionRef = useRef(0) const activeIdRef = useRef('') const titleRef = useRef('') const bodyRef = useRef('') const activeNote = useMemo( () => notes.find(note => note.id === activeId) || null, [activeId, notes] ) const stats = useMemo(() => wordStats(body), [body]) const filteredNotes = useMemo(() => , [notes, query]) useEffect(() => { let cancelled = false fetch('/api/notes?scope=writing', ) .then(async response => { const data = await response.json().catch(() => ( )) if (!response.ok) throw new Error(data.error || '草稿读取失败') return data }) .then(data => { if (cancelled) return const loaded = data.notes || [] setNotes(loaded) if (loaded[0]) else setState('ready') }) .catch(error => ) return () => }, []) useEffect(() => { if (!dirty || activeId === 'new' || !body.trim() || saveLock.current) return undefined const timer = window.setTimeout(() => { void saveDraft( ) }, 1100) return () => window.clearTimeout(timer) }, [dirty, title, body, activeId]) useEffect(() => { const onKey = event => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') } window.addEventListener('keydown', onKey) return () => window.removeEventListener('keydown', onKey) }, [activeId, title, body]) function selectNote(note) function newDraft() async function saveDraft( = ) { if (saveLock.current) const saveActiveId = activeIdRef.current || activeId const saveTitle = titleRef.current const saveBody = bodyRef.current const saveRevision = editRevisionRef.current if (!saveBody.trim()) saveLock.current = true setSaveState('saving') if (!quiet) setMessage('') try { const isNew = saveActiveId === 'new' const response = await fetch('/api/notes', { method: isNew ? 'POST' : 'PATCH', credentials: 'same-origin', headers: , body: JSON.stringify( ) }) const data = await response.json().catch(() => ( )) if (!response.ok) throw new Error(data.error || '保存失败') const saved = data.note setNotes(current => [saved, ...current.filter(note => note.id !== saved.id)]) const sameEditor = activeIdRef.current === saveActiveId if (!sameEditor) return saved if (isNew) if (editRevisionRef.current === saveRevision) { if (!saveTitle.trim() && saved.title) setDirty(false) setSaveState('saved') if (!quiet) setMessage('已保存') window.setTimeout(() => , 1800) } else return saved } catch (error) finally { saveLock.current = false if (pendingSaveRef.current) { pendingSaveRef.current = false window.setTimeout(() => void saveDraft( ), 0) } } } async function archiveDraft() { if (!activeNote || activeId === 'new') return if (!window.confirm('归档这篇草稿？')) return setSaveState('saving') try { const response = await fetch('/api/notes', { method: 'PATCH', credentials: 'same-origin', headers: , body: JSON.stringify( ) }) if (!response.ok) throw new Error('归档失败') const remaining = notes.filter(note => note.id !== activeId) setNotes(remaining) if (remaining[0]) selectNote(remaining[0]) else newDraft() setMessage('已归档') } catch (error) } function updateTitle(value) function updateBody(value) async function openPublishSettings() { let note = activeNote if (activeId === 'new' || dirty) note = await saveDraft() if (!note) return setPublishNote( ) } if (state === 'loading') if (state === 'error') { return <div className='course-empty-state'><strong>草稿没有载入</strong><p> </p><button type='button' onClick= >重新加载</button></div> } return <> <div className='writing-studio'> <header className='writing-studio-head'> <div><span>Writing Studio</span><h2>写作</h2></div> <div className='writing-studio-actions'> <button type='button' onClick= ><LawTechIcon name='writing' size= />新建</button> <button className='is-primary' disabled= type='button' onClick= > </button> <button type='button' disabled= onClick= >发布设置</button> </div> </header> <div className='writing-studio-layout'> <aside className='writing-studio-library'> <label> <LawTechIcon name='search' size= /> <input value= onChange= placeholder='搜索草稿' /> </label> <div className='writing-studio-list'> {filteredNotes.map(note => ( <button key= type='button' aria-pressed= onClick= > <span><b> </b><time> </time></span> <strong> </strong> <small> </small> </button> ))} </div> </aside> <section className='writing-studio-editor'> <div className='writing-studio-toolbar'> <div role='tablist' aria-label='写作视图'> <button aria-selected= type='button' onClick= >编辑</button> <button aria-selected= type='button' onClick= >预览</button> </div> <span> 字 · 字符</span> </div> <input className='writing-studio-title' value= onChange= placeholder='标题' /> {mode === 'write' ? ( <textarea className='writing-studio-body' value= onChange= placeholder='开始写作…' spellCheck='false' /> ) : ( <MarkdownDocument className='writing-studio-preview' markdown= title= emptyText='暂无正文。' /> )} <footer> <span className={"
+  },
+  {
+    "file": "components/WritingPublishDialog.js",
+    "text": "发布设置读取失败"
+  },
+  {
+    "file": "pages/about/index.js",
+    "text": "北京大学法学院法律硕士（非法学）。本科就读于中南财经政法大学侦查学专业。"
+  },
+  {
+    "file": "pages/about/index.js",
+    "text": "个人网站、OCR 与学习工具。"
+  },
+  {
+    "file": "pages/about/index.js",
+    "text": "经济法、民法、刑法与国际法。"
+  },
+  {
+    "file": "pages/about/index.js",
+    "text": "课程笔记、案例分析与论文。"
+  },
+  {
+    "file": "pages/content/[...slug].js",
+    "text": "密码不正确，或者这条分享不可访问。"
+  },
+  {
+    "file": "pages/content/[...slug].js",
+    "text": "输入密码后继续阅读"
+  },
+  {
+    "file": "pages/content/[...slug].js",
+    "text": "这篇内容未公开展示正文。"
+  },
+  {
+    "file": "pages/content/[...slug].js",
+    "text": "这条内容的临时访问已经失效"
+  },
+  {
+    "file": "pages/content/index.js",
+    "text": "标题、摘要、课程或标签"
+  },
+  {
+    "file": "pages/content/index.js",
+    "text": "可以清除筛选后重新浏览。"
+  },
+  {
+    "file": "pages/content/index.js",
+    "text": "这个栏目还没有公开内容。"
+  },
+  {
+    "file": "pages/content/index.js",
+    "text": "Curacao 的文章、课程笔记、读书记录与项目记录。"
+  },
+  {
+    "file": "pages/desk/tasks/index.js",
+    "text": "这里查看长期任务、未来安排与四象限；回到“今日”时，只保留现在需要执行的部分。"
+  },
+  {
+    "file": "pages/index.js",
+    "text": "法学笔记、文章、课程整理与工具。"
+  },
+  {
+    "file": "pages/index.js",
+    "text": "还没有更多公开内容。"
+  },
+  {
+    "file": "pages/search/index.js",
+    "text": "可以换一个更短的关键词，或者清除栏目与类型筛选。"
+  },
+  {
+    "file": "pages/search/index.js",
+    "text": "没有找到匹配内容"
+  },
+  {
+    "file": "pages/search/index.js",
+    "text": "输入关键词开始搜索"
+  },
+  {
+    "file": "pages/search/index.js",
+    "text": "搜索 law-tech.dev 的文章、课程笔记、读书记录与项目。"
+  },
+  {
+    "file": "pages/search/index.js",
+    "text": "文章中的一句话、课程、栏目或标签"
+  },
+  {
+    "file": "pages/tools/index.js",
+    "text": "论文、作业、读书笔记"
+  }
+]

@@ -7,6 +7,7 @@
 
 # testing
 /coverage
+/test-results/
 
 # next.js
 /.next/
@@ -29,7 +30,12 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.course-worker.local
 .env
+
+# local course worker runtime
+/.venv-course-worker/
+/.law-tech-course-worker/
 
 # vercel
 .vercel
@@ -37,9 +43,10 @@ yarn-error.log*
 # dev
 /data.json
 /pnpm-lock.yaml
+tsconfig.tsbuildinfo
 .idea
 .vscode
-
+.firecrawl/
 
 # sitemap
 /public/robots.txt
