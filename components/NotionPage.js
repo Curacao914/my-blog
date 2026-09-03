@@ -125,6 +125,7 @@ const NotionPage = ({ post, className }) => {
       className={`mx-auto overflow-hidden ${className || ''}`}>
       <NotionRenderer
         recordMap={post?.blockMap}
+        blockId={post?.id}
         rootPageId={post?.id}
         mapPageUrl={mapPageUrl}
         mapImageUrl={mapImgUrl}
