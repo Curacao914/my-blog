@@ -1,0 +1,164 @@
+name: Course Worker Control Plane Diagnose
+
+# Manual only. This file has no schedule and never starts the course worker.
+'on':
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Prepare Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read-only control-plane comparison
+        env:
+          COURSE_CONTROL_PLANE_URL: ${{ secrets.COURSE_CONTROL_PLANE_URL }}
+          COURSE_WORKER_SECRET: ${{ secrets.COURSE_WORKER_SECRET }}
+          COURSE_WORKER_OWNER_ID: ${{ secrets.COURSE_WORKER_OWNER_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          // Read-only diagnostic. Does not claim tasks or contact PKU, ASR, R2 or an LLM.
+          // Only a small metadata projection is printed. Never print response bodies.
+          import { pathToFileURL } from 'node:url'
+          
+          export const PRODUCTION_ORIGIN = 'https://law-tech.dev'
+          const KNOWN_CODES = new Set([
+            'DEPLOYMENT_NOT_FOUND', 'DEPLOYMENT_DELETED', 'DEPLOYMENT_DISABLED',
+            'DEPLOYMENT_PAUSED', 'DEPLOYMENT_BLOCKED', 'NOT_FOUND', 'FORBIDDEN',
+            'FUNCTION_INVOCATION_FAILED', 'FUNCTION_INVOCATION_TIMEOUT',
+            'MIDDLEWARE_INVOCATION_FAILED', 'MIDDLEWARE_INVOCATION_TIMEOUT',
+            'invalid_course_worker_secret', 'course_worker_unconfigured',
+            'course_worker_owner_ambiguous', 'course_worker_owner_invalid',
+            'course_worker_owner_missing', 'course_worker_owner_unavailable',
+            'course_worker_required', 'signed_out', 'unauthorized'
+          ])
+          
+          export function validateTarget(raw) {
+            if (!String(raw || '').trim()) return {ok:false, code:'target_not_configured'}
+            let url
+            try { url = new URL(String(raw).trim()) }
+            catch { return {ok:false, code:'invalid_target_url'} }
+            if (url.protocol !== 'https:' || url.username || url.password || url.port ||
+                url.search || url.hash || !/^\/*$/.test(url.pathname)) {
+              return {ok:false, code:'target_must_be_https_origin_only'}
+            }
+            const host = url.hostname
+            const allowed = new Set([
+              'law-tech.dev', 'preview.law-tech.dev', 'my-blog-nu-eight.vercel.app',
+              'curacao-top-curacaos-projects.vercel.app'
+            ])
+            const ownDeployment = /^(?:curacao(?:-top)?|my-blog)-[a-z0-9-]+-curacaos-projects\.vercel\.app$/.test(host)
+            if (!allowed.has(host) && !ownDeployment) return {ok:false, code:'unapproved_target_host'}
+            return {ok:true, origin:url.origin,
+              kind: host === 'law-tech.dev' ? 'production-domain' :
+                host === 'preview.law-tech.dev' ? 'preview-domain' : 'vercel-alias-or-deployment'}
+          }
+          
+          async function limitedText(response) {
+            if (!response.body) return ''
+            const reader=response.body.getReader()
+            const parts=[]; let size=0
+            try {
+              while (true) {
+                const {done,value}=await reader.read()
+                if (done) break
+                size+=value.byteLength
+                if (size > 262144) {
+                  await reader.cancel()
+                  throw new Error('response_too_large')
+                }
+                parts.push(Buffer.from(value))
+              }
+            } finally { reader.releaseLock() }
+            return Buffer.concat(parts).toString('utf8')
+          }
+          
+          export async function probe({target, secret, ownerId, fetchImpl=fetch, timeoutMs=20000}) {
+            const safeTarget=validateTarget(target)
+            const summary={ok:false, targetKind:safeTarget.kind || 'invalid', status:0, code:''}
+            if (!safeTarget.ok) return {...summary, code:safeTarget.code}
+            if (!secret || !ownerId) return {...summary, code:'missing_worker_credentials'}
+            const controller=new AbortController()
+            const timer=setTimeout(()=>controller.abort(), timeoutMs)
+            const headers={authorization:`Bearer ${secret}`, accept:'application/json',
+              'x-law-tech-owner-id':ownerId}
+            try {
+              let endpoint=new URL('/api/courses/pipeline?limit=1',safeTarget.origin)
+              let response
+              for (let redirects=0; redirects<=2; redirects++) {
+                response=await fetchImpl(endpoint.href,{method:'GET', headers,
+                  redirect:'manual', signal:controller.signal})
+                summary.status=response.status
+                if (![301,302,303,307,308].includes(response.status)) break
+                const location=response.headers.get('location')
+                if (!location) return {...summary, code:'redirect_without_location'}
+                const next=new URL(location,endpoint)
+                // Do not forward the worker secret across origins or to other routes.
+                if (next.origin!==safeTarget.origin || next.username || next.password ||
+                    !/^\/(?:zh-CN\/)?api\/courses\/pipeline\/?$/.test(next.pathname)) {
+                  return {...summary, code:'unsafe_redirect_blocked'}
+                }
+                if (redirects===2) return {...summary, code:'too_many_redirects'}
+                endpoint=next
+              }
+              const raw=await limitedText(response)
+              let data
+              try { data=JSON.parse(raw) }
+              catch { return {...summary, bodyKind:'non-json', code:'non_json_response'} }
+              if (!data || typeof data!=='object' || Array.isArray(data)) {
+                return {...summary, bodyKind:'invalid-json-shape', code:'invalid_response_shape'}
+              }
+              const remoteCode=data.code || data.error?.code
+              const code=KNOWN_CODES.has(remoteCode) ? remoteCode :
+                remoteCode ? 'unrecognized_remote_error' : ''
+              // No remote error message, owner UUID, task or response body is logged.
+              if (!response.ok || data.ok===false) {
+                return {...summary, bodyKind:'json', code:code || 'http_or_application_error'}
+              }
+              const ownerMatched=data.ownerId===ownerId
+              const validShape=data.ok===true && Array.isArray(data.tasks)
+              if (!validShape || !ownerMatched) {
+                return {...summary, bodyKind:'json', ownerMatched,
+                  code:validShape ? 'owner_mismatch' : 'invalid_success_response'}
+              }
+              return {...summary, ok:true, bodyKind:'json', ownerMatched:true,
+                code:'control_plane_read_ok'}
+            } catch (error) {
+              return {...summary, code:controller.signal.aborted ? 'request_timeout' :
+                error?.message==='response_too_large' ? 'response_too_large' : 'network_or_response_failure'}
+            } finally { clearTimeout(timer) }
+          }
+          
+          export async function diagnose(env=process.env, fetchImpl=fetch) {
+            const secret=String(env.COURSE_WORKER_SECRET || '').trim()
+            const ownerId=String(env.COURSE_WORKER_OWNER_ID || '').trim()
+            const target=String(env.COURSE_CONTROL_PLANE_URL || '').trim()
+            const credentialsPresent=Boolean(secret && ownerId)
+            const configured=await probe({target,secret,ownerId,fetchImpl})
+            const checked=validateTarget(target)
+            const production=checked.ok && checked.origin===PRODUCTION_ORIGIN ?
+              {...configured} : await probe({target:PRODUCTION_ORIGIN,secret,ownerId,fetchImpl})
+            let diagnosis='inspect_result_codes'
+            if (!credentialsPresent) diagnosis='missing_worker_credentials'
+            else if (production.ok && !configured.ok) diagnosis='configured_target_problem'
+            else if (production.ok && configured.targetKind!=='production-domain') diagnosis='nonproduction_target_configured'
+            else if (production.ok && configured.ok) diagnosis='control_plane_read_verified'
+            else if (production.code==='invalid_course_worker_secret') diagnosis='worker_secret_mismatch'
+            else if (production.code==='course_worker_unconfigured') diagnosis='production_worker_secret_missing'
+            return {checkedAt:new Date().toISOString(), readOnly:true, credentialsPresent,
+              configured, production, diagnosis,
+              notTested:['pku_login','r2_access','asr_access','course_discovery','note_generation','wechat_delivery']}
+          }
+          
+          const report=await diagnose()
+          console.log(JSON.stringify(report,null,2))
+          process.exitCode=report.diagnosis==='control_plane_read_verified' ? 0 : 1
+          NODE
