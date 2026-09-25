@@ -47,6 +47,7 @@ tsconfig.tsbuildinfo
 .idea
 .vscode
 .firecrawl/
+.worktrees/
 
 # sitemap
 /public/robots.txt

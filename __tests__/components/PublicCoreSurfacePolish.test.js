@@ -18,11 +18,11 @@ describe('public core surface polish', () => {
   })
 
   it('adds compact local surfaces for tools and about', () => {
-    expect(toolsPage).toContain('public-tools-surface-v1')
-    expect(toolsPage).toContain('repeat(auto-fit,minmax(220px,1fr))')
-    expect(toolsPage).toContain('min-height:168px')
-    expect(aboutPage).toContain('public-about-surface-v1')
-    expect(aboutPage).toContain('repeat(auto-fit,minmax(220px,1fr))')
-    expect(aboutPage).toContain('min-height:154px')
+    expect(toolsPage).toContain('tools-app-v2')
+    expect(toolsPage).toContain('tools-compact-grid')
+    expect(toolsPage).toContain('tools-bottom-bar')
+    expect(aboutPage).toContain('about-app-v2')
+    expect(aboutPage).toContain('about-profile-head')
+    expect(aboutPage).toContain('about-skill-grid')
   })
 })

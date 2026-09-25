@@ -97,7 +97,7 @@ describe('OpenClawAgentStudio', () => {
       evaluationRuns: []
     }))
     render(<OpenClawAgentStudio />)
-    expect(await screen.findByText(/尚无配置版本/)).toBeInTheDocument()
+    expect(await screen.findByText(/尚无版本/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '新建草稿' }))
     await waitFor(() => {
       const createCall = global.fetch.mock.calls.find(([, options]) => options?.method === 'POST')
@@ -111,7 +111,7 @@ describe('OpenClawAgentStudio', () => {
     render(<OpenClawAgentStudio />)
     const publish = await screen.findByRole('button', { name: '发布此版本' })
     expect(publish).toBeDisabled()
-    expect(screen.getByText(/需要 150 条/)).toBeInTheDocument()
+    expect(screen.getByText(/尚无评估结果/)).toBeInTheDocument()
   })
 
   it('shows deterministic failure categories and representative model errors', async () => {
@@ -181,7 +181,7 @@ describe('OpenClawAgentStudio', () => {
     })
     render(<OpenClawAgentStudio />)
     fireEvent.click(await screen.findByRole('button', { name: '查看失败明细' }))
-    expect(await screen.findByText(/失败明细/)).toBeInTheDocument()
+    expect(await screen.findByText(/^失败明细（/)).toBeInTheDocument()
     expect(screen.getByText('schedule_core-01')).toBeInTheDocument()
     expect(screen.getByText(/fields: domain, objectType/)).toBeInTheDocument()
     expect(global.fetch).toHaveBeenCalledWith(
@@ -281,7 +281,7 @@ describe('OpenClawAgentStudio', () => {
       }))
     render(<OpenClawAgentStudio />)
     fireEvent.click(await screen.findByRole('button', { name: '运行完整评估' }))
-    expect(await screen.findByText(/评估连接中断，已刷新服务器状态/)).toBeInTheDocument()
+    expect(await screen.findByText(/连接中断，状态已刷新/)).toBeInTheDocument()
     expect(screen.getByText('58.0%')).toBeInTheDocument()
     expect(screen.queryByText(/Unexpected token/)).not.toBeInTheDocument()
   })

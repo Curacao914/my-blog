@@ -210,7 +210,7 @@ export function CourseAutomationSettings() {
             />
             <span>
               <strong>自动批准大纲</strong>
-              <small>保留人工查看入口，但不让普通课程卡在确认门口。</small>
+              <small>异常节点仍需人工确认。</small>
             </span>
           </label>
 

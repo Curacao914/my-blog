@@ -60,10 +60,7 @@ function ContentMaintenance({ health, state, onReload }) {
           <div className='settings-subsection notion-sync-settings'>
             <div>
               <h4>立即更新 Notion 文章</h4>
-              <p>
-                重新拉取 Notion，提升稳定快照，并同步搜索与页面缓存。
-                缓存尚未自动更新时，可以在这里手动取得最新内容。
-              </p>
+              <p>同步 Notion、搜索与页面缓存。</p>
             </div>
             <AdminContentSync compact={false} />
           </div>

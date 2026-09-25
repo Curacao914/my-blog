@@ -15,18 +15,18 @@ describe('homepage and writing studio polish', () => {
   const summaryApi = read('pages/api/content/summary.js')
 
   it('uses content, topics and covered cards rather than personal advertising', () => {
-    expect(home).toContain('FeaturedContent')
-    expect(home).toContain('home-topic-strip')
-    expect(home).toContain('home-content-thumb')
-    expect(home).toContain('publicHomeQuickLinks')
+    expect(home).toContain('LibraryWindow')
+    expect(home).toContain('home-library-shelves')
+    expect(home).toContain('ContentCover')
+    expect(home).toContain("href='/content'")
     expect(home).not.toContain('郭鑫 / Curacao')
     expect(home).not.toContain('北京大学法学院')
     expect(home).not.toContain('意义有什么意义')
   })
 
-  it('uses the left header area for local time and an editable line corpus', () => {
+  it('keeps the public header signal and editable line corpus', () => {
     expect(header).toContain('PublicHeaderSignal')
-    expect(signal).toContain('publicHomeDailyLines')
+    expect(signal).toContain('formatDateTime')
     expect(signal).toContain('window.setInterval')
     expect(signal).toContain("href='/'")
     expect(homeData).toContain('法学之外还有风')
@@ -34,10 +34,10 @@ describe('homepage and writing studio polish', () => {
   })
 
   it('keeps search compact and lets the tool dock grow horizontally', () => {
-    expect(home).toContain("placeholder='搜索内容'")
-    expect(home).toContain('home-command-links')
-    expect(home).toContain('overflow-x:auto')
-    expect(home).toContain('全部工具')
+    expect(home).toContain("href='/search'")
+    expect(home).toContain('home-utility-widget')
+    expect(home).toContain("href='/tools'")
+    expect(home).toContain('HOME_TOOLS.map')
   })
 
   it('always sends public tools to the production domain from Preview', () => {

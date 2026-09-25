@@ -16,7 +16,6 @@ describe('workbench identity and date-digest settings', () => {
     expect(shell.toLowerCase()).not.toContain('personal workspace')
     expect(identity).toContain('src={avatar}')
     expect(identity).toContain("'/curacao-avatar.png'")
-    expect(identity).toContain('看到我记得喝口水')
     expect(identity).toContain("{ label: '今日'")
     expect(identity).toContain("{ label: '待办'")
     expect(identity).toContain("{ label: '草稿'")

@@ -7,10 +7,14 @@ describe('homepage cards and writing autosave race guard', () => {
   const home = read('pages/index.js')
   const writing = read('components/WritingDesk.js')
 
-  it('lets homepage styles reach extracted card components', () => {
-    expect(home).toContain('<style jsx global>')
-    expect(home).toContain('home-feature-cover')
-    expect(home).toContain('home-content-row')
+  it('keeps homepage cover cards on the shared system stylesheet contract', () => {
+    const systemStyles = read('styles/lawtech-system.css')
+
+    expect(home).toContain('function ContentCover')
+    expect(home).toContain('home-stack-card-v6')
+    expect(home).toContain('home-library-recent')
+    expect(systemStyles).toContain('.home-stack-card-v6')
+    expect(systemStyles).toContain('.home-library-recent')
   })
 
   it('does not let an older save response restore deleted title text', () => {

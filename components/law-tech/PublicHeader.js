@@ -280,9 +280,13 @@ export function PublicHeader({ active = '', randomItems = [], showDock = true, o
         </nav>
         <div className='system-menu-trailing'>
           <SystemSearch />
-          <div className='public-header-actions'>
-            <AdminContentSync compact />
-            <WorkspaceAccountMenu placement='public' />
+              <div className='public-header-actions'>
+                <AdminContentSync compact />
+                <Link className='workspace-entry-link' href='/desk/today'>
+                  <LawTechIcon name='desk' size={15} />
+                  <span>工作台</span>
+                </Link>
+                <WorkspaceAccountMenu placement='public' />
           </div>
         </div>
       </header>

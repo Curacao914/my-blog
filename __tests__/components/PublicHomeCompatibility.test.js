@@ -13,6 +13,7 @@ describe('public home compatibility entry', () => {
     expect(domain).toContain("label: '个人博客'")
     expect(domain).toContain("href: '/archive'")
     expect(domain).toContain("meta: '旧文章与时间归档'")
-    expect(home).toContain('publicHomeQuickLinks.map')
+    expect(home).toContain("key: 'chronicle'")
+    expect(home).toContain("icon: 'archive'")
   })
 })

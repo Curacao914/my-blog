@@ -47,7 +47,9 @@ describe('workspace account and settings surface', () => {
   })
 
   it('keeps the identity card useful and readable', () => {
-    expect(identity).toContain('看到我记得喝口水')
+    expect(identity).toContain("{ label: '今日'")
+    expect(identity).toContain("{ label: '待办'")
+    expect(identity).toContain("{ label: '草稿'")
     expect(identity).toContain('/curacao-avatar.png')
     expect(identity).not.toContain('PERSONAL WORKSPACE')
     expect(identity).not.toContain('天气')

@@ -10,7 +10,7 @@ export default function TasksPage() {
     <Head><title>事项 · law-tech.dev</title></Head>
     <DeskShell active='tasks' title='事项' kicker='Tasks'>
       <section className='desk-module-intro'>
-        <div><span>Task library</span><h2>全部事项</h2><p>这里查看长期任务、未来安排与四象限；回到“今日”时，只保留现在需要执行的部分。</p></div>
+        <div><span>Tasks</span><h2>全部事项</h2></div>
       </section>
       <TodayBoard initialView='all' />
     </DeskShell>

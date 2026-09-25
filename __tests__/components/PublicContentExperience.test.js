@@ -42,7 +42,8 @@ describe('public content experience', () => {
   it('renders published markdown with heading ids and a live table of contents', () => {
     expect(detail).toContain('MarkdownDocument')
     expect(detail).toContain('ReadingNavigator')
-    expect(detail).toContain('content-reader-toc')
+    expect(detail).toContain('content-reading-nav')
+    expect(detail).toContain('content-reading-side')
     expect(markdown).toContain('stripLeadingDuplicateTitle')
     expect(markdown).toContain('extractMarkdownHeadings')
   })
