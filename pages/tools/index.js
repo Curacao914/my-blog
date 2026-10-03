@@ -27,7 +27,7 @@ const tools = [
   },
   {
     name: '课程',
-    href: 'https://course.law-tech.dev/',
+    href: 'https://course.law-tech.dev/_auth/start?next=%2F',
     icon: 'courses',
     kicker: 'Course',
     detail: '课程、课次、课件与笔记',
