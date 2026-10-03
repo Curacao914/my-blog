@@ -31,7 +31,7 @@ const HOME_APPS = [
 const HOME_TOOLS = [
   { label: 'OCR', href: 'https://law-tech.dev/ocr/', icon: 'scan', meta: '图片与 PDF' },
   { label: '引注', href: 'https://law-tech.dev/citation/', icon: 'citation', meta: '脚注与书目' },
-  { label: '课程', href: 'https://course.law-tech.dev/admin', icon: 'courses', meta: '课次与课件' },
+  { label: '课程', href: 'https://course.law-tech.dev/', icon: 'courses', meta: '课次与课件' },
   { label: '写作', href: '/desk/writing', icon: 'writing', meta: '草稿与项目' }
 ]
 

@@ -1,7 +1,7 @@
 export async function getServerSideProps() {
   return {
     redirect: {
-      destination: 'https://course.law-tech.dev/admin',
+      destination: 'https://course.law-tech.dev/',
       permanent: false
     }
   }
