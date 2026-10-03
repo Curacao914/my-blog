@@ -33,8 +33,8 @@ function Avatar({ profile, size = 'normal' }) {
 function SignedOutActions({ compact = false }) {
   return (
     <div className={`workspace-auth-actions ${compact ? 'is-compact' : ''}`}>
-      <Link href='/sign-in'>登录</Link>
-      <Link className='is-primary' href='/sign-up'>注册</Link>
+      <Link href='https://desk.law-tech.dev/sign-in'>登录</Link>
+      <Link className='is-primary' href='https://desk.law-tech.dev/sign-up'>注册</Link>
     </div>
   )
 }
@@ -42,7 +42,7 @@ function SignedOutActions({ compact = false }) {
 function SignedInFallback({ compact = false }) {
   return (
     <div className={`workspace-auth-actions ${compact ? 'is-compact' : ''}`}>
-      <Link className='is-primary' href='/desk/today'>进入工作台</Link>
+      <Link className='is-primary' href='https://desk.law-tech.dev/desk/settings'>进入工作台</Link>
     </div>
   )
 }
@@ -214,10 +214,16 @@ function AccountMenuEnabled({ placement = 'desk' }) {
                   ? '查看申请状态'
                   : '查看账号状态'}
             </Link>
-            <Link href='/desk/system' onClick={() => setOpen(false)}>
+            <Link href='https://desk.law-tech.dev/desk/settings' onClick={() => setOpen(false)}>
               <LawTechIcon name='system' size={15} />
               账号与设置
             </Link>
+            {session.isOwner ? (
+              <Link href='/desk/system' onClick={() => setOpen(false)}>
+                <LawTechIcon name='system' size={15} />
+                站点管理
+              </Link>
+            ) : null}
           </nav>
 
           <footer>

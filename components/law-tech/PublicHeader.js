@@ -93,7 +93,7 @@ function SystemDock({ active = '', randomItems = [], showAbout = false }) {
       <RandomDockLink randomItems={randomItems} />
       <DockItem active={active === 'tools'} href='/tools' icon='tools' label='工具' onClick={active === 'tools' ? restoreCurrent : undefined} windowStatus={active === 'tools' ? currentStatus : ''} />
       {showAbout ? <DockItem active={active === 'about'} href='/about' icon='about' label='关于' onClick={active === 'about' ? restoreCurrent : undefined} windowStatus={active === 'about' ? currentStatus : ''} /> : null}
-      <DockItem active={active === 'desk'} href='/desk/today' icon='desk' label='工作台' onClick={active === 'desk' ? restoreCurrent : undefined} windowStatus={active === 'desk' ? currentStatus : ''} />
+      <DockItem active={active === 'desk'} href='https://desk.law-tech.dev/desk/settings' icon='desk' label='工作台' windowStatus={active === 'desk' ? currentStatus : ''} />
       <button className={`system-dock-item system-dock-overview ${windowCount ? 'has-windows' : ''}`} type='button' title='窗口总览' aria-label='窗口总览' onClick={openMissionControl}>
         <LawTechIcon name='atlas' size={17} />
         <span className='system-dock-tooltip'>窗口总览</span>
