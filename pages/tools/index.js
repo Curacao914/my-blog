@@ -26,12 +26,13 @@ const tools = [
     tone: 'honey'
   },
   {
-    name: '课程整理',
-    href: '/desk/courses',
+    name: '课程',
+    href: 'https://course.law-tech.dev/admin',
     icon: 'courses',
-    kicker: 'Course notes',
-    detail: '课程材料、录音与笔记',
+    kicker: 'Course',
+    detail: '课程、课次、课件与笔记',
     output: '工作台',
+    external: true,
     tone: 'leaf'
   }
 ]
@@ -39,7 +40,7 @@ const tools = [
 const shortcuts = [
   { label: '写作', href: '/desk/writing', icon: 'writing' },
   { label: '笔记库', href: '/desk/materials', icon: 'materials' },
-  { label: '系统设置', href: '/desk/system', icon: 'system' }
+  { label: '账号设置', href: 'https://desk.law-tech.dev/desk/settings', icon: 'system' }
 ]
 
 export default function ToolsPage() {
