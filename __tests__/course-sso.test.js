@@ -67,7 +67,7 @@ describe('Course SSO', () => {
     const res = response()
     await courseSso({ method: 'GET', query: { next: '/notes/test' } }, res)
     expect(res.statusCode).toBe(302)
-    expect(res.location).toContain('https://law-tech.dev/sign-in?redirect_url=')
+    expect(res.location).toContain('https://law-tech.dev/course/connect?next=')
   })
 
   test('never signs for an inactive identity or absent shared secret', async () => {
