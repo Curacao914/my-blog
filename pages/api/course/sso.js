@@ -49,6 +49,7 @@ export default async function courseSso(req, res) {
   }
 
   const next = safeCoursePath(req.query?.next)
+  const jsonMode = req.query?.response === 'json'
   let session
   try {
     session = await getWorkspaceSession(req, { ignoreImpersonation: true })
@@ -58,11 +59,12 @@ export default async function courseSso(req, res) {
 
   if (!session?.ok) {
     if (session?.code === 'handshake' && session.redirectUrl) {
+      if (jsonMode) return res.status(401).json({ error: 'handshake_required' })
       return res.redirect(302, session.redirectUrl)
     }
     if (session?.code === 'signed_out') {
-      const resume = '/api/course/sso?next=' + encodeURIComponent(next)
-      return res.redirect(302, SITE_ORIGIN + '/sign-in?redirect_url=' + encodeURIComponent(resume))
+      if (jsonMode) return res.status(401).json({ error: 'signed_out' })
+      return res.redirect(302, SITE_ORIGIN + '/course/connect?next=' + encodeURIComponent(next))
     }
     return res.status(session?.status || 403).json({ error: session?.code || 'access_denied' })
   }
@@ -89,5 +91,7 @@ export default async function courseSso(req, res) {
   } catch {
     return res.status(503).json({ error: 'course_sso_unavailable' })
   }
-  return res.redirect(302, COURSE_ORIGIN + '/_auth/callback?token=' + encodeURIComponent(token))
+  const destination = COURSE_ORIGIN + '/_auth/callback?token=' + encodeURIComponent(token)
+  if (jsonMode) return res.status(200).json({ redirect: destination })
+  return res.redirect(302, destination)
 }
